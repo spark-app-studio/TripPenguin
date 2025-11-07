@@ -12,7 +12,7 @@ Guide2Go is a trip planning application designed to help users plan overseas tri
 
 3. **AI Booking Integration**: Live OpenAI-powered booking recommendations in Step 3. When users click "AI Booking" on any booking item, GPT-4o-mini generates 3 personalized recommendations with pricing, providers, pros/cons, and booking tips based on trip context (destinations, budget, travelers, season).
 
-4. **AI Budget Guidance**: New AI budget assistant in Step 2 (Plan). When users click "Get Budget Guidance", GPT-4o-mini analyzes trip details and provides personalized budget recommendations for all 6 categories (flights, housing, food, transportation, fun, preparation) with estimated price ranges, explanations, and money-saving tips.
+4. **Per-Category AI Budget Guidance**: Enhanced AI budget assistant in Step 2 (Plan). Each budget category card (flights, housing, food, transportation, fun, preparation) now has its own beautiful primary-colored "AI Guide" button. When clicked, GPT-4o-mini provides personalized recommendations specific to that category with estimated price ranges, detailed explanations, and 3-5 money-saving tips. Category-specific dialogs show focused guidance (e.g., "Flights Budget Guidance") rather than overwhelming users with all 6 categories at once.
 
 ## User Preferences
 

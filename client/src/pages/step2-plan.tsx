@@ -127,7 +127,8 @@ export default function Step2Plan({
         travelSeason,
         category,
       });
-      return response as unknown as BudgetAdviceResponse;
+      const data = await response.json();
+      return data as BudgetAdviceResponse;
     },
     onSuccess: (data: BudgetAdviceResponse, variables) => {
       setAiAdvice(data);
@@ -441,13 +442,13 @@ export default function Step2Plan({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              {currentAICategory && aiAdvice?.categories?.[0]?.categoryLabel 
+              {aiAdvice?.categories?.[0]?.categoryLabel 
                 ? `${aiAdvice.categories[0].categoryLabel} Budget Guidance`
                 : "AI Budget Guidance"}
             </DialogTitle>
             <DialogDescription>
-              {currentAICategory 
-                ? `Personalized ${aiAdvice?.categories?.[0]?.categoryLabel?.toLowerCase() || "budget"} recommendations for your trip to ${destinations.join(", ")}`
+              {aiAdvice?.categories?.[0]?.categoryLabel 
+                ? `Personalized ${aiAdvice.categories[0].categoryLabel.toLowerCase()} recommendations for your trip to ${destinations.join(", ")}`
                 : `Here are personalized budget recommendations for your trip to ${destinations.join(", ")}`}
             </DialogDescription>
           </DialogHeader>
