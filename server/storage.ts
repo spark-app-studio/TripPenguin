@@ -18,6 +18,7 @@ import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Trip operations
+  getAllTrips(): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   getTrip(id: string): Promise<Trip | undefined>;
   getTripWithDetails(id: string): Promise<TripWithDetails | undefined>;
@@ -45,6 +46,10 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // Trip operations
+  async getAllTrips(): Promise<Trip[]> {
+    return await db.select().from(trips);
+  }
+
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {
     const [trip] = await db
       .insert(trips)

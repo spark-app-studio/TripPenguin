@@ -11,6 +11,15 @@ import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
+  app.get("/api/trips", async (req, res) => {
+    try {
+      const allTrips = await storage.getAllTrips();
+      res.json(allTrips);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch trips" });
+    }
+  });
+
   app.post("/api/trips", async (req, res) => {
     try {
       const tripData = insertTripSchema.parse(req.body);

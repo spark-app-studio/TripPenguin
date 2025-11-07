@@ -69,7 +69,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="default"
-              onClick={() => setLocation("/trip/new")}
+              onClick={() => setLocation("/trips")}
               className="text-lg px-8 py-6 min-h-0 bg-primary hover:bg-primary border-2 border-primary-border"
               data-testid="button-hero-start"
             >
@@ -78,11 +78,11 @@ export default function Landing() {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => setLocation("/trip/new")}
+              onClick={() => setLocation("/trips")}
               className="text-lg px-8 py-6 min-h-0 text-white border-white hover:bg-white/20 backdrop-blur-sm"
               data-testid="button-hero-learn"
             >
-              Learn More
+              View My Trips
             </Button>
           </div>
         </div>
