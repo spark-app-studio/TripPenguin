@@ -450,43 +450,45 @@ export default function Step2Plan({
                 </Card>
 
                 {/* Category Recommendations */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Category Breakdown</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {aiAdvice.categories.map((category) => (
-                      <Card key={category.category} data-testid={`card-ai-category-${category.category}`}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">
-                              {category.categoryLabel}
-                            </CardTitle>
-                            <span className="text-primary font-semibold" data-testid={`text-ai-range-${category.category}`}>
-                              {category.estimatedRange}
-                            </span>
-                          </div>
-                          <CardDescription>{category.explanation}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium text-muted-foreground">
-                              Money-Saving Tips:
-                            </h4>
-                            <ul className="list-disc list-inside space-y-1 text-sm">
-                              {category.tips.map((tip, index) => (
-                                <li key={index} className="text-muted-foreground">
-                                  {tip}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                {aiAdvice.categories && aiAdvice.categories.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Category Breakdown</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {aiAdvice.categories.map((category) => (
+                        <Card key={category.category} data-testid={`card-ai-category-${category.category}`}>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg">
+                                {category.categoryLabel}
+                              </CardTitle>
+                              <span className="text-primary font-semibold" data-testid={`text-ai-range-${category.category}`}>
+                                {category.estimatedRange}
+                              </span>
+                            </div>
+                            <CardDescription>{category.explanation}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium text-muted-foreground">
+                                Money-Saving Tips:
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1 text-sm">
+                                {category.tips && category.tips.map((tip, index) => (
+                                  <li key={index} className="text-muted-foreground">
+                                    {tip}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* General Tips */}
-                {aiAdvice.generalTips.length > 0 && (
+                {aiAdvice.generalTips && aiAdvice.generalTips.length > 0 && (
                   <>
                     <Separator />
                     <div className="space-y-3">
