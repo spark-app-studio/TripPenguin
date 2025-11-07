@@ -114,30 +114,49 @@ export default function Step2Plan({
 
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [aiAdvice, setAiAdvice] = useState<BudgetAdviceResponse | null>(null);
+  const [currentAICategory, setCurrentAICategory] = useState<string | null>(null);
+  const [loadingCategories, setLoadingCategories] = useState<Record<string, boolean>>({});
 
-  // AI Budget Advisor mutation
+  // AI Budget Advisor mutation for specific category
   const budgetAdvisorMutation = useMutation({
-    mutationFn: async (): Promise<BudgetAdviceResponse> => {
+    mutationFn: async ({ category }: { category: string }): Promise<BudgetAdviceResponse> => {
       const response = await apiRequest("POST", "/api/ai/budget-recommendations", {
         destinations,
         travelers: numberOfTravelers,
         tripDuration,
         travelSeason,
+        category,
       });
       return response as unknown as BudgetAdviceResponse;
     },
-    onSuccess: (data: BudgetAdviceResponse) => {
+    onSuccess: (data: BudgetAdviceResponse, variables) => {
       setAiAdvice(data);
       setShowAIDialog(true);
+      setLoadingCategories((prev) => {
+        const updated = { ...prev };
+        delete updated[variables.category];
+        return updated;
+      });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
       toast({
         variant: "destructive",
         title: "AI Budget Advisor Error",
         description: error.message || "Failed to get budget recommendations. Please try again.",
       });
+      setLoadingCategories((prev) => {
+        const updated = { ...prev };
+        delete updated[variables.category];
+        return updated;
+      });
     },
   });
+
+  const handleGetAIGuidance = (category: string) => {
+    setCurrentAICategory(category);
+    setLoadingCategories((prev) => ({ ...prev, [category]: true }));
+    budgetAdvisorMutation.mutate({ category });
+  };
 
   const updateCategoryField = (
     category: keyof Omit<BudgetData, "monthlySavings" | "currentSavings" | "creditCardPoints">,
@@ -321,23 +340,7 @@ export default function Step2Plan({
 
           {/* Budget Categories */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-2xl font-bold">Budget Breakdown</h2>
-              <Button
-                onClick={() => budgetAdvisorMutation.mutate()}
-                disabled={budgetAdvisorMutation.isPending}
-                variant="outline"
-                className="gap-2"
-                data-testid="button-ai-budget-guidance"
-              >
-                {budgetAdvisorMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                {budgetAdvisorMutation.isPending ? "Getting Guidance..." : "Get Budget Guidance"}
-              </Button>
-            </div>
+            <h2 className="text-2xl font-bold">Budget Breakdown</h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BudgetCategoryCard
@@ -349,6 +352,8 @@ export default function Step2Plan({
                 onNotesChange={(value) => updateCategoryField("flights", "notes", value)}
                 onUsePointsChange={(value) => updateCategoryField("flights", "usePoints", value)}
                 tips={budgetTips.flights}
+                onGetAIGuidance={() => handleGetAIGuidance("flights")}
+                isLoadingAI={loadingCategories["flights"] || false}
               />
 
               <BudgetCategoryCard
@@ -358,6 +363,8 @@ export default function Step2Plan({
                 onEstimatedCostChange={(value) => updateCategoryField("housing", "cost", value)}
                 onNotesChange={(value) => updateCategoryField("housing", "notes", value)}
                 tips={budgetTips.housing}
+                onGetAIGuidance={() => handleGetAIGuidance("housing")}
+                isLoadingAI={loadingCategories["housing"] || false}
               />
 
               <BudgetCategoryCard
@@ -367,6 +374,8 @@ export default function Step2Plan({
                 onEstimatedCostChange={(value) => updateCategoryField("food", "cost", value)}
                 onNotesChange={(value) => updateCategoryField("food", "notes", value)}
                 tips={budgetTips.food}
+                onGetAIGuidance={() => handleGetAIGuidance("food")}
+                isLoadingAI={loadingCategories["food"] || false}
               />
 
               <BudgetCategoryCard
@@ -376,6 +385,8 @@ export default function Step2Plan({
                 onEstimatedCostChange={(value) => updateCategoryField("transportation", "cost", value)}
                 onNotesChange={(value) => updateCategoryField("transportation", "notes", value)}
                 tips={budgetTips.transportation}
+                onGetAIGuidance={() => handleGetAIGuidance("transportation")}
+                isLoadingAI={loadingCategories["transportation"] || false}
               />
 
               <BudgetCategoryCard
@@ -385,6 +396,8 @@ export default function Step2Plan({
                 onEstimatedCostChange={(value) => updateCategoryField("fun", "cost", value)}
                 onNotesChange={(value) => updateCategoryField("fun", "notes", value)}
                 tips={budgetTips.fun}
+                onGetAIGuidance={() => handleGetAIGuidance("fun")}
+                isLoadingAI={loadingCategories["fun"] || false}
               />
 
               <BudgetCategoryCard
@@ -394,6 +407,8 @@ export default function Step2Plan({
                 onEstimatedCostChange={(value) => updateCategoryField("preparation", "cost", value)}
                 onNotesChange={(value) => updateCategoryField("preparation", "notes", value)}
                 tips={budgetTips.preparation}
+                onGetAIGuidance={() => handleGetAIGuidance("preparation")}
+                isLoadingAI={loadingCategories["preparation"] || false}
               />
             </div>
           </div>
@@ -426,11 +441,14 @@ export default function Step2Plan({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              AI Budget Guidance
+              {currentAICategory && aiAdvice?.categories?.[0]?.categoryLabel 
+                ? `${aiAdvice.categories[0].categoryLabel} Budget Guidance`
+                : "AI Budget Guidance"}
             </DialogTitle>
             <DialogDescription>
-              Here are personalized budget recommendations for your trip to{" "}
-              {destinations.join(", ")}
+              {currentAICategory 
+                ? `Personalized ${aiAdvice?.categories?.[0]?.categoryLabel?.toLowerCase() || "budget"} recommendations for your trip to ${destinations.join(", ")}`
+                : `Here are personalized budget recommendations for your trip to ${destinations.join(", ")}`}
             </DialogDescription>
           </DialogHeader>
 
