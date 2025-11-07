@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plane, Home, Utensils, Car, PartyPopper, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plane, Home, Utensils, Car, PartyPopper, ShoppingBag, Sparkles, Loader2 } from "lucide-react";
 
 interface BudgetCategoryCardProps {
   category: string;
@@ -14,6 +15,8 @@ interface BudgetCategoryCardProps {
   onNotesChange?: (value: string) => void;
   onUsePointsChange?: (value: boolean) => void;
   tips?: string[];
+  onGetAIGuidance?: () => void;
+  isLoadingAI?: boolean;
 }
 
 const categoryIcons: Record<string, any> = {
@@ -52,6 +55,8 @@ export function BudgetCategoryCard({
   onNotesChange,
   onUsePointsChange,
   tips,
+  onGetAIGuidance,
+  isLoadingAI = false,
 }: BudgetCategoryCardProps) {
   const Icon = categoryIcons[category] || ShoppingBag;
   const title = categoryTitles[category] || category;
@@ -60,14 +65,35 @@ export function BudgetCategoryCard({
   return (
     <Card data-testid={`budget-card-${category}`}>
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <div className="p-2 rounded-md bg-primary/10">
             <Icon className="w-5 h-5 text-primary" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <CardTitle className="text-lg">{title}</CardTitle>
             <CardDescription className="text-sm">{description}</CardDescription>
           </div>
+          {onGetAIGuidance && (
+            <Button
+              size="sm"
+              onClick={onGetAIGuidance}
+              disabled={isLoadingAI}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all gap-1.5 shrink-0"
+              data-testid={`button-ai-guidance-${category}`}
+            >
+              {isLoadingAI ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="hidden sm:inline">AI...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">AI Guide</span>
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </CardHeader>
 
