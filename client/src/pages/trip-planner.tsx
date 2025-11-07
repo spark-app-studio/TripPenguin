@@ -235,8 +235,6 @@ export default function TripPlanner() {
   };
 
   const handleStep2Complete = async (data: TripPlanData["step2"]) => {
-    setTripData({ ...tripData, step2: data });
-    
     if (!currentTripId || !data) return;
 
     try {
@@ -282,6 +280,8 @@ export default function TripPlanner() {
         }
       }
 
+      // Update state AFTER all async operations complete
+      setTripData(prevData => ({ ...prevData, step2: data }));
       setCurrentStep("book");
     } catch (error) {
       console.error("Failed to save step 2 data:", error);
@@ -407,6 +407,12 @@ export default function TripPlanner() {
       {currentStep === "book" && tripData.step1 && tripData.step2 && (
         <Step3Book
           budgetCategories={getBudgetCategories()}
+          tripContext={{
+            destinations: tripData.step1.selectedDestinations.map(d => d.cityName),
+            travelers: tripData.step1.numberOfTravelers,
+            tripDuration: tripData.step1.tripDuration,
+            travelSeason: tripData.step1.travelSeason,
+          }}
           onComplete={handleStep3Complete}
           onBack={() => setCurrentStep("plan")}
         />

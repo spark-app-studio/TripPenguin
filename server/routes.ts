@@ -8,6 +8,7 @@ import {
   insertBookingSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
@@ -224,6 +225,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete booking" });
+    }
+  });
+
+  // AI Booking routes
+  app.post("/api/ai/booking-recommendations", async (req, res) => {
+    try {
+      const searchParams = bookingSearchParamsSchema.parse(req.body);
+      const recommendations = await getBookingRecommendations(searchParams);
+      res.json(recommendations);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid booking search parameters", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI booking service is not configured" });
+      } else {
+        console.error("AI booking error:", error);
+        res.status(500).json({ error: "Failed to get booking recommendations" });
+      }
     }
   });
 

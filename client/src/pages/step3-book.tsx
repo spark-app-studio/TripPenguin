@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,7 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { BookingItem } from "@/components/BookingItem";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronRight, Sparkles, CheckCircle } from "lucide-react";
+import { ChevronRight, Sparkles, CheckCircle, Loader2, ExternalLink, DollarSign, ThumbsUp, ThumbsDown, Lightbulb } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookingData {
   id: string;
@@ -18,8 +21,26 @@ interface BookingData {
   actualCost?: number;
 }
 
+interface BookingRecommendation {
+  title: string;
+  description: string;
+  estimatedPrice: number;
+  provider: string;
+  pros: string[];
+  cons: string[];
+  bookingTips: string;
+}
+
+interface TripContext {
+  destinations: string[];
+  travelers: number;
+  tripDuration: number;
+  travelSeason: string;
+}
+
 interface Step3BookProps {
   budgetCategories: Array<{ category: string; estimatedCost: number }>;
+  tripContext: TripContext;
   onComplete: (bookings: BookingData[]) => void;
   onBack: () => void;
 }
@@ -32,7 +53,8 @@ const defaultBookingItems: Record<string, string[]> = {
   preparation: ["Travel insurance", "Power adapters", "Luggage"],
 };
 
-export default function Step3Book({ budgetCategories, onComplete, onBack }: Step3BookProps) {
+export default function Step3Book({ budgetCategories, tripContext, onComplete, onBack }: Step3BookProps) {
+  const { toast } = useToast();
   const [bookings, setBookings] = useState<BookingData[]>(() => {
     const items: BookingData[] = [];
     budgetCategories.forEach((cat) => {
@@ -52,6 +74,33 @@ export default function Step3Book({ budgetCategories, onComplete, onBack }: Step
 
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
+  const [recommendations, setRecommendations] = useState<BookingRecommendation[]>([]);
+
+  const recommendationsMutation = useMutation({
+    mutationFn: async (booking: BookingData) => {
+      const response = await apiRequest("POST", "/api/ai/booking-recommendations", {
+        itemName: booking.itemName,
+        category: booking.category,
+        budget: booking.estimatedCost,
+        destinations: tripContext.destinations,
+        travelers: tripContext.travelers,
+        tripDuration: tripContext.tripDuration,
+        travelSeason: tripContext.travelSeason,
+      });
+      const data = await response.json();
+      return data as BookingRecommendation[];
+    },
+    onSuccess: (data) => {
+      setRecommendations(data);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to get AI recommendations. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateBookingStatus = (id: string, status: BookingData["status"]) => {
     setBookings(bookings.map(b => b.id === id ? { ...b, status } : b));
@@ -59,7 +108,9 @@ export default function Step3Book({ budgetCategories, onComplete, onBack }: Step
 
   const handleAIClick = (booking: BookingData) => {
     setSelectedBooking(booking);
+    setRecommendations([]);
     setAiDialogOpen(true);
+    recommendationsMutation.mutate(booking);
   };
 
   // Calculate progress
@@ -235,50 +286,105 @@ export default function Step3Book({ budgetCategories, onComplete, onBack }: Step
         </div>
       </div>
 
-      {/* AI Booking Dialog (Stub) */}
+      {/* AI Booking Dialog */}
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-primary" />
-              <DialogTitle>AI Booking Assistant</DialogTitle>
+              <DialogTitle>AI Booking Recommendations</DialogTitle>
             </div>
             <DialogDescription>
-              Coming Soon - AI-powered booking assistance
+              {selectedBooking?.itemName} • Budget: ${selectedBooking?.estimatedCost}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="p-4 rounded-md bg-muted/50">
-              <p className="font-medium mb-2">Booking: {selectedBooking?.itemName}</p>
-              <p className="text-sm text-muted-foreground">
-                Our AI assistant will help you find and book {selectedBooking?.category} options that match your budget and preferences.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="p-3 rounded-md bg-primary/5 border border-primary/20">
-                <p className="text-sm font-medium text-primary">🤖 AI Agent will:</p>
-                <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                  <li>• Search multiple booking sites</li>
-                  <li>• Compare prices and reviews</li>
-                  <li>• Suggest best options within budget</li>
-                  <li>• Handle booking process</li>
-                </ul>
+            {recommendationsMutation.isPending && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Finding the best options for you...</p>
               </div>
+            )}
 
-              <div className="p-3 rounded-md bg-muted text-center">
-                <p className="text-sm font-semibold mb-1">This feature is in development</p>
-                <p className="text-xs text-muted-foreground">
-                  For now, use your favorite booking sites and update the status manually
-                </p>
+            {recommendationsMutation.isError && (
+              <div className="p-4 rounded-md bg-destructive/10 border border-destructive/20">
+                <p className="text-sm font-medium text-destructive">Failed to load recommendations</p>
+                <p className="text-xs text-muted-foreground mt-1">Please try again later</p>
               </div>
-            </div>
+            )}
+
+            {!recommendationsMutation.isPending && recommendations.length > 0 && (
+              <div className="space-y-4">
+                {recommendations.map((rec, index) => (
+                  <Card key={index} className="overflow-hidden" data-testid={`recommendation-${index}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{rec.title}</CardTitle>
+                          <CardDescription className="mt-1">{rec.description}</CardDescription>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 text-2xl font-bold text-primary">
+                            <DollarSign className="w-5 h-5" />
+                            {rec.estimatedPrice}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{rec.provider}</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-sm font-medium text-green-600">
+                            <ThumbsUp className="w-4 h-4" />
+                            <span>Pros</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {rec.pros.map((pro, i) => (
+                              <li key={i} className="text-sm text-muted-foreground">• {pro}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1 text-sm font-medium text-orange-600">
+                            <ThumbsDown className="w-4 h-4" />
+                            <span>Cons</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {rec.cons.map((con, i) => (
+                              <li key={i} className="text-sm text-muted-foreground">• {con}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+                        <div className="flex items-start gap-2">
+                          <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-primary mb-1">Booking Tip</p>
+                            <p className="text-sm text-muted-foreground">{rec.bookingTips}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                <div className="p-4 rounded-md bg-muted/50 border">
+                  <p className="text-sm font-medium mb-2">Ready to book?</p>
+                  <p className="text-xs text-muted-foreground">
+                    These are AI-generated recommendations to help guide your search. Visit the suggested providers' websites to complete your booking, then update the status in your checklist.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button onClick={() => setAiDialogOpen(false)} data-testid="button-close-ai-dialog">
-              Got it
+              Close
             </Button>
           </div>
         </DialogContent>
