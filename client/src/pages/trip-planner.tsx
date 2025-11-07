@@ -399,6 +399,8 @@ export default function TripPlanner() {
           initialData={tripData.step2}
           tripDuration={tripData.step1.tripDuration}
           numberOfTravelers={tripData.step1.numberOfTravelers}
+          destinations={tripData.step1.selectedDestinations.map(d => d.cityName)}
+          travelSeason={tripData.step1.travelSeason}
           onComplete={handleStep2Complete}
           onBack={() => setCurrentStep("dream")}
         />

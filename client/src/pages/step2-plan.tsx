@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +9,17 @@ import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { BudgetCategoryCard } from "@/components/BudgetCategoryCard";
 import { BudgetAlert } from "@/components/BudgetAlert";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2 } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean };
@@ -25,8 +37,24 @@ interface Step2PlanProps {
   initialData?: Partial<BudgetData>;
   tripDuration: number;
   numberOfTravelers: number;
+  destinations: string[];
+  travelSeason: string;
   onComplete: (data: BudgetData) => void;
   onBack: () => void;
+}
+
+interface CategoryBudget {
+  category: "flights" | "housing" | "food" | "transportation" | "fun" | "preparation";
+  categoryLabel: string;
+  estimatedRange: string;
+  explanation: string;
+  tips: string[];
+}
+
+interface BudgetAdviceResponse {
+  totalEstimatedRange: string;
+  categories: CategoryBudget[];
+  generalTips: string[];
 }
 
 const budgetTips: Record<string, string[]> = {
@@ -66,9 +94,12 @@ export default function Step2Plan({
   initialData,
   tripDuration,
   numberOfTravelers,
+  destinations,
+  travelSeason,
   onComplete,
   onBack,
 }: Step2PlanProps) {
+  const { toast } = useToast();
   const [budgetData, setBudgetData] = useState<BudgetData>({
     flights: initialData?.flights || { cost: "0", notes: "", usePoints: false },
     housing: initialData?.housing || { cost: "0", notes: "" },
@@ -79,6 +110,33 @@ export default function Step2Plan({
     monthlySavings: initialData?.monthlySavings || "500",
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
+  });
+
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiAdvice, setAiAdvice] = useState<BudgetAdviceResponse | null>(null);
+
+  // AI Budget Advisor mutation
+  const budgetAdvisorMutation = useMutation({
+    mutationFn: async (): Promise<BudgetAdviceResponse> => {
+      const response = await apiRequest("POST", "/api/ai/budget-advice", {
+        destinations,
+        travelers: numberOfTravelers,
+        tripDuration,
+        travelSeason,
+      });
+      return response as unknown as BudgetAdviceResponse;
+    },
+    onSuccess: (data: BudgetAdviceResponse) => {
+      setAiAdvice(data);
+      setShowAIDialog(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "AI Budget Advisor Error",
+        description: error.message || "Failed to get budget recommendations. Please try again.",
+      });
+    },
   });
 
   const updateCategoryField = (
@@ -263,7 +321,23 @@ export default function Step2Plan({
 
           {/* Budget Categories */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Budget Breakdown</h2>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-2xl font-bold">Budget Breakdown</h2>
+              <Button
+                onClick={() => budgetAdvisorMutation.mutate()}
+                disabled={budgetAdvisorMutation.isPending}
+                variant="outline"
+                className="gap-2"
+                data-testid="button-ai-budget-guidance"
+              >
+                {budgetAdvisorMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {budgetAdvisorMutation.isPending ? "Getting Guidance..." : "Get Budget Guidance"}
+              </Button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BudgetCategoryCard
@@ -345,6 +419,93 @@ export default function Step2Plan({
           </div>
         </div>
       </div>
+
+      {/* AI Budget Guidance Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Budget Guidance
+            </DialogTitle>
+            <DialogDescription>
+              Here are personalized budget recommendations for your trip to{" "}
+              {destinations.join(", ")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {aiAdvice && (
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-6">
+                {/* Total Estimated Range */}
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardDescription className="text-xs">
+                      Total Estimated Budget
+                    </CardDescription>
+                    <CardTitle className="text-2xl text-primary" data-testid="text-ai-total-budget">
+                      {aiAdvice.totalEstimatedRange}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+
+                {/* Category Recommendations */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Category Breakdown</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {aiAdvice.categories.map((category) => (
+                      <Card key={category.category} data-testid={`card-ai-category-${category.category}`}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">
+                              {category.categoryLabel}
+                            </CardTitle>
+                            <span className="text-primary font-semibold" data-testid={`text-ai-range-${category.category}`}>
+                              {category.estimatedRange}
+                            </span>
+                          </div>
+                          <CardDescription>{category.explanation}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              Money-Saving Tips:
+                            </h4>
+                            <ul className="list-disc list-inside space-y-1 text-sm">
+                              {category.tips.map((tip, index) => (
+                                <li key={index} className="text-muted-foreground">
+                                  {tip}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* General Tips */}
+                {aiAdvice.generalTips.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg">General Tips</h3>
+                      <ul className="list-disc list-inside space-y-2">
+                        {aiAdvice.generalTips.map((tip, index) => (
+                          <li key={index} className="text-sm text-muted-foreground">
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
