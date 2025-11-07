@@ -247,19 +247,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ai/budget-advice", async (req, res) => {
+  app.post("/api/ai/budget-recommendations", async (req, res) => {
     try {
       const adviceParams = budgetAdviceParamsSchema.parse(req.body);
       const advice = await getBudgetAdvice(adviceParams);
       res.json(advice);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid budget advice parameters", details: error.errors });
+        res.status(400).json({ error: "Invalid budget recommendation parameters", details: error.errors });
       } else if (error instanceof Error && error.message.includes("API key")) {
-        res.status(503).json({ error: "AI budget advice service is not configured" });
+        res.status(503).json({ error: "AI budget recommendation service is not configured" });
       } else {
-        console.error("AI budget advice error:", error);
-        res.status(500).json({ error: "Failed to get budget advice" });
+        console.error("AI budget recommendation error:", error);
+        res.status(500).json({ error: "Failed to get budget recommendations" });
       }
     }
   });

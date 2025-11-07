@@ -118,7 +118,7 @@ export default function Step2Plan({
   // AI Budget Advisor mutation
   const budgetAdvisorMutation = useMutation({
     mutationFn: async (): Promise<BudgetAdviceResponse> => {
-      const response = await apiRequest("POST", "/api/ai/budget-advice", {
+      const response = await apiRequest("POST", "/api/ai/budget-recommendations", {
         destinations,
         travelers: numberOfTravelers,
         tripDuration,
