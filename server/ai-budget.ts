@@ -7,6 +7,7 @@ export const budgetAdviceParamsSchema = z.object({
   travelers: z.number().int().min(1).max(50),
   tripDuration: z.number().int().min(1).max(365),
   travelSeason: z.string().max(50),
+  category: z.enum(["flights", "housing", "food", "transportation", "fun", "preparation"]).optional(),
 });
 
 export type BudgetAdviceParams = z.infer<typeof budgetAdviceParamsSchema>;
@@ -54,8 +55,53 @@ export async function getBudgetAdvice(params: BudgetAdviceParams): Promise<Budge
   const sanitizedDestinations = validated.destinations.map(sanitizeInput);
   const sanitizedSeason = sanitizeInput(validated.travelSeason);
 
-  // Build the prompt
-  const prompt = `You are a travel budget advisor. Provide realistic budget estimates for a trip with these details:
+  // Category metadata
+  const categoryMetadata: Record<string, { label: string; description: string }> = {
+    flights: { label: "Flights", description: "Round-trip airfare for all travelers" },
+    housing: { label: "Housing", description: "Accommodation for the entire stay" },
+    food: { label: "Food", description: "Meals and dining for all travelers" },
+    transportation: { label: "Transportation", description: "Local transport (taxis, trains, car rentals, etc.)" },
+    fun: { label: "Fun", description: "Activities, tours, entertainment, attractions" },
+    preparation: { label: "Preparation", description: "Visas, travel insurance, vaccinations, gear" },
+  };
+
+  // Build the prompt based on whether a specific category is requested
+  let prompt: string;
+  
+  if (validated.category) {
+    // Single category request
+    const meta = categoryMetadata[validated.category];
+    prompt = `You are a travel budget advisor. Provide a realistic budget estimate for the ${meta.label} category of a trip with these details:
+
+Destinations: ${sanitizedDestinations.join(", ")}
+Number of travelers: ${validated.travelers}
+Trip duration: ${validated.tripDuration} days
+Travel season: ${sanitizedSeason}
+
+Category: ${meta.label} - ${meta.description}
+
+Provide:
+- A realistic price range in USD (e.g., "$800-$1,200")
+- A detailed explanation of what's included and what factors affect the cost
+- 3-5 practical tips for saving money or getting the best value specific to this category
+
+Return your response as a JSON object with this exact structure:
+{
+  "totalEstimatedRange": "${meta.label} estimated range",
+  "categories": [
+    {
+      "category": "${validated.category}",
+      "categoryLabel": "${meta.label}",
+      "estimatedRange": "price range string",
+      "explanation": "detailed explanation",
+      "tips": ["tip1", "tip2", "tip3", "tip4", "tip5"]
+    }
+  ],
+  "generalTips": []
+}`;
+  } else {
+    // All categories request
+    prompt = `You are a travel budget advisor. Provide realistic budget estimates for a trip with these details:
 
 Destinations: ${sanitizedDestinations.join(", ")}
 Number of travelers: ${validated.travelers}
@@ -93,6 +139,7 @@ Return your response as a JSON object with this exact structure:
   ],
   "generalTips": ["tip1", "tip2", "tip3", "tip4"]
 }`;
+  }
 
   try {
     const completion = await openai.chat.completions.create({
