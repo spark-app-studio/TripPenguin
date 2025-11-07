@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
+import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
@@ -228,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Booking routes
+  // AI routes
   app.post("/api/ai/booking-recommendations", async (req, res) => {
     try {
       const searchParams = bookingSearchParamsSchema.parse(req.body);
@@ -242,6 +243,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI booking error:", error);
         res.status(500).json({ error: "Failed to get booking recommendations" });
+      }
+    }
+  });
+
+  app.post("/api/ai/budget-advice", async (req, res) => {
+    try {
+      const adviceParams = budgetAdviceParamsSchema.parse(req.body);
+      const advice = await getBudgetAdvice(adviceParams);
+      res.json(advice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid budget advice parameters", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI budget advice service is not configured" });
+      } else {
+        console.error("AI budget advice error:", error);
+        res.status(500).json({ error: "Failed to get budget advice" });
       }
     }
   });
