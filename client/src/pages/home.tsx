@@ -23,7 +23,10 @@ export default function Home() {
       await apiRequest("POST", "/api/auth/logout", {});
     },
     onSuccess: () => {
-      queryClient.clear();
+      // Invalidate auth query to trigger re-fetch and update auth state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Clear all other cached data
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "/api/auth/user" });
       toast({
         title: "Logged out",
         description: "You've been successfully logged out.",
