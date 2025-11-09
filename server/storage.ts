@@ -3,6 +3,7 @@ import {
   destinations,
   budgetCategories,
   bookings,
+  users,
   type Trip,
   type InsertTrip,
   type Destination,
@@ -12,13 +13,22 @@ import {
   type Booking,
   type InsertBooking,
   type TripWithDetails,
+  type User,
+  type InsertUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  
   // Trip operations
   getAllTrips(): Promise<Trip[]>;
+  getTripsByUser(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   getTrip(id: string): Promise<Trip | undefined>;
   getTripWithDetails(id: string): Promise<TripWithDetails | undefined>;
@@ -45,9 +55,41 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
   // Trip operations
   async getAllTrips(): Promise<Trip[]> {
     return await db.select().from(trips);
+  }
+
+  async getTripsByUser(userId: string): Promise<Trip[]> {
+    return await db.select().from(trips).where(eq(trips.userId, userId));
   }
 
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {

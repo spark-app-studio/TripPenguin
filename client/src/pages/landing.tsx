@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, Calculator, CheckSquare, TrendingUp, Shield, Clock } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import heroImage from "@assets/generated_images/Family_travel_hero_image_ae06478c.png";
 
 export default function Landing() {
@@ -45,6 +45,38 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header/Nav */}
+      <header className="absolute top-0 left-0 right-0 z-20 bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/">
+            <div className="flex items-center gap-2 cursor-pointer">
+              <Plane className="h-6 w-6 text-white" />
+              <span className="text-xl font-bold text-white">Guide2Go</span>
+            </div>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/login">
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20"
+                data-testid="button-login"
+              >
+                Log In
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button
+                variant="default"
+                className="bg-primary border-2 border-primary-border"
+                data-testid="button-register"
+              >
+                Sign Up
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

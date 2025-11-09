@@ -6,26 +6,144 @@ import {
   insertDestinationSchema,
   insertBudgetCategorySchema,
   insertBookingSchema,
+  registerUserSchema,
+  loginUserSchema,
+  type PublicUser,
 } from "@shared/schema";
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
+import { setupAuth, hashPassword, isAuthenticated, csrfProtection } from "./auth";
+import passport from "passport";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Trip routes
-  app.get("/api/trips", async (req, res) => {
+  // Setup authentication
+  await setupAuth(app);
+
+  // Apply CSRF protection to all routes
+  app.use(csrfProtection);
+
+  // Auth routes
+  app.post("/api/auth/register", async (req, res) => {
     try {
-      const allTrips = await storage.getAllTrips();
-      res.json(allTrips);
+      const userData = registerUserSchema.parse(req.body);
+      
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        res.status(400).json({ error: "Email already registered" });
+        return;
+      }
+
+      const hashedPassword = await hashPassword(userData.password);
+      const user = await storage.createUser({
+        email: userData.email,
+        password: hashedPassword,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        acceptedTermsAt: new Date(),
+      });
+
+      const publicUser: PublicUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        acceptedTermsAt: user.acceptedTermsAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          res.status(500).json({ error: "Failed to create session" });
+          return;
+        }
+        
+        req.login(publicUser, (err) => {
+          if (err) {
+            res.status(500).json({ error: "Failed to login after registration" });
+            return;
+          }
+          res.status(201).json(publicUser);
+        });
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid registration data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to register user" });
+      }
+    }
+  });
+
+  app.post("/api/auth/login", (req, res, next) => {
+    try {
+      loginUserSchema.parse(req.body);
+      passport.authenticate("local", (err: any, user: PublicUser | false, info: any) => {
+        if (err) {
+          res.status(500).json({ error: "Authentication failed" });
+          return;
+        }
+        if (!user) {
+          res.status(401).json({ error: info?.message || "Invalid credentials" });
+          return;
+        }
+        
+        req.session.regenerate((regenerateErr) => {
+          if (regenerateErr) {
+            res.status(500).json({ error: "Failed to create session" });
+            return;
+          }
+          
+          req.login(user, (loginErr) => {
+            if (loginErr) {
+              res.status(500).json({ error: "Login failed" });
+              return;
+            }
+            res.json(user);
+          });
+        });
+      })(req, res, next);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid login data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Login failed" });
+      }
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        res.status(500).json({ error: "Logout failed" });
+        return;
+      }
+      res.status(200).json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+    res.json(req.user);
+  });
+
+  // Trip routes
+  app.get("/api/trips", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as PublicUser;
+      const userTrips = await storage.getTripsByUser(user.id);
+      res.json(userTrips);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch trips" });
     }
   });
 
-  app.post("/api/trips", async (req, res) => {
+  app.post("/api/trips", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
       const tripData = insertTripSchema.parse(req.body);
-      const trip = await storage.createTrip(tripData);
+      const trip = await storage.createTrip({ ...tripData, userId: user.id });
       res.json(trip);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -36,11 +154,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/:id", async (req, res) => {
+  app.get("/api/trips/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
       const trip = await storage.getTripWithDetails(req.params.id);
       if (!trip) {
         res.status(404).json({ error: "Trip not found" });
+        return;
+      }
+      if (trip.userId !== user.id) {
+        res.status(403).json({ error: "Forbidden" });
         return;
       }
       res.json(trip);
@@ -49,14 +172,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/trips/:id", async (req, res) => {
+  app.patch("/api/trips/:id", isAuthenticated, async (req, res) => {
     try {
-      const tripData = insertTripSchema.partial().parse(req.body);
-      const trip = await storage.updateTrip(req.params.id, tripData);
-      if (!trip) {
+      const user = req.user as PublicUser;
+      const existingTrip = await storage.getTrip(req.params.id);
+      if (!existingTrip) {
         res.status(404).json({ error: "Trip not found" });
         return;
       }
+      if (existingTrip.userId !== user.id) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      
+      const tripData = insertTripSchema.partial().parse(req.body);
+      const trip = await storage.updateTrip(req.params.id, tripData);
       res.json(trip);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -67,8 +197,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/trips/:id", async (req, res) => {
+  app.delete("/api/trips/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      const trip = await storage.getTrip(req.params.id);
+      if (!trip) {
+        res.status(404).json({ error: "Trip not found" });
+        return;
+      }
+      if (trip.userId !== user.id) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      
       await storage.deleteTrip(req.params.id);
       res.status(204).send();
     } catch (error) {
