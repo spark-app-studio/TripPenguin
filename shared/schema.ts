@@ -12,6 +12,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: varchar("profile_image_url", { length: 500 }),
   acceptedTermsAt: timestamp("accepted_terms_at"),
+  emailVerified: boolean("email_verified").default(false),
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -26,6 +29,24 @@ export const sessions = pgTable(
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
+
+// Email verification tokens
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Password reset tokens
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 // Trip table - main entity
 export const trips = pgTable("trips", {
@@ -91,8 +112,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+// Password validation with complexity requirements
+export const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
 // Registration schema with password confirmation and terms acceptance
 export const registerUserSchema = insertUserSchema.extend({
+  password: passwordSchema,
   confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
   acceptedTerms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms of service",
@@ -108,8 +138,29 @@ export const loginUserSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+// Password reset request schema
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+// Password reset schema
+export const passwordResetSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: passwordSchema,
+  confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Resend verification email schema
+export const resendVerificationSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
 export const insertTripSchema = createInsertSchema(trips).omit({
   id: true,
+  userId: true, // userId is added from authenticated session
   createdAt: true,
   updatedAt: true,
 });
@@ -132,9 +183,16 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
+export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
+export type PasswordReset = z.infer<typeof passwordResetSchema>;
+export type ResendVerification = z.infer<typeof resendVerificationSchema>;
 
-// Public user type (without password)
-export type PublicUser = Omit<User, 'password'>;
+// Public user type (without password and sensitive security fields)
+export type PublicUser = Omit<User, 'password' | 'failedLoginAttempts' | 'lockedUntil'>;
+
+// Token types
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
 export type InsertTrip = z.infer<typeof insertTripSchema>;
 export type Trip = typeof trips.$inferSelect;

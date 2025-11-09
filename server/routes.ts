@@ -8,12 +8,16 @@ import {
   insertBookingSchema,
   registerUserSchema,
   loginUserSchema,
+  passwordResetRequestSchema,
+  passwordResetSchema,
+  resendVerificationSchema,
   type PublicUser,
 } from "@shared/schema";
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
-import { setupAuth, hashPassword, isAuthenticated, csrfProtection } from "./auth";
+import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
+import { emailService } from "./email";
 import passport from "passport";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -24,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(csrfProtection);
 
   // Auth routes
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authRateLimiter, async (req, res) => {
     try {
       const userData = registerUserSchema.parse(req.body);
       
@@ -41,7 +45,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: userData.firstName,
         lastName: userData.lastName,
         acceptedTermsAt: new Date(),
+        emailVerified: false,
       });
+
+      // Create email verification token and send email
+      const verificationToken = await storage.createEmailVerificationToken(user.id);
+      await emailService.sendVerificationEmail(user.email, verificationToken.token);
 
       const publicUser: PublicUser = {
         id: user.id,
@@ -50,6 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
         acceptedTermsAt: user.acceptedTermsAt,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
@@ -72,12 +82,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid registration data", details: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to register user" });
+        console.error("Registration error:", error);
+        res.status(500).json({ error: "Failed to register user", details: error instanceof Error ? error.message : String(error) });
       }
     }
   });
 
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", authRateLimiter, (req, res, next) => {
     try {
       loginUserSchema.parse(req.body);
       passport.authenticate("local", (err: any, user: PublicUser | false, info: any) => {
@@ -126,6 +137,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/user", isAuthenticated, async (req, res) => {
     res.json(req.user);
+  });
+
+  // Email verification routes
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        res.status(400).json({ error: "Token is required" });
+        return;
+      }
+
+      const verificationToken = await storage.getEmailVerificationToken(token);
+      if (!verificationToken) {
+        res.status(400).json({ error: "Invalid or expired verification token" });
+        return;
+      }
+
+      await storage.updateUser(verificationToken.userId, { emailVerified: true });
+      await storage.deleteEmailVerificationToken(token);
+
+      res.json({ message: "Email verified successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
+  app.post("/api/auth/resend-verification", authRateLimiter, async (req, res) => {
+    try {
+      const { email } = resendVerificationSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists
+        res.json({ message: "If the email exists, a verification link has been sent" });
+        return;
+      }
+
+      if (user.emailVerified) {
+        res.status(400).json({ error: "Email is already verified" });
+        return;
+      }
+
+      const verificationToken = await storage.createEmailVerificationToken(user.id);
+      await emailService.sendVerificationEmail(user.email, verificationToken.token);
+
+      res.json({ message: "Verification email sent successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid email", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to send verification email" });
+      }
+    }
+  });
+
+  // Password reset routes
+  app.post("/api/auth/forgot-password", passwordResetRateLimiter, async (req, res) => {
+    try {
+      const { email } = passwordResetRequestSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists
+        res.json({ message: "If the email exists, a password reset link has been sent" });
+        return;
+      }
+
+      const resetToken = await storage.createPasswordResetToken(user.id);
+      await emailService.sendPasswordResetEmail(user.email, resetToken.token);
+
+      res.json({ message: "Password reset email sent successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid email", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to send password reset email" });
+      }
+    }
+  });
+
+  app.post("/api/auth/reset-password", passwordResetRateLimiter, async (req, res) => {
+    try {
+      const resetData = passwordResetSchema.parse(req.body);
+      
+      const resetToken = await storage.getPasswordResetToken(resetData.token);
+      if (!resetToken) {
+        res.status(400).json({ error: "Invalid or expired reset token" });
+        return;
+      }
+
+      const hashedPassword = await hashPassword(resetData.password);
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      await storage.deletePasswordResetToken(resetData.token);
+      await storage.resetFailedLoginAttempts(resetToken.userId);
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid password reset data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to reset password" });
+      }
+    }
   });
 
   // Trip routes
@@ -218,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Destination routes
-  app.post("/api/destinations", async (req, res) => {
+  app.post("/api/destinations", isAuthenticated, async (req, res) => {
     try {
       const destinationData = insertDestinationSchema.parse(req.body);
       const destination = await storage.createDestination(destinationData);
@@ -232,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/destinations/trip/:tripId", async (req, res) => {
+  app.get("/api/destinations/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
       const destinations = await storage.getDestinationsByTrip(req.params.tripId);
       res.json(destinations);
@@ -241,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/destinations/:id", async (req, res) => {
+  app.patch("/api/destinations/:id", isAuthenticated, async (req, res) => {
     try {
       const destinationData = insertDestinationSchema.partial().parse(req.body);
       const destination = await storage.updateDestination(req.params.id, destinationData);
@@ -259,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/destinations/:id", async (req, res) => {
+  app.delete("/api/destinations/:id", isAuthenticated, async (req, res) => {
     try {
       await storage.deleteDestination(req.params.id);
       res.status(204).send();
@@ -269,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Budget category routes
-  app.post("/api/budget-categories", async (req, res) => {
+  app.post("/api/budget-categories", isAuthenticated, async (req, res) => {
     try {
       const categoryData = insertBudgetCategorySchema.parse(req.body);
       const category = await storage.createBudgetCategory(categoryData);
@@ -283,7 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/budget-categories/trip/:tripId", async (req, res) => {
+  app.get("/api/budget-categories/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
       const categories = await storage.getBudgetCategoriesByTrip(req.params.tripId);
       res.json(categories);
@@ -292,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/budget-categories/:id", async (req, res) => {
+  app.patch("/api/budget-categories/:id", isAuthenticated, async (req, res) => {
     try {
       const categoryData = insertBudgetCategorySchema.partial().parse(req.body);
       const category = await storage.updateBudgetCategory(req.params.id, categoryData);
@@ -310,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/budget-categories/:id", async (req, res) => {
+  app.delete("/api/budget-categories/:id", isAuthenticated, async (req, res) => {
     try {
       await storage.deleteBudgetCategory(req.params.id);
       res.status(204).send();
@@ -320,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Booking routes
-  app.post("/api/bookings", async (req, res) => {
+  app.post("/api/bookings", isAuthenticated, async (req, res) => {
     try {
       const bookingData = insertBookingSchema.parse(req.body);
       const booking = await storage.createBooking(bookingData);
@@ -334,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/bookings/trip/:tripId", async (req, res) => {
+  app.get("/api/bookings/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
       const bookingsData = await storage.getBookingsByTrip(req.params.tripId);
       res.json(bookingsData);
@@ -343,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/bookings/:id", async (req, res) => {
+  app.patch("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {
       const bookingData = insertBookingSchema.partial().parse(req.body);
       const booking = await storage.updateBooking(req.params.id, bookingData);
@@ -361,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/bookings/:id", async (req, res) => {
+  app.delete("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {
       await storage.deleteBooking(req.params.id);
       res.status(204).send();
@@ -371,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI routes
-  app.post("/api/ai/booking-recommendations", async (req, res) => {
+  app.post("/api/ai/booking-recommendations", isAuthenticated, async (req, res) => {
     try {
       const searchParams = bookingSearchParamsSchema.parse(req.body);
       const recommendations = await getBookingRecommendations(searchParams);
@@ -388,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ai/budget-recommendations", async (req, res) => {
+  app.post("/api/ai/budget-recommendations", isAuthenticated, async (req, res) => {
     try {
       const adviceParams = budgetAdviceParamsSchema.parse(req.body);
       const advice = await getBudgetAdvice(adviceParams);

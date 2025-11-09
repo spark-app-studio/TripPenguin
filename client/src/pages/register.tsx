@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Plane } from "lucide-react";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
 type RegisterFormData = z.infer<typeof registerUserSchema>;
 
@@ -156,6 +157,7 @@ export default function Register() {
                         data-testid="input-password"
                       />
                     </FormControl>
+                    <PasswordStrengthMeter password={field.value} />
                     <FormMessage />
                   </FormItem>
                 )}

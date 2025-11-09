@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { Trip } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,10 +28,7 @@ export default function TripsList() {
 
   const deleteTripMutation = useMutation({
     mutationFn: async (tripId: string) => {
-      const response = await fetch(`/api/trips/${tripId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete trip");
+      await apiRequest("DELETE", `/api/trips/${tripId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });

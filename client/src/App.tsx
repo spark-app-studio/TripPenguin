@@ -8,6 +8,9 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
+import VerifyEmail from "@/pages/verify-email";
 import TermsOfService from "@/pages/terms-of-service";
 import TripsList from "@/pages/trips-list";
 import TripPlanner from "@/pages/trip-planner";
@@ -33,6 +36,9 @@ function Router() {
       {/* Public routes */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/terms-of-service" component={TermsOfService} />
 
       {/* Conditional routes based on authentication */}

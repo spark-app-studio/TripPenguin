@@ -3,11 +3,14 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
 import type { PublicUser } from "@shared/schema";
 
 const SALT_ROUNDS = 10;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 15;
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -15,6 +18,37 @@ export async function hashPassword(password: string): Promise<string> {
 
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
+}
+
+// Rate limiters
+export const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: "Too many authentication attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 password reset requests per hour
+  message: "Too many password reset requests, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Check if account is locked
+async function isAccountLocked(user: any): Promise<boolean> {
+  if (!user.lockedUntil) return false;
+  
+  const now = new Date();
+  if (user.lockedUntil > now) {
+    return true;
+  }
+  
+  // Lock has expired, reset failed attempts
+  await storage.resetFailedLoginAttempts(user.id);
+  return false;
 }
 
 export function getSession() {
@@ -64,10 +98,36 @@ export async function setupAuth(app: Express) {
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          // Check if account is locked
+          if (await isAccountLocked(user)) {
+            return done(null, false, { 
+              message: `Account is locked due to too many failed login attempts. Please try again in ${LOCKOUT_DURATION_MINUTES} minutes.` 
+            });
+          }
+
           const isValid = await comparePassword(password, user.password);
           if (!isValid) {
-            return done(null, false, { message: "Invalid email or password" });
+            // Increment failed login attempts
+            await storage.incrementFailedLoginAttempts(user.id);
+            
+            const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+            
+            // Lock account if max attempts reached
+            if (failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+              await storage.lockAccount(user.id, LOCKOUT_DURATION_MINUTES);
+              return done(null, false, { 
+                message: `Too many failed login attempts. Account locked for ${LOCKOUT_DURATION_MINUTES} minutes.` 
+              });
+            }
+            
+            const remainingAttempts = MAX_LOGIN_ATTEMPTS - failedAttempts;
+            return done(null, false, { 
+              message: `Invalid email or password. ${remainingAttempts} attempts remaining.` 
+            });
           }
+
+          // Successful login - reset failed attempts
+          await storage.resetFailedLoginAttempts(user.id);
 
           const publicUser: PublicUser = {
             id: user.id,
@@ -76,6 +136,7 @@ export async function setupAuth(app: Express) {
             lastName: user.lastName,
             profileImageUrl: user.profileImageUrl,
             acceptedTermsAt: user.acceptedTermsAt,
+            emailVerified: user.emailVerified,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
           };
@@ -106,6 +167,7 @@ export async function setupAuth(app: Express) {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
         acceptedTermsAt: user.acceptedTermsAt,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { TripWithDetails, InsertTrip, Trip } from "@shared/schema";
 import Step1Dream from "./step1-dream";
 import Step2Plan from "./step2-plan";
@@ -131,12 +131,7 @@ export default function TripPlanner() {
   // Create trip mutation
   const createTripMutation = useMutation({
     mutationFn: async (data: InsertTrip) => {
-      const response = await fetch("/api/trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create trip");
+      const response = await apiRequest("POST", "/api/trips", data);
       return response.json();
     },
     onSuccess: (data: Trip) => {
@@ -148,12 +143,7 @@ export default function TripPlanner() {
   // Update trip mutation
   const updateTripMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertTrip> }) => {
-      const response = await fetch(`/api/trips/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update trip");
+      const response = await apiRequest("PATCH", `/api/trips/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -187,17 +177,13 @@ export default function TripPlanner() {
         // Create destinations
         for (let i = 0; i < data.selectedDestinations.length; i++) {
           const dest = data.selectedDestinations[i];
-          await fetch("/api/destinations", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tripId: newTrip.id,
-              cityName: dest.cityName,
-              countryName: dest.countryName,
-              numberOfNights: dest.numberOfNights,
-              imageUrl: dest.imageUrl,
-              order: i,
-            }),
+          await apiRequest("POST", "/api/destinations", {
+            tripId: newTrip.id,
+            cityName: dest.cityName,
+            countryName: dest.countryName,
+            numberOfNights: dest.numberOfNights,
+            imageUrl: dest.imageUrl,
+            order: i,
           });
         }
       } else {
@@ -207,23 +193,19 @@ export default function TripPlanner() {
         // Delete existing destinations and recreate
         const existingDests = await fetch(`/api/destinations/trip/${currentTripId}`).then(r => r.json());
         for (const dest of existingDests) {
-          await fetch(`/api/destinations/${dest.id}`, { method: "DELETE" });
+          await apiRequest("DELETE", `/api/destinations/${dest.id}`);
         }
         
         // Create new destinations
         for (let i = 0; i < data.selectedDestinations.length; i++) {
           const dest = data.selectedDestinations[i];
-          await fetch("/api/destinations", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tripId: currentTripId,
-              cityName: dest.cityName,
-              countryName: dest.countryName,
-              numberOfNights: dest.numberOfNights,
-              imageUrl: dest.imageUrl,
-              order: i,
-            }),
+          await apiRequest("POST", "/api/destinations", {
+            tripId: currentTripId,
+            cityName: dest.cityName,
+            countryName: dest.countryName,
+            numberOfNights: dest.numberOfNights,
+            imageUrl: dest.imageUrl,
+            order: i,
           });
         }
       }
@@ -251,7 +233,7 @@ export default function TripPlanner() {
       // Delete existing budget categories and recreate
       const existingCategories = await fetch(`/api/budget-categories/trip/${currentTripId}`).then(r => r.json());
       for (const cat of existingCategories) {
-        await fetch(`/api/budget-categories/${cat.id}`, { method: "DELETE" });
+        await apiRequest("DELETE", `/api/budget-categories/${cat.id}`);
       }
 
       // Create budget categories
@@ -266,16 +248,12 @@ export default function TripPlanner() {
 
       for (const cat of categories) {
         if (parseFloat(cat.cost || "0") > 0) {
-          await fetch("/api/budget-categories", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tripId: currentTripId,
-              category: cat.category,
-              estimatedCost: cat.cost,
-              notes: cat.notes || "",
-              usePoints: cat.usePoints || false,
-            }),
+          await apiRequest("POST", "/api/budget-categories", {
+            tripId: currentTripId,
+            category: cat.category,
+            estimatedCost: cat.cost,
+            notes: cat.notes || "",
+            usePoints: cat.usePoints || false,
           });
         }
       }
@@ -297,24 +275,20 @@ export default function TripPlanner() {
       // Delete existing bookings and recreate
       const existingBookings = await fetch(`/api/bookings/trip/${currentTripId}`).then(r => r.json());
       for (const booking of existingBookings) {
-        await fetch(`/api/bookings/${booking.id}`, { method: "DELETE" });
+        await apiRequest("DELETE", `/api/bookings/${booking.id}`);
       }
 
       // Create bookings
       for (let i = 0; i < data.length; i++) {
         const booking = data[i];
-        await fetch("/api/bookings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tripId: currentTripId,
-            itemName: booking.itemName,
-            category: booking.category,
-            status: booking.status,
-            estimatedCost: booking.estimatedCost.toString(),
-            actualCost: booking.actualCost?.toString() || null,
-            order: i,
-          }),
+        await apiRequest("POST", "/api/bookings", {
+          tripId: currentTripId,
+          itemName: booking.itemName,
+          category: booking.category,
+          status: booking.status,
+          estimatedCost: booking.estimatedCost.toString(),
+          actualCost: booking.actualCost?.toString() || null,
+          order: i,
         });
       }
 

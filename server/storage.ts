@@ -4,6 +4,8 @@ import {
   budgetCategories,
   bookings,
   users,
+  emailVerificationTokens,
+  passwordResetTokens,
   type Trip,
   type InsertTrip,
   type Destination,
@@ -15,9 +17,12 @@ import {
   type TripWithDetails,
   type User,
   type InsertUser,
+  type EmailVerificationToken,
+  type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
+import crypto from "crypto";
 
 export interface IStorage {
   // User operations
@@ -25,6 +30,20 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  incrementFailedLoginAttempts(userId: string): Promise<void>;
+  resetFailedLoginAttempts(userId: string): Promise<void>;
+  lockAccount(userId: string, duration: number): Promise<void>;
+  
+  // Email verification operations
+  createEmailVerificationToken(userId: string): Promise<EmailVerificationToken>;
+  getEmailVerificationToken(token: string): Promise<EmailVerificationToken | undefined>;
+  deleteEmailVerificationToken(token: string): Promise<void>;
+  
+  // Password reset operations
+  createPasswordResetToken(userId: string): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  deletePasswordResetToken(token: string): Promise<void>;
+  deletePasswordResetTokensByUser(userId: string): Promise<void>;
   
   // Trip operations
   getAllTrips(): Promise<Trip[]>;
@@ -210,6 +229,121 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBooking(id: string): Promise<void> {
     await db.delete(bookings).where(eq(bookings.id, id));
+  }
+
+  // Account lockout operations
+  async incrementFailedLoginAttempts(userId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) return;
+    
+    await db
+      .update(users)
+      .set({
+        failedLoginAttempts: (user.failedLoginAttempts || 0) + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async resetFailedLoginAttempts(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async lockAccount(userId: string, durationMinutes: number): Promise<void> {
+    const lockedUntil = new Date();
+    lockedUntil.setMinutes(lockedUntil.getMinutes() + durationMinutes);
+    
+    await db
+      .update(users)
+      .set({
+        lockedUntil,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Email verification operations
+  async createEmailVerificationToken(userId: string): Promise<EmailVerificationToken> {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiration
+    
+    const [verificationToken] = await db
+      .insert(emailVerificationTokens)
+      .values({
+        userId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    
+    return verificationToken;
+  }
+
+  async getEmailVerificationToken(token: string): Promise<EmailVerificationToken | undefined> {
+    const [verificationToken] = await db
+      .select()
+      .from(emailVerificationTokens)
+      .where(
+        and(
+          eq(emailVerificationTokens.token, token),
+          gt(emailVerificationTokens.expiresAt, new Date())
+        )
+      );
+    return verificationToken || undefined;
+  }
+
+  async deleteEmailVerificationToken(token: string): Promise<void> {
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.token, token));
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(userId: string): Promise<PasswordResetToken> {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
+    
+    // Delete any existing tokens for this user
+    await this.deletePasswordResetTokensByUser(userId);
+    
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        userId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          gt(passwordResetTokens.expiresAt, new Date())
+        )
+      );
+    return resetToken || undefined;
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+  }
+
+  async deletePasswordResetTokensByUser(userId: string): Promise<void> {
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
   }
 }
 
