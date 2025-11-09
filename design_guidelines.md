@@ -1,4 +1,4 @@
-# Guide2Go Trip Planning App - Design Guidelines
+# TripPirate Trip Planning App - Design Guidelines
 
 ## Design Approach
 

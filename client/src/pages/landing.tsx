@@ -51,7 +51,7 @@ export default function Landing() {
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-white" />
-              <span className="text-xl font-bold text-white">Guide2Go</span>
+              <span className="text-xl font-bold text-white">TripPirate</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4 font-serif">
-              Why Choose Guide2Go?
+              Why Choose TripPirate?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Make your travel dreams a reality without the financial stress
@@ -206,7 +206,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-8 bg-background border-t">
         <div className="max-w-7xl mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2024 Guide2Go. Plan your dream trip without debt.</p>
+          <p>&copy; 2024 TripPirate. Plan your dream trip without debt.</p>
         </div>
       </footer>
     </div>

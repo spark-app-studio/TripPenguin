@@ -49,7 +49,7 @@ export default function Register() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Welcome to Guide2Go!",
+        title: "Welcome to TripPirate!",
         description: "Your account has been created successfully.",
       });
       setLocation("/");
@@ -74,7 +74,7 @@ export default function Register() {
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
               <Plane className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">Guide2Go</span>
+              <span className="text-2xl font-bold">TripPirate</span>
             </div>
           </div>
           <CardTitle className="text-2xl text-center">Create an account</CardTitle>

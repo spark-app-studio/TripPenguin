@@ -59,7 +59,7 @@ export default function Home() {
           <Link href="/">
             <a className="flex items-center gap-2">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">Guide2Go</span>
+              <span className="text-xl font-bold">TripPirate</span>
             </a>
           </Link>
           <div className="flex items-center gap-4">

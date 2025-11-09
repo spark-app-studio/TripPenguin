@@ -1,8 +1,8 @@
-# Guide2Go Trip Planning Application
+# TripPirate Trip Planning Application
 
 ## Overview
 
-Guide2Go is a trip planning application designed to help users plan overseas trips without going into debt. The application guides users through a three-step process: Dream (defining trip basics), Plan (budgeting and saving), and Do (booking). The app emphasizes budget planning, savings tracking, and organized booking management to transform trip planning from a stressful chore into an exciting journey.
+TripPirate is a trip planning application designed to help users plan overseas trips without going into debt. The application guides users through a three-step process: Dream (defining trip basics), Plan (budgeting and saving), and Do (booking). The app emphasizes budget planning, savings tracking, and organized booking management to transform trip planning from a stressful chore into an exciting journey.
 
 ### Recent Updates (Nov 7-9, 2025)
 
