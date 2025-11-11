@@ -20,6 +20,33 @@ import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimit
 import { emailService } from "./email";
 import passport from "passport";
 
+// Helper function to verify trip ownership
+async function verifyTripOwnership(tripId: string, userId: string): Promise<boolean> {
+  const trip = await storage.getTrip(tripId);
+  return trip !== undefined && trip.userId === userId;
+}
+
+// Helper function to verify destination ownership
+async function verifyDestinationOwnership(destinationId: string, userId: string): Promise<boolean> {
+  const destination = await storage.getDestination(destinationId);
+  if (!destination) return false;
+  return verifyTripOwnership(destination.tripId, userId);
+}
+
+// Helper function to verify budget category ownership
+async function verifyBudgetCategoryOwnership(categoryId: string, userId: string): Promise<boolean> {
+  const category = await storage.getBudgetCategory(categoryId);
+  if (!category) return false;
+  return verifyTripOwnership(category.tripId, userId);
+}
+
+// Helper function to verify booking ownership
+async function verifyBookingOwnership(bookingId: string, userId: string): Promise<boolean> {
+  const booking = await storage.getBooking(bookingId);
+  if (!booking) return false;
+  return verifyTripOwnership(booking.tripId, userId);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
@@ -126,12 +153,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
+    // Properly destroy session and logout
+    req.session.destroy((destroyErr) => {
+      if (destroyErr) {
         res.status(500).json({ error: "Logout failed" });
         return;
       }
-      res.status(200).json({ message: "Logged out successfully" });
+      req.logout((logoutErr) => {
+        if (logoutErr) {
+          res.status(500).json({ error: "Logout failed" });
+          return;
+        }
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
+        res.status(200).json({ message: "Logged out successfully" });
+      });
     });
   });
 
@@ -140,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email verification routes
-  app.post("/api/auth/verify-email", async (req, res) => {
+  app.post("/api/auth/verify-email", authRateLimiter, async (req, res) => {
     try {
       const { token } = req.body;
       
@@ -349,6 +385,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/destinations/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify trip ownership before returning destinations
+      const hasAccess = await verifyTripOwnership(req.params.tripId, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const destinations = await storage.getDestinationsByTrip(req.params.tripId);
       res.json(destinations);
     } catch (error) {
@@ -358,6 +401,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/destinations/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify destination ownership
+      const hasAccess = await verifyDestinationOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const destinationData = insertDestinationSchema.partial().parse(req.body);
       const destination = await storage.updateDestination(req.params.id, destinationData);
       if (!destination) {
@@ -376,6 +426,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/destinations/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify destination ownership
+      const hasAccess = await verifyDestinationOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       await storage.deleteDestination(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -400,6 +457,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/budget-categories/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify trip ownership
+      const hasAccess = await verifyTripOwnership(req.params.tripId, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const categories = await storage.getBudgetCategoriesByTrip(req.params.tripId);
       res.json(categories);
     } catch (error) {
@@ -409,6 +473,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/budget-categories/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify budget category ownership
+      const hasAccess = await verifyBudgetCategoryOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const categoryData = insertBudgetCategorySchema.partial().parse(req.body);
       const category = await storage.updateBudgetCategory(req.params.id, categoryData);
       if (!category) {
@@ -427,6 +498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/budget-categories/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify budget category ownership
+      const hasAccess = await verifyBudgetCategoryOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       await storage.deleteBudgetCategory(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -451,6 +529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/bookings/trip/:tripId", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify trip ownership
+      const hasAccess = await verifyTripOwnership(req.params.tripId, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const bookingsData = await storage.getBookingsByTrip(req.params.tripId);
       res.json(bookingsData);
     } catch (error) {
@@ -460,6 +545,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify booking ownership
+      const hasAccess = await verifyBookingOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const bookingData = insertBookingSchema.partial().parse(req.body);
       const booking = await storage.updateBooking(req.params.id, bookingData);
       if (!booking) {
@@ -478,6 +570,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/bookings/:id", isAuthenticated, async (req, res) => {
     try {
+      const user = req.user as PublicUser;
+      // Verify booking ownership
+      const hasAccess = await verifyBookingOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       await storage.deleteBooking(req.params.id);
       res.status(204).send();
     } catch (error) {

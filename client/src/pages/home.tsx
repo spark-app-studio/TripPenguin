@@ -23,14 +23,15 @@ export default function Home() {
       await apiRequest("POST", "/api/auth/logout", {});
     },
     onSuccess: () => {
-      // Invalidate auth query to trigger re-fetch and update auth state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Clear user data immediately to ensure isAuthenticated becomes false
+      queryClient.setQueryData(["/api/auth/user"], null);
       // Clear all other cached data
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "/api/auth/user" });
+      queryClient.clear();
       toast({
         title: "Logged out",
         description: "You've been successfully logged out.",
       });
+      // Redirect to landing page
       setLocation("/");
     },
   });

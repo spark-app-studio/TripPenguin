@@ -56,18 +56,21 @@ export interface IStorage {
   
   // Destination operations
   createDestination(destination: InsertDestination): Promise<Destination>;
+  getDestination(id: string): Promise<Destination | undefined>;
   getDestinationsByTrip(tripId: string): Promise<Destination[]>;
   updateDestination(id: string, destination: Partial<InsertDestination>): Promise<Destination | undefined>;
   deleteDestination(id: string): Promise<void>;
   
   // Budget category operations
   createBudgetCategory(category: InsertBudgetCategory): Promise<BudgetCategory>;
+  getBudgetCategory(id: string): Promise<BudgetCategory | undefined>;
   getBudgetCategoriesByTrip(tripId: string): Promise<BudgetCategory[]>;
   updateBudgetCategory(id: string, category: Partial<InsertBudgetCategory>): Promise<BudgetCategory | undefined>;
   deleteBudgetCategory(id: string): Promise<void>;
   
   // Booking operations
   createBooking(booking: InsertBooking): Promise<Booking>;
+  getBooking(id: string): Promise<Booking | undefined>;
   getBookingsByTrip(tripId: string): Promise<Booking[]>;
   updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
@@ -162,6 +165,11 @@ export class DatabaseStorage implements IStorage {
     return destination;
   }
 
+  async getDestination(id: string): Promise<Destination | undefined> {
+    const [destination] = await db.select().from(destinations).where(eq(destinations.id, id));
+    return destination || undefined;
+  }
+
   async getDestinationsByTrip(tripId: string): Promise<Destination[]> {
     return await db.select().from(destinations).where(eq(destinations.tripId, tripId));
   }
@@ -188,6 +196,11 @@ export class DatabaseStorage implements IStorage {
     return category;
   }
 
+  async getBudgetCategory(id: string): Promise<BudgetCategory | undefined> {
+    const [category] = await db.select().from(budgetCategories).where(eq(budgetCategories.id, id));
+    return category || undefined;
+  }
+
   async getBudgetCategoriesByTrip(tripId: string): Promise<BudgetCategory[]> {
     return await db.select().from(budgetCategories).where(eq(budgetCategories.tripId, tripId));
   }
@@ -212,6 +225,11 @@ export class DatabaseStorage implements IStorage {
       .values(insertBooking)
       .returning();
     return booking;
+  }
+
+  async getBooking(id: string): Promise<Booking | undefined> {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return booking || undefined;
   }
 
   async getBookingsByTrip(tripId: string): Promise<Booking[]> {
