@@ -235,39 +235,35 @@ export default function Step1Dream({ initialData, onComplete }: Step1DreamProps)
             <CardHeader>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary" />
-                <CardTitle>Where do you want to go?</CardTitle>
+                <CardTitle>Your Destination</CardTitle>
               </div>
               <CardDescription>
-                Select one or more destinations. Aim for 3+ nights per city.
+                {selectedDestinations.length > 0 
+                  ? "Adjust nights or add more destinations if you'd like"
+                  : "Select one or more destinations. Aim for 3+ nights per city."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {destinations.map((dest) => {
-                  const isSelected = selectedDestinations.some(d => d.cityName === dest.cityName);
-                  return (
-                    <DestinationCard
-                      key={dest.cityName}
-                      {...dest}
-                      numberOfNights={destinationNights[dest.cityName] || 3}
-                      selected={isSelected}
-                      onClick={() => toggleDestination(dest)}
-                      showNights={false}
-                    />
-                  );
-                })}
-              </div>
-
               {selectedDestinations.length > 0 && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-semibold">Adjust nights per destination:</h4>
+                <div className="space-y-4 pb-4 border-b">
+                  <h4 className="font-semibold">Selected Destinations:</h4>
                   {selectedDestinations.map((dest) => (
                     <div key={dest.cityName} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>{dest.cityName}</Label>
-                        <span className="text-sm font-medium">
-                          {destinationNights[dest.cityName] || 3} nights
-                        </span>
+                        <div>
+                          <Label className="text-base">{dest.cityName}, {dest.countryName}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {destinationNights[dest.cityName] || 3} nights
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleDestination(dest)}
+                          data-testid={`button-remove-${dest.cityName}`}
+                        >
+                          Remove
+                        </Button>
                       </div>
                       <Slider
                         value={[destinationNights[dest.cityName] || 3]}
@@ -280,6 +276,27 @@ export default function Step1Dream({ initialData, onComplete }: Step1DreamProps)
                   ))}
                 </div>
               )}
+
+              <div className="space-y-4">
+                <h4 className="font-semibold">
+                  {selectedDestinations.length > 0 ? "Add Another Destination" : "Where do you want to go?"}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {destinations.map((dest) => {
+                    const isSelected = selectedDestinations.some(d => d.cityName === dest.cityName);
+                    return (
+                      <DestinationCard
+                        key={dest.cityName}
+                        {...dest}
+                        numberOfNights={destinationNights[dest.cityName] || 3}
+                        selected={isSelected}
+                        onClick={() => toggleDestination(dest)}
+                        showNights={false}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
