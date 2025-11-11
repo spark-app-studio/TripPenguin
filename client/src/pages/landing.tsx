@@ -101,7 +101,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="default"
-              onClick={() => setLocation("/trips")}
+              onClick={() => setLocation("/quiz")}
               className="text-lg px-8 py-6 min-h-0 bg-primary hover:bg-primary border-2 border-primary-border"
               data-testid="button-hero-start"
             >
