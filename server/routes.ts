@@ -11,11 +11,13 @@ import {
   passwordResetRequestSchema,
   passwordResetSchema,
   resendVerificationSchema,
+  quizResponseSchema,
   type PublicUser,
 } from "@shared/schema";
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
+import { getDestinationRecommendations } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
 import passport from "passport";
@@ -615,6 +617,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI budget recommendation error:", error);
         res.status(500).json({ error: "Failed to get budget recommendations" });
+      }
+    }
+  });
+
+  app.post("/api/ai/destination-recommendations", isAuthenticated, async (req, res) => {
+    try {
+      const quizResponse = quizResponseSchema.parse(req.body);
+      const recommendations = await getDestinationRecommendations(quizResponse);
+      res.json({ recommendations });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid quiz response data", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI destination recommendation service is not configured" });
+      } else {
+        console.error("AI destination recommendation error:", error);
+        res.status(500).json({ error: "Failed to get destination recommendations" });
       }
     }
   });

@@ -212,3 +212,37 @@ export type TripWithDetails = Trip & {
   budgetCategories: BudgetCategory[];
   bookings: Booking[];
 };
+
+// Quiz schemas for destination recommendations
+// Note: Quiz responses are intentionally ephemeral (not persisted to database)
+// They are only used to generate AI destination recommendations via the API
+// If future analytics or historical tracking is needed, a database table can be added
+export const quizResponseSchema = z.object({
+  tripGoal: z.enum(["rest", "culture", "thrill", "magic"]),
+  placeType: z.enum(["ocean", "mountains", "ancientCities", "modernSkyline"]),
+  temperature: z.enum(["warm", "cool", "flexible"]),
+  dayPace: z.enum(["relaxed", "balanced", "packed"]),
+  spendingPriority: z.enum(["food", "experiences", "comfort", "souvenirs"]),
+  desiredEmotion: z.enum(["wonder", "freedom", "connection", "awe"]),
+  region: z.enum(["europe", "asia", "southAmerica", "tropicalIslands", "surprise"]),
+  dreamMoment: z.string().min(1, "Please describe your dream moment").max(500),
+});
+
+export const destinationRecommendationSchema = z.object({
+  cityName: z.string(),
+  countryName: z.string(),
+  description: z.string(),
+  whyMatch: z.string(),
+  estimatedDailyBudget: z.number(),
+  bestTimeToVisit: z.string(),
+  imageQuery: z.string(), // Used to fetch stock images
+  isCurveball: z.boolean().default(false),
+});
+
+export const destinationRecommendationsResponseSchema = z.object({
+  recommendations: z.array(destinationRecommendationSchema).length(3),
+});
+
+export type QuizResponse = z.infer<typeof quizResponseSchema>;
+export type DestinationRecommendation = z.infer<typeof destinationRecommendationSchema>;
+export type DestinationRecommendationsResponse = z.infer<typeof destinationRecommendationsResponseSchema>;

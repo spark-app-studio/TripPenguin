@@ -4,9 +4,20 @@
 
 TripPirate is a trip planning application designed to help users plan overseas trips without going into debt. The application guides users through a three-step process: Dream (defining trip basics), Plan (budgeting and saving), and Do (booking). The app emphasizes budget planning, savings tracking, and organized booking management to transform trip planning from a stressful chore into an exciting journey.
 
-### Recent Updates (Nov 7-9, 2025)
+### Recent Updates (Nov 9-11, 2025)
 
-1. **Secure User Authentication**: Complete session-based authentication system with registration, login, and logout. Features include:
+1. **Onboarding Quiz Flow** (Nov 11, 2025): AI-powered destination discovery for new trips:
+   - 7-question personality quiz ("Find Your Adventure Type") with dream moment free-text field
+   - Beautiful progress-tracked UI following design guidelines with hover states and transitions
+   - POST /api/ai/destination-recommendations endpoint using GPT-4o-mini
+   - Generates 3 personalized destinations: 2 matched to personality, 1 "curveball surprise"
+   - Each recommendation includes city/country, description, why it matches, daily budget estimate, best time to visit
+   - Quiz responses are intentionally ephemeral (not stored in database, only used for AI generation)
+   - Flow: Home "New Trip" → Quiz (/quiz) → Results (/quiz/results) → Trip Planner with pre-filled destination
+   - Pre-fill logic uses sessionStorage to pass selected destination to trip planner
+   - Authentication required for entire quiz flow
+
+2. **Secure User Authentication**: Complete session-based authentication system with registration, login, and logout. Features include:
    - Password hashing with bcrypt (10 salt rounds)
    - Session management with PostgreSQL storage (connect-pg-simple)
    - CSRF protection using custom headers (X-Requested-With)
@@ -16,13 +27,13 @@ TripPirate is a trip planning application designed to help users plan overseas t
    - All trip routes require authentication and filter by userId
    - Protected routes with ownership verification (users can only access their own trips)
 
-2. **Full Database Persistence**: All trip data (destinations, budget categories, bookings) now persists to PostgreSQL with complete CRUD operations. Trips survive page refreshes and can be edited/deleted. Trips are associated with users via userId foreign key.
+3. **Full Database Persistence**: All trip data (destinations, budget categories, bookings) now persists to PostgreSQL with complete CRUD operations. Trips survive page refreshes and can be edited/deleted. Trips are associated with users via userId foreign key.
 
-3. **Trip List Management**: New /trips page displays all user trips with view, edit, and delete functionality. Includes empty states, confirmation dialogs, and seamless navigation flow from landing page.
+4. **Trip List Management**: New /trips page displays all user trips with view, edit, and delete functionality. Includes empty states, confirmation dialogs, and seamless navigation flow from landing page.
 
-4. **AI Booking Integration**: Live OpenAI-powered booking recommendations in Step 3. When users click "AI Booking" on any booking item, GPT-4o-mini generates 3 personalized recommendations with pricing, providers, pros/cons, and booking tips based on trip context (destinations, budget, travelers, season).
+5. **AI Booking Integration**: Live OpenAI-powered booking recommendations in Step 3. When users click "AI Booking" on any booking item, GPT-4o-mini generates 3 personalized recommendations with pricing, providers, pros/cons, and booking tips based on trip context (destinations, budget, travelers, season).
 
-5. **Per-Category AI Budget Guidance**: Enhanced AI budget assistant in Step 2 (Plan). Each budget category card (flights, housing, food, transportation, fun, preparation) now has its own beautiful primary-colored "AI Guide" button. When clicked, GPT-4o-mini provides personalized recommendations specific to that category with estimated price ranges, detailed explanations, and 3-5 money-saving tips. Category-specific dialogs show focused guidance (e.g., "Flights Budget Guidance") rather than overwhelming users with all 6 categories at once.
+6. **Per-Category AI Budget Guidance**: Enhanced AI budget assistant in Step 2 (Plan). Each budget category card (flights, housing, food, transportation, fun, preparation) now has its own beautiful primary-colored "AI Guide" button. When clicked, GPT-4o-mini provides personalized recommendations specific to that category with estimated price ranges, detailed explanations, and 3-5 money-saving tips. Category-specific dialogs show focused guidance (e.g., "Flights Budget Guidance") rather than overwhelming users with all 6 categories at once.
 
 ## User Preferences
 

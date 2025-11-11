@@ -128,6 +128,37 @@ export default function TripPlanner() {
     }
   }, [existingTrip]);
 
+  // Pre-fill destination from quiz results (only for new trips, runs once on mount)
+  useEffect(() => {
+    if (!currentTripId) {
+      const selectedDestinationJson = sessionStorage.getItem("selectedDestination");
+      if (selectedDestinationJson) {
+        try {
+          const destination = JSON.parse(selectedDestinationJson);
+          setTripData((prevData) => ({
+            ...prevData,
+            step1: {
+              travelers: "Just me",
+              numberOfTravelers: 1,
+              travelSeason: destination.bestTimeToVisit || "Summer",
+              tripDuration: 7,
+              selectedDestinations: [{
+                cityName: destination.cityName,
+                countryName: destination.countryName,
+                imageUrl: "",
+                numberOfNights: 7,
+              }],
+            },
+          }));
+          sessionStorage.removeItem("selectedDestination");
+        } catch (error) {
+          console.error("Failed to parse selected destination:", error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
   // Create trip mutation
   const createTripMutation = useMutation({
     mutationFn: async (data: InsertTrip) => {
