@@ -48,31 +48,27 @@ export default function Landing() {
       {/* Header/Nav */}
       <header className="absolute top-0 left-0 right-0 z-20 bg-transparent">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <Plane className="h-6 w-6 text-white" />
-              <span className="text-xl font-bold text-white">TripPirate</span>
-            </div>
+          <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <Plane className="h-6 w-6 text-white" />
+            <span className="text-xl font-bold text-white">TripPirate</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-                data-testid="button-login"
-              >
-                Log In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button
-                variant="default"
-                className="bg-primary border-2 border-primary-border"
-                data-testid="button-register"
-              >
-                Sign Up
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              onClick={() => setLocation("/login")}
+              data-testid="button-login"
+            >
+              Log In
+            </Button>
+            <Button
+              variant="default"
+              className="bg-primary border-2 border-primary-border"
+              onClick={() => setLocation("/register")}
+              data-testid="button-register"
+            >
+              Sign Up
+            </Button>
           </div>
         </div>
       </header>
