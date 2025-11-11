@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -47,10 +47,22 @@ export default function Step1Dream({ initialData, onComplete }: Step1DreamProps)
   const [numberOfTravelers, setNumberOfTravelers] = useState(initialData?.numberOfTravelers || 1);
   const [travelSeason, setTravelSeason] = useState(initialData?.travelSeason || "summer");
   const [tripDuration, setTripDuration] = useState([initialData?.tripDuration || 10]);
-  const [selectedDestinations, setSelectedDestinations] = useState<typeof initialData.selectedDestinations>(
-    initialData?.selectedDestinations || []
-  );
-  const [destinationNights, setDestinationNights] = useState<Record<string, number>>({});
+  const [selectedDestinations, setSelectedDestinations] = useState<Array<{
+    cityName: string;
+    countryName: string;
+    imageUrl: string;
+    numberOfNights: number;
+  }>>(initialData?.selectedDestinations || []);
+  const [destinationNights, setDestinationNights] = useState<Record<string, number>>(() => {
+    // Initialize destinationNights from initialData
+    const nights: Record<string, number> = {};
+    if (initialData?.selectedDestinations) {
+      initialData.selectedDestinations.forEach(dest => {
+        nights[dest.cityName] = dest.numberOfNights || 3;
+      });
+    }
+    return nights;
+  });
 
   const toggleDestination = (dest: typeof destinations[0]) => {
     const exists = selectedDestinations.find(d => d.cityName === dest.cityName);

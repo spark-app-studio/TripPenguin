@@ -50,7 +50,37 @@ export default function TripPlanner() {
   const tripId = params?.id === "new" ? null : (params?.id || null);
   
   const [currentStep, setCurrentStep] = useState<Step>("dream");
-  const [tripData, setTripData] = useState<TripPlanData>({});
+  
+  // Initialize tripData with quiz destination if available (lazy initialization)
+  const [tripData, setTripData] = useState<TripPlanData>(() => {
+    // Only hydrate from sessionStorage for new trips (not editing existing trips)
+    if (!tripId) {
+      const selectedDestinationJson = sessionStorage.getItem("selectedDestination");
+      if (selectedDestinationJson) {
+        try {
+          const destination = JSON.parse(selectedDestinationJson);
+          sessionStorage.removeItem("selectedDestination");
+          return {
+            step1: {
+              travelers: "Just me",
+              numberOfTravelers: 1,
+              travelSeason: destination.bestTimeToVisit || "Summer",
+              tripDuration: 7,
+              selectedDestinations: [{
+                cityName: destination.cityName,
+                countryName: destination.countryName,
+                imageUrl: "",
+                numberOfNights: 7,
+              }],
+            },
+          };
+        } catch (error) {
+          console.error("Failed to parse selected destination:", error);
+        }
+      }
+    }
+    return {};
+  });
   const [currentTripId, setCurrentTripId] = useState<string | null>(tripId);
 
   // Load existing trip if editing
@@ -127,37 +157,6 @@ export default function TripPlanner() {
       }
     }
   }, [existingTrip]);
-
-  // Pre-fill destination from quiz results (only for new trips, runs once on mount)
-  useEffect(() => {
-    if (!currentTripId) {
-      const selectedDestinationJson = sessionStorage.getItem("selectedDestination");
-      if (selectedDestinationJson) {
-        try {
-          const destination = JSON.parse(selectedDestinationJson);
-          setTripData((prevData) => ({
-            ...prevData,
-            step1: {
-              travelers: "Just me",
-              numberOfTravelers: 1,
-              travelSeason: destination.bestTimeToVisit || "Summer",
-              tripDuration: 7,
-              selectedDestinations: [{
-                cityName: destination.cityName,
-                countryName: destination.countryName,
-                imageUrl: "",
-                numberOfNights: 7,
-              }],
-            },
-          }));
-          sessionStorage.removeItem("selectedDestination");
-        } catch (error) {
-          console.error("Failed to parse selected destination:", error);
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
 
   // Create trip mutation
   const createTripMutation = useMutation({
