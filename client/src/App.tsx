@@ -50,6 +50,8 @@ function Router() {
           <Route path="/trips" component={Landing} />
           <Route path="/planner" component={Landing} />
           <Route path="/trip/:id" component={Landing} />
+          <Route path="/quiz" component={Landing} />
+          <Route path="/quiz/results" component={Landing} />
         </>
       ) : (
         <>
