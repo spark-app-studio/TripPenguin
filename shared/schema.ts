@@ -287,3 +287,51 @@ export type ItineraryRecommendationsResponse = z.infer<typeof itineraryRecommend
 
 // Legacy type for backward compatibility
 export type DestinationRecommendation = ItineraryRecommendation;
+
+// Itinerary refinement schemas
+export const adjustItineraryDurationRequestSchema = z.object({
+  itinerary: itineraryRecommendationSchema,
+  newTotalNights: z.number().int().min(2).max(50),
+  numberOfTravelers: z.number().int().min(1).max(50),
+  allowCityRemoval: z.boolean().default(true), // Allow AI to remove cities if duration is reduced
+  maxCities: z.number().int().optional(), // Optional constraint on maximum cities
+});
+
+export const itineraryAddonSchema = z.object({
+  id: z.string(),
+  title: z.string(), // e.g., "Add 2 More Days"
+  description: z.string(), // e.g., "Extend your adventure with 2 additional days exploring..."
+  deltaNights: z.number().int().min(1), // Additional nights to add
+  deltaCost: z.object({
+    min: z.number(),
+    max: z.number(),
+    currency: z.string().default("USD"),
+  }),
+  suggestedAddition: z.string(), // What cities/activities would be added
+});
+
+export const itineraryAddonsRequestSchema = z.object({
+  itinerary: itineraryRecommendationSchema,
+  numberOfTravelers: z.number().int().min(1).max(50),
+});
+
+export const itineraryAddonsResponseSchema = z.object({
+  addons: z.array(itineraryAddonSchema).min(2).max(3), // 2-3 add-on options
+});
+
+export const applyAddonRequestSchema = z.object({
+  itinerary: itineraryRecommendationSchema,
+  addon: itineraryAddonSchema,
+  numberOfTravelers: z.number().int().min(1).max(50),
+});
+
+export const applyAddonResponseSchema = z.object({
+  updatedItinerary: itineraryRecommendationSchema,
+});
+
+export type AdjustItineraryDurationRequest = z.infer<typeof adjustItineraryDurationRequestSchema>;
+export type ItineraryAddon = z.infer<typeof itineraryAddonSchema>;
+export type ItineraryAddonsRequest = z.infer<typeof itineraryAddonsRequestSchema>;
+export type ItineraryAddonsResponse = z.infer<typeof itineraryAddonsResponseSchema>;
+export type ApplyAddonRequest = z.infer<typeof applyAddonRequestSchema>;
+export type ApplyAddonResponse = z.infer<typeof applyAddonResponseSchema>;

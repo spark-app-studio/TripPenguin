@@ -12,12 +12,20 @@ import {
   passwordResetSchema,
   resendVerificationSchema,
   quizResponseSchema,
+  adjustItineraryDurationRequestSchema,
+  itineraryAddonsRequestSchema,
+  applyAddonRequestSchema,
   type PublicUser,
 } from "@shared/schema";
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
-import { getItineraryRecommendations } from "./ai-destination";
+import { 
+  getItineraryRecommendations,
+  adjustItineraryDuration,
+  generateItineraryAddons,
+  applyAddon
+} from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
 import passport from "passport";
@@ -641,6 +649,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI destination recommendation error:", error);
         res.status(500).json({ error: "Failed to get destination recommendations" });
+      }
+    }
+  });
+
+  app.post("/api/ai/adjust-itinerary-duration", isAuthenticated, async (req, res) => {
+    try {
+      const request = adjustItineraryDurationRequestSchema.parse(req.body);
+      const updatedItinerary = await adjustItineraryDuration(request);
+      res.json({ itinerary: updatedItinerary });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid itinerary duration adjustment request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI itinerary adjustment service is not configured" });
+      } else {
+        console.error("AI itinerary duration adjustment error:", error);
+        res.status(500).json({ error: "Failed to adjust itinerary duration" });
+      }
+    }
+  });
+
+  app.post("/api/ai/itinerary-addons", isAuthenticated, async (req, res) => {
+    try {
+      const request = itineraryAddonsRequestSchema.parse(req.body);
+      const addons = await generateItineraryAddons(request.itinerary, request.numberOfTravelers);
+      res.json({ addons });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid itinerary add-ons request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI add-on generation service is not configured" });
+      } else {
+        console.error("AI add-on generation error:", error);
+        res.status(500).json({ error: "Failed to generate add-ons" });
+      }
+    }
+  });
+
+  app.post("/api/ai/apply-addon", isAuthenticated, async (req, res) => {
+    try {
+      const request = applyAddonRequestSchema.parse(req.body);
+      const updatedItinerary = await applyAddon(request);
+      res.json({ itinerary: updatedItinerary });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid apply add-on request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI add-on application service is not configured" });
+      } else {
+        console.error("AI add-on application error:", error);
+        res.status(500).json({ error: "Failed to apply add-on" });
       }
     }
   });

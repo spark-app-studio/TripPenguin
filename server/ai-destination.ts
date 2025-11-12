@@ -1,5 +1,16 @@
 import OpenAI from "openai";
-import { quizResponseSchema, type QuizResponse, type ItineraryRecommendation, itineraryRecommendationsResponseSchema } from "@shared/schema";
+import { 
+  quizResponseSchema, 
+  type QuizResponse, 
+  type ItineraryRecommendation, 
+  itineraryRecommendationsResponseSchema,
+  type AdjustItineraryDurationRequest,
+  type ItineraryAddon,
+  itineraryAddonSchema,
+  itineraryAddonsResponseSchema,
+  type ApplyAddonRequest,
+  itineraryRecommendationSchema,
+} from "@shared/schema";
 
 if (!process.env.OPENAI_API_KEY) {
   console.error("OPENAI_API_KEY environment variable is not set");
@@ -263,5 +274,405 @@ Format response as valid JSON matching this structure:
   } catch (error) {
     console.error("Error getting itinerary recommendations:", error);
     throw new Error("Failed to get AI itinerary recommendations");
+  }
+}
+
+/**
+ * Validate that itinerary structure matches constraints
+ */
+function validateItineraryStructure(
+  itinerary: ItineraryRecommendation,
+  expectedNights: number,
+  originalCityNames?: string[],
+  allowCityRemoval?: boolean,
+  maxCities?: number
+): void {
+  // Validate total nights matches sum of city nights
+  const summedNights = itinerary.cities.reduce((sum, city) => sum + city.stayLengthNights, 0);
+  if (summedNights !== itinerary.totalNights) {
+    throw new Error(`Sum of city nights (${summedNights}) doesn't match totalNights (${itinerary.totalNights})`);
+  }
+  
+  if (itinerary.totalNights !== expectedNights) {
+    throw new Error(`Expected ${expectedNights} nights but got ${itinerary.totalNights}`);
+  }
+  
+  // Validate city orders are sequential
+  const orders = itinerary.cities.map(c => c.order);
+  const expectedOrders = Array.from({ length: itinerary.cities.length }, (_, i) => i + 1);
+  if (JSON.stringify(orders) !== JSON.stringify(expectedOrders)) {
+    throw new Error(`City orders are not sequential: ${orders.join(', ')}`);
+  }
+  
+  // Validate each city has at least 1 night
+  const invalidCity = itinerary.cities.find(c => c.stayLengthNights < 1);
+  if (invalidCity) {
+    throw new Error(`City ${invalidCity.cityName} has ${invalidCity.stayLengthNights} nights (minimum is 1)`);
+  }
+  
+  // Validate city count constraints
+  if (maxCities && itinerary.cities.length > maxCities) {
+    throw new Error(`Itinerary has ${itinerary.cities.length} cities but max allowed is ${maxCities}`);
+  }
+  
+  // Validate city removal constraint
+  if (originalCityNames && allowCityRemoval === false) {
+    const currentCityNames = itinerary.cities.map(c => c.cityName);
+    const removedCities = originalCityNames.filter(name => !currentCityNames.includes(name));
+    if (removedCities.length > 0) {
+      throw new Error(`Cities were removed (${removedCities.join(', ')}) but allowCityRemoval is false`);
+    }
+  }
+  
+  // Validate cost breakdown sums to reasonable total
+  const breakdownSum = Object.values(itinerary.costBreakdown).reduce((sum, val) => sum + val, 0);
+  if (breakdownSum < itinerary.totalCost.min * 0.8 || breakdownSum > itinerary.totalCost.max * 1.2) {
+    throw new Error(`Cost breakdown sum (${breakdownSum}) is inconsistent with total cost range`);
+  }
+  
+  // Validate all costs are non-negative
+  Object.entries(itinerary.costBreakdown).forEach(([category, amount]) => {
+    if (amount < 0) {
+      throw new Error(`Negative cost for ${category}: ${amount}`);
+    }
+  });
+}
+
+/**
+ * Adjust itinerary duration - AI regenerates itinerary for new trip length
+ */
+export async function adjustItineraryDuration(
+  request: AdjustItineraryDurationRequest
+): Promise<ItineraryRecommendation> {
+  const { itinerary, newTotalNights, numberOfTravelers, allowCityRemoval, maxCities } = request;
+  
+  const currentNights = itinerary.totalNights;
+  const changeDirection = newTotalNights > currentNights ? "increase" : "decrease";
+  const nightsDelta = Math.abs(newTotalNights - currentNights);
+  
+  // Save original city names for validation if removal is not allowed
+  const originalCityNames = allowCityRemoval === false ? itinerary.cities.map(c => c.cityName) : undefined;
+
+  const systemPrompt = `You are a travel planning AI that helps users adjust their multi-city itineraries.
+Your task is to regenerate an itinerary to match a new trip duration while maintaining the spirit and flow of the original plan.
+
+Rules:
+- If increasing duration: Add nights to existing cities OR add new cities if it makes sense
+- If decreasing duration: Remove nights from cities OR remove entire cities if needed (and allowed)
+- Maintain logical travel order and efficient routing
+- Keep the same itinerary vibe and overall theme
+- Update cost estimates proportionally based on the duration change
+- Ensure all city orders are sequential (1, 2, 3...)
+- Each city must have at least 1 night
+
+Respond ONLY with valid JSON.`;
+
+  const userPrompt = `Original Itinerary: "${itinerary.title}"
+Current Duration: ${currentNights} nights across ${itinerary.cities.length} cities
+New Duration: ${newTotalNights} nights
+Travelers: ${numberOfTravelers}
+${!allowCityRemoval ? "IMPORTANT: Cannot remove cities - only adjust nights per city" : ""}
+${maxCities ? `Maximum ${maxCities} cities allowed` : ""}
+
+Current Cities:
+${itinerary.cities.map((c, i) => `${i + 1}. ${c.cityName}, ${c.countryName} (${c.stayLengthNights} nights)`).join("\n")}
+
+Original Total Cost: $${itinerary.totalCost.min} - $${itinerary.totalCost.max}
+Original Cost Breakdown: ${JSON.stringify(itinerary.costBreakdown)}
+
+Task: ${changeDirection === "increase" ? `Add ${nightsDelta} nights` : `Reduce by ${nightsDelta} nights`}
+
+Generate the updated itinerary following this JSON structure:
+{
+  "id": "${itinerary.id}",
+  "title": "${itinerary.title}",
+  "vibeTagline": "${itinerary.vibeTagline}",
+  "isCurveball": ${itinerary.isCurveball},
+  "totalCost": {
+    "min": number,
+    "max": number,
+    "currency": "USD"
+  },
+  "costBreakdown": {
+    "flights": number,
+    "housing": number,
+    "food": number,
+    "transportation": number,
+    "fun": number,
+    "preparation": number
+  },
+  "cities": [
+    {
+      "order": 1,
+      "cityName": "string",
+      "countryName": "string",
+      "arrivalAirport": "IATA",
+      "departureAirport": "IATA",
+      "stayLengthNights": number,
+      "activities": ["activity1", "activity2", "..."],
+      "imageQuery": "search query"
+    }
+  ],
+  "bestTimeToVisit": "${itinerary.bestTimeToVisit}",
+  "totalNights": ${newTotalNights}
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    const validated = itineraryRecommendationSchema.parse(parsed);
+    
+    // Validate itinerary structure and constraints
+    validateItineraryStructure(
+      validated,
+      newTotalNights,
+      originalCityNames,
+      allowCityRemoval,
+      maxCities
+    );
+    
+    return validated;
+  } catch (error) {
+    console.error("Error adjusting itinerary duration:", error);
+    throw new Error("Failed to adjust itinerary duration");
+  }
+}
+
+/**
+ * Generate add-on recommendations for a confirmed itinerary
+ */
+export async function generateItineraryAddons(
+  itinerary: ItineraryRecommendation,
+  numberOfTravelers: number
+): Promise<ItineraryAddon[]> {
+  const systemPrompt = `You are a travel planning AI that suggests add-on extensions to multi-city itineraries.
+Your task is to generate 2-3 attractive add-on options that users can apply to extend their trip.
+
+Guidelines:
+- Suggest realistic extensions (2-5 additional days each)
+- Add-ons should enhance the existing itinerary (nearby cities, deeper exploration, etc.)
+- Calculate realistic cost increases based on the existing itinerary's cost structure
+- Make each add-on distinct and appealing
+- Consider the existing itinerary's theme and vibe
+
+Respond ONLY with valid JSON.`;
+
+  const userPrompt = `Itinerary: "${itinerary.title}"
+Vibe: ${itinerary.vibeTagline}
+Current Duration: ${itinerary.totalNights} nights
+Cities: ${itinerary.cities.map(c => `${c.cityName}, ${c.countryName}`).join(" → ")}
+Current Total Cost: $${itinerary.totalCost.min} - $${itinerary.totalCost.max} for ${numberOfTravelers} traveler(s)
+Best Time: ${itinerary.bestTimeToVisit}
+
+Generate 2-3 add-on options following this JSON structure:
+{
+  "addons": [
+    {
+      "id": "addon-1",
+      "title": "Add 2 More Days",
+      "description": "Brief description of what the extension includes",
+      "deltaNights": 2,
+      "deltaCost": {
+        "min": number,
+        "max": number,
+        "currency": "USD"
+      },
+      "suggestedAddition": "What cities/activities would be added (e.g., 'Add 2 days in Rome to visit the Vatican')"
+    }
+  ]
+}
+
+Make the add-ons progressively larger (e.g., +2 days, +4 days, +7 days).`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    const validated = itineraryAddonsResponseSchema.parse(parsed);
+    
+    // Validate add-on structure
+    validated.addons.forEach((addon, index) => {
+      if (addon.deltaNights < 1) {
+        throw new Error(`Add-on ${index + 1} has invalid deltaNights: ${addon.deltaNights} (minimum is 1)`);
+      }
+      
+      if (addon.deltaCost.min <= 0 || addon.deltaCost.max <= 0) {
+        throw new Error(`Add-on ${index + 1} has non-positive costs: min=${addon.deltaCost.min}, max=${addon.deltaCost.max}`);
+      }
+      
+      if (addon.deltaCost.min > addon.deltaCost.max) {
+        throw new Error(`Add-on ${index + 1} has min cost greater than max: ${addon.deltaCost.min} > ${addon.deltaCost.max}`);
+      }
+    });
+    
+    // Validate add-ons are monotonically sized (first should be shortest)
+    for (let i = 1; i < validated.addons.length; i++) {
+      if (validated.addons[i].deltaNights <= validated.addons[i - 1].deltaNights) {
+        throw new Error(`Add-ons are not progressively sized: addon ${i} has ${validated.addons[i].deltaNights} nights vs addon ${i - 1} has ${validated.addons[i - 1].deltaNights} nights`);
+      }
+    }
+    
+    // Validate unique IDs
+    const ids = validated.addons.map(a => a.id);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+      throw new Error(`Add-ons have duplicate IDs: ${ids.join(', ')}`);
+    }
+    
+    return validated.addons;
+  } catch (error) {
+    console.error("Error generating itinerary add-ons:", error);
+    throw new Error("Failed to generate itinerary add-ons");
+  }
+}
+
+/**
+ * Apply a selected add-on to an itinerary
+ */
+export async function applyAddon(
+  request: ApplyAddonRequest
+): Promise<ItineraryRecommendation> {
+  const { itinerary, addon, numberOfTravelers } = request;
+
+  const systemPrompt = `You are a travel planning AI that applies add-on extensions to multi-city itineraries.
+Your task is to seamlessly integrate the selected add-on into the existing itinerary.
+
+Guidelines:
+- Add the extension in a logical way (append cities, extend existing cities, or insert mid-trip)
+- Maintain the itinerary's original vibe and flow
+- Update all cost breakdowns to reflect the addition
+- Ensure city orders remain sequential
+- Keep the same itinerary ID, title, and vibe
+
+Respond ONLY with valid JSON.`;
+
+  const userPrompt = `Original Itinerary: "${itinerary.title}"
+Current Duration: ${itinerary.totalNights} nights
+Cities: ${itinerary.cities.map(c => `${c.cityName} (${c.stayLengthNights}n)`).join(" → ")}
+Current Cost: $${itinerary.totalCost.min} - $${itinerary.totalCost.max}
+
+Selected Add-on: "${addon.title}"
+Description: ${addon.description}
+Additional Nights: ${addon.deltaNights}
+Additional Cost: $${addon.deltaCost.min} - $${addon.deltaCost.max}
+Suggested Addition: ${addon.suggestedAddition}
+
+Travelers: ${numberOfTravelers}
+
+Generate the updated itinerary with the add-on applied. Follow this JSON structure:
+{
+  "id": "${itinerary.id}",
+  "title": "${itinerary.title}",
+  "vibeTagline": "${itinerary.vibeTagline}",
+  "isCurveball": ${itinerary.isCurveball},
+  "totalCost": {
+    "min": ${itinerary.totalCost.min + addon.deltaCost.min},
+    "max": ${itinerary.totalCost.max + addon.deltaCost.max},
+    "currency": "USD"
+  },
+  "costBreakdown": {
+    "flights": number (updated),
+    "housing": number (updated),
+    "food": number (updated),
+    "transportation": number (updated),
+    "fun": number (updated),
+    "preparation": number (updated)
+  },
+  "cities": [
+    {
+      "order": sequential starting from 1,
+      "cityName": "string",
+      "countryName": "string",
+      "arrivalAirport": "IATA",
+      "departureAirport": "IATA",
+      "stayLengthNights": number,
+      "activities": ["array of activities"],
+      "imageQuery": "search query"
+    }
+  ],
+  "bestTimeToVisit": "${itinerary.bestTimeToVisit}",
+  "totalNights": ${itinerary.totalNights + addon.deltaNights}
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    const validated = itineraryRecommendationSchema.parse(parsed);
+    
+    // Validate total nights increased correctly
+    const expectedNights = itinerary.totalNights + addon.deltaNights;
+    validateItineraryStructure(validated, expectedNights);
+    
+    // Validate all original cities are preserved (add-ons should not remove cities)
+    const originalCityNames = itinerary.cities.map(c => c.cityName);
+    const updatedCityNames = validated.cities.map(c => c.cityName);
+    const missingCities = originalCityNames.filter(name => !updatedCityNames.includes(name));
+    if (missingCities.length > 0) {
+      throw new Error(`Add-on removed original cities (${missingCities.join(', ')}), which is not allowed`);
+    }
+    
+    // Validate cost increased reasonably (use proportional tolerance for small add-ons)
+    const expectedMinCost = itinerary.totalCost.min + addon.deltaCost.min;
+    const expectedMaxCost = itinerary.totalCost.max + addon.deltaCost.max;
+    
+    // For small add-ons (<$500), allow ±30% variance; for large add-ons, allow ±20%
+    const minTolerance = addon.deltaCost.min < 500 ? 0.3 : 0.2;
+    const maxTolerance = addon.deltaCost.max < 500 ? 0.3 : 0.2;
+    
+    if (validated.totalCost.min < expectedMinCost * (1 - minTolerance) || 
+        validated.totalCost.min > expectedMinCost * (1 + minTolerance)) {
+      throw new Error(`Cost increase doesn't match add-on (expected ~${expectedMinCost}, got ${validated.totalCost.min})`);
+    }
+    
+    if (validated.totalCost.max < expectedMaxCost * (1 - maxTolerance) || 
+        validated.totalCost.max > expectedMaxCost * (1 + maxTolerance)) {
+      throw new Error(`Max cost increase doesn't match add-on (expected ~${expectedMaxCost}, got ${validated.totalCost.max})`);
+    }
+    
+    return validated;
+  } catch (error) {
+    console.error("Error applying add-on:", error);
+    throw new Error("Failed to apply add-on to itinerary");
   }
 }
