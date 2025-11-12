@@ -155,14 +155,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    // Properly destroy session and logout
-    req.session.destroy((destroyErr) => {
-      if (destroyErr) {
+    // Logout from passport first, then destroy session
+    req.logout((logoutErr) => {
+      if (logoutErr) {
         res.status(500).json({ error: "Logout failed" });
         return;
       }
-      req.logout((logoutErr) => {
-        if (logoutErr) {
+      // Destroy the session after logging out
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
           res.status(500).json({ error: "Logout failed" });
           return;
         }
