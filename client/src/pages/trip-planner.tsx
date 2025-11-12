@@ -49,7 +49,19 @@ export default function TripPlanner() {
   const [, setLocation] = useLocation();
   const tripId = params?.id === "new" ? null : (params?.id || null);
   
-  const [currentStep, setCurrentStep] = useState<Step>("dream");
+  // Check if coming from quiz flow
+  const [isQuizFlow] = useState<boolean>(() => {
+    const tripSource = sessionStorage.getItem("tripSource");
+    if (tripSource === "quiz") {
+      sessionStorage.removeItem("tripSource");
+      return true;
+    }
+    return false;
+  });
+  
+  const [currentStep, setCurrentStep] = useState<Step>(() => {
+    return isQuizFlow ? "plan" : "dream";
+  });
   
   // Helper function to normalize season from AI response to radio button values
   const normalizeSeason = (season: string | undefined): string => {
@@ -311,6 +323,52 @@ export default function TripPlanner() {
     }
   }, [existingTrip]);
 
+  // Initialize trip from quiz flow
+  useEffect(() => {
+    // Only run for quiz flow and when we have step1 data but no tripId yet
+    if (isQuizFlow && tripData.step1 && !currentTripId && currentStep === "plan") {
+      const initializeQuizTrip = async () => {
+        try {
+          const data = tripData.step1;
+          if (!data) return;
+          
+          // Create trip
+          const tripPayload: InsertTrip = {
+            travelers: data.travelers,
+            numberOfTravelers: data.numberOfTravelers,
+            travelSeason: data.travelSeason,
+            tripDuration: data.tripDuration,
+          };
+          
+          const response = await apiRequest("POST", "/api/trips", tripPayload);
+          const newTrip: Trip = await response.json();
+          setCurrentTripId(newTrip.id);
+          queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+          
+          // Update URL with new trip ID
+          setLocation(`/trip/${newTrip.id}`);
+          
+          // Create destinations
+          for (let i = 0; i < data.selectedDestinations.length; i++) {
+            const dest = data.selectedDestinations[i];
+            await apiRequest("POST", "/api/destinations", {
+              tripId: newTrip.id,
+              cityName: dest.cityName,
+              countryName: dest.countryName,
+              numberOfNights: dest.numberOfNights,
+              imageUrl: dest.imageUrl,
+              order: i,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to initialize quiz trip:", error);
+        }
+      };
+      
+      initializeQuizTrip();
+    }
+  }, [isQuizFlow, tripData.step1, currentTripId, currentStep]);
+
   // Create trip mutation
   const createTripMutation = useMutation({
     mutationFn: async (data: InsertTrip) => {
@@ -559,7 +617,7 @@ export default function TripPlanner() {
           destinations={tripData.step1.selectedDestinations.map(d => d.cityName)}
           travelSeason={tripData.step1.travelSeason}
           onComplete={handleStep2Complete}
-          onBack={() => setCurrentStep("dream")}
+          onBack={isQuizFlow ? () => setLocation("/trips") : () => setCurrentStep("dream")}
         />
       )}
 
