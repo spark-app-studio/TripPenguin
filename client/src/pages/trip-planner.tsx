@@ -51,6 +51,19 @@ export default function TripPlanner() {
   
   const [currentStep, setCurrentStep] = useState<Step>("dream");
   
+  // Helper function to convert trip length preference to days
+  const convertTripLengthToDays = (preference: string): number => {
+    const lengthMap: Record<string, number> = {
+      "1-3 days": 3,
+      "4-7 days": 7,
+      "1-2 weeks": 10,
+      "2-3 weeks": 17,
+      "3+ weeks": 21,
+      "flexible": 7,
+    };
+    return lengthMap[preference] || 7;
+  };
+
   // Initialize tripData with quiz destination if available (lazy initialization)
   const [tripData, setTripData] = useState<TripPlanData>(() => {
     // Only hydrate from sessionStorage for new trips (not editing existing trips)
@@ -60,17 +73,32 @@ export default function TripPlanner() {
         try {
           const destination = JSON.parse(selectedDestinationJson);
           sessionStorage.removeItem("selectedDestination");
+          
+          // Get quiz data for numberOfTravelers and tripLength
+          const quizNumberOfTravelers = sessionStorage.getItem("quizNumberOfTravelers");
+          const quizTripLength = sessionStorage.getItem("quizTripLength");
+          
+          // Clean up quiz data from sessionStorage
+          sessionStorage.removeItem("quizNumberOfTravelers");
+          sessionStorage.removeItem("quizTripLength");
+          
+          const numberOfTravelers = quizNumberOfTravelers ? parseInt(quizNumberOfTravelers, 10) : 1;
+          const tripDuration = quizTripLength ? convertTripLengthToDays(quizTripLength) : 7;
+          
+          // Determine travelers text based on numberOfTravelers
+          const travelersText = numberOfTravelers === 1 ? "Just me" : "Me plus family/friends";
+          
           return {
             step1: {
-              travelers: "Just me",
-              numberOfTravelers: 1,
+              travelers: travelersText,
+              numberOfTravelers: numberOfTravelers,
               travelSeason: destination.bestTimeToVisit || "Summer",
-              tripDuration: 7,
+              tripDuration: tripDuration,
               selectedDestinations: [{
                 cityName: destination.cityName,
                 countryName: destination.countryName,
                 imageUrl: "",
-                numberOfNights: 7,
+                numberOfNights: tripDuration,
               }],
             },
           };

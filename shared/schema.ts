@@ -231,7 +231,11 @@ export const quizResponseSchema = z.object({
   spendingPriority: z.enum(["food", "experiences", "comfort", "souvenirs"]),
   desiredEmotion: z.enum(["wonder", "freedom", "connection", "awe"]),
   region: z.enum(["europe", "asia", "southAmerica", "tropicalIslands", "surprise"]),
+  favoriteMovie: z.string().min(1, "Please enter a movie").max(200),
+  favoriteBook: z.string().min(1, "Please enter a book").max(200),
   dreamMoment: z.string().min(1, "Please describe your dream moment").max(500),
+  numberOfTravelers: z.number().int().min(1).max(50),
+  tripLengthPreference: z.enum(["1-3 days", "4-7 days", "1-2 weeks", "2-3 weeks", "3+ weeks", "flexible"]),
 });
 
 export const destinationRecommendationSchema = z.object({

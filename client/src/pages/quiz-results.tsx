@@ -46,6 +46,23 @@ export default function QuizResults() {
 
   const handleStartBudget = (destination: DestinationRecommendation) => {
     sessionStorage.setItem("selectedDestination", JSON.stringify(destination));
+    
+    // Also pass quiz data for trip planning (numberOfTravelers and tripLengthPreference)
+    const quizDataJson = sessionStorage.getItem("quizData");
+    if (quizDataJson) {
+      try {
+        const quizData = JSON.parse(quizDataJson);
+        if (quizData.numberOfTravelers) {
+          sessionStorage.setItem("quizNumberOfTravelers", String(quizData.numberOfTravelers));
+        }
+        if (quizData.tripLengthPreference) {
+          sessionStorage.setItem("quizTripLength", quizData.tripLengthPreference);
+        }
+      } catch (error) {
+        console.error("Failed to parse quiz data:", error);
+      }
+    }
+    
     setLocation("/trip-planner");
   };
 

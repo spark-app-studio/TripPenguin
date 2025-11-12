@@ -87,6 +87,20 @@ function mapQuizToPersonality(quiz: QuizResponse): string {
   return `${traits.join("; ")}${regionPreference ? `. Interested in ${regionPreference}` : ""}.`;
 }
 
+function buildCulturalInsightsText(quiz: QuizResponse): string {
+  const insights: string[] = [];
+  
+  if (quiz.favoriteMovie) {
+    insights.push(`Favorite Movie: "${sanitizeInput(quiz.favoriteMovie)}"`);
+  }
+  
+  if (quiz.favoriteBook) {
+    insights.push(`Favorite Book: "${sanitizeInput(quiz.favoriteBook)}"`);
+  }
+  
+  return insights.length > 0 ? insights.join(", ") : "";
+}
+
 export async function getDestinationRecommendations(
   quiz: QuizResponse
 ): Promise<DestinationRecommendation[]> {
@@ -96,17 +110,23 @@ export async function getDestinationRecommendations(
 
   const sanitizedDreamMoment = sanitizeInput(quiz.dreamMoment);
   const personalityProfile = mapQuizToPersonality(quiz);
+  const culturalInsights = buildCulturalInsightsText(quiz);
 
-  const systemPrompt = `You are an expert travel advisor who helps people discover their perfect destinations. Based on someone's personality, preferences, and dream moments, you recommend destinations that will create unforgettable experiences.`;
+  const systemPrompt = `You are an expert travel advisor who helps people discover their perfect destinations. Based on someone's personality, preferences, cultural interests (movies, books), and dream moments, you recommend destinations that will create unforgettable experiences. Pay special attention to their favorite books and movies - these often reveal deep travel desires. For example, if they love "Lord of the Rings," they might dream of visiting Hobbiton in New Zealand. If they love "Eat Pray Love," they might want to explore Bali or Italy.`;
 
   const userPrompt = `Based on this traveler profile, recommend 3 destinations:
 
 Traveler Personality: ${personalityProfile}
 
+${culturalInsights ? `Cultural Interests: ${culturalInsights}\nIMPORTANT: Consider how their favorite movie/book might influence destination recommendations. Look for real filming locations, settings from books, or places that match the themes and atmospheres of their favorites.\n` : ""}
 Dream Moment: "${sanitizedDreamMoment}"
 
+Trip Planning Details:
+- Number of travelers: ${quiz.numberOfTravelers}
+- Trip length preference: ${quiz.tripLengthPreference}
+
 Please provide exactly 3 destination recommendations:
-- Recommendations 1 & 2: Should perfectly match their personality and preferences
+- Recommendations 1 & 2: Should perfectly match their personality, preferences, and cultural interests (especially their favorite movie/book if relevant)
 - Recommendation 3: Should be a "curveball surprise" - something unexpected, completely different from what they'd normally choose, but still amazing
 
 For each destination, provide:

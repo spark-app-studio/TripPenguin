@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
@@ -87,15 +88,63 @@ const questions = [
       { value: "surprise", label: "Not sure — surprise me" },
     ],
   },
+  {
+    id: 8,
+    key: "favoriteMovie" as const,
+    type: "text" as const,
+    question: "What's your favorite movie?",
+    placeholder: "e.g., The Lord of the Rings, Before Sunrise, The Darjeeling Limited",
+  },
+  {
+    id: 9,
+    key: "favoriteBook" as const,
+    type: "text" as const,
+    question: "What's your favorite book?",
+    placeholder: "e.g., Harry Potter, Eat Pray Love, Wild",
+  },
+  {
+    id: 10,
+    key: "dreamMoment" as const,
+    type: "textarea" as const,
+    question: "Describe your dream moment",
+    description: "Describe the dream moment you picture — even if it's just one sentence.",
+    placeholder: "Picture yourself there... What are you doing? What do you see, hear, or feel?",
+  },
+  {
+    id: 11,
+    key: "numberOfTravelers" as const,
+    question: "How many travelers?",
+    description: "This will help us plan your budget accurately.",
+    options: [
+      { value: 1, label: "Just me (1)" },
+      { value: 2, label: "2 travelers" },
+      { value: 3, label: "3 travelers" },
+      { value: 4, label: "4 travelers" },
+      { value: 5, label: "5-6 travelers" },
+      { value: 7, label: "7+ travelers" },
+    ],
+  },
+  {
+    id: 12,
+    key: "tripLengthPreference" as const,
+    question: "Do you have a preference for how long the trip is?",
+    options: [
+      { value: "1-3 days", label: "1-3 days (quick getaway)" },
+      { value: "4-7 days", label: "4-7 days (one week)" },
+      { value: "1-2 weeks", label: "1-2 weeks" },
+      { value: "2-3 weeks", label: "2-3 weeks" },
+      { value: "3+ weeks", label: "3+ weeks (extended trip)" },
+      { value: "flexible", label: "I'm flexible" },
+    ],
+  },
 ];
 
 export default function Quiz() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({});
-  const [dreamMoment, setDreamMoment] = useState("");
 
-  const totalSteps = questions.length + 1;
+  const totalSteps = questions.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   const handleAnswer = (key: keyof QuizAnswers, value: any) => {
@@ -103,7 +152,7 @@ export default function Quiz() {
   };
 
   const handleNext = () => {
-    if (currentStep < questions.length) {
+    if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -115,19 +164,25 @@ export default function Quiz() {
   };
 
   const handleSubmit = () => {
-    const quizData: QuizResponse = {
-      ...answers,
-      dreamMoment,
-    } as QuizResponse;
+    const quizData: QuizResponse = answers as QuizResponse;
 
     sessionStorage.setItem("quizData", JSON.stringify(quizData));
     setLocation("/quiz/results");
   };
 
-  const currentQuestion = currentStep < questions.length ? questions[currentStep] : null;
-  const currentAnswer = currentQuestion ? answers[currentQuestion.key] : null;
-  const isLastQuestion = currentStep === questions.length;
-  const canProceed = currentQuestion ? !!currentAnswer : dreamMoment.trim().length > 0;
+  const currentQuestion = questions[currentStep];
+  const currentAnswer = answers[currentQuestion.key];
+  const isLastQuestion = currentStep === questions.length - 1;
+  
+  const canProceed = () => {
+    if (!currentQuestion) return false;
+    const answer = currentAnswer;
+    
+    if (currentQuestion.type === "text" || currentQuestion.type === "textarea") {
+      return typeof answer === "string" && answer.trim().length > 0;
+    }
+    return !!answer;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,20 +208,46 @@ export default function Quiz() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-2xl md:text-3xl font-lora">
-              {currentQuestion ? currentQuestion.question : "Describe your dream moment"}
+              {currentQuestion.question}
             </CardTitle>
-            {isLastQuestion && (
+            {currentQuestion.description && (
               <CardDescription>
-                Describe the dream moment you picture — even if it's just one sentence.
+                {currentQuestion.description}
               </CardDescription>
             )}
           </CardHeader>
           <CardContent className="space-y-4">
-            {currentQuestion ? (
+            {currentQuestion.type === "text" ? (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={(currentAnswer as string) || ""}
+                  onChange={(e) => handleAnswer(currentQuestion.key, e.target.value)}
+                  placeholder={currentQuestion.placeholder}
+                  className="text-base"
+                  maxLength={200}
+                  data-testid={`input-${currentQuestion.key}`}
+                />
+              </div>
+            ) : currentQuestion.type === "textarea" ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={(currentAnswer as string) || ""}
+                  onChange={(e) => handleAnswer(currentQuestion.key, e.target.value)}
+                  placeholder={currentQuestion.placeholder}
+                  className="min-h-32 text-base"
+                  maxLength={500}
+                  data-testid={`input-${currentQuestion.key}`}
+                />
+                <p className="text-sm text-muted-foreground text-right">
+                  {((currentAnswer as string) || "").length}/500
+                </p>
+              </div>
+            ) : (
               <div className="space-y-3">
-                {currentQuestion.options.map((option) => (
+                {currentQuestion.options?.map((option) => (
                   <button
-                    key={option.value}
+                    key={String(option.value)}
                     onClick={() => handleAnswer(currentQuestion.key, option.value)}
                     className={`w-full text-left p-4 rounded-md border-2 transition-all hover-elevate ${
                       currentAnswer === option.value
@@ -180,20 +261,6 @@ export default function Quiz() {
                     </Label>
                   </button>
                 ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Textarea
-                  value={dreamMoment}
-                  onChange={(e) => setDreamMoment(e.target.value)}
-                  placeholder="Picture yourself there... What are you doing? What do you see, hear, or feel?"
-                  className="min-h-32 text-base"
-                  maxLength={500}
-                  data-testid="input-dream-moment"
-                />
-                <p className="text-sm text-muted-foreground text-right">
-                  {dreamMoment.length}/500
-                </p>
               </div>
             )}
           </CardContent>
@@ -213,7 +280,7 @@ export default function Quiz() {
           {isLastQuestion ? (
             <Button
               onClick={handleSubmit}
-              disabled={!canProceed}
+              disabled={!canProceed()}
               className="ml-auto"
               data-testid="button-submit-quiz"
             >
@@ -223,7 +290,7 @@ export default function Quiz() {
           ) : (
             <Button
               onClick={handleNext}
-              disabled={!canProceed}
+              disabled={!canProceed()}
               className="ml-auto"
               data-testid="button-next"
             >
