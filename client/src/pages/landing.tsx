@@ -97,7 +97,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="default"
-              onClick={() => setLocation("/quiz")}
+              onClick={() => setLocation("/register")}
               className="text-lg px-8 py-6 min-h-0 bg-primary hover:bg-primary border-2 border-primary-border"
               data-testid="button-hero-start"
             >
@@ -106,11 +106,11 @@ export default function Landing() {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => setLocation("/trips")}
+              onClick={() => setLocation("/login")}
               className="text-lg px-8 py-6 min-h-0 text-white border-white hover:bg-white/20 backdrop-blur-sm"
               data-testid="button-hero-learn"
             >
-              View My Trips
+              Log In
             </Button>
           </div>
         </div>
@@ -185,16 +185,16 @@ export default function Landing() {
             Ready to Start Your Adventure?
           </h2>
           <p className="text-lg mb-8 text-primary-foreground/90">
-            Join thousands who have planned debt-free trips with our proven system
+            Create a free account to start planning your debt-free trip today
           </p>
           <Button
             size="lg"
             variant="outline"
-            onClick={() => setLocation("/trip/new")}
+            onClick={() => setLocation("/register")}
             className="text-lg px-8 py-6 min-h-0 bg-white text-primary hover:bg-white/90 border-white"
             data-testid="button-cta-start"
           >
-            Begin Your Trip Plan
+            Get Started Free
           </Button>
         </div>
       </section>
