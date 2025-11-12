@@ -195,7 +195,7 @@ export default function QuizRefine() {
     if (!currentItinerary) return;
     sessionStorage.setItem("selectedItinerary", JSON.stringify(currentItinerary));
     sessionStorage.setItem("quizNumberOfTravelers", String(numberOfTravelers));
-    setLocation("/trip-planner");
+    setLocation("/trip/new");
   };
 
   if (!currentItinerary) {

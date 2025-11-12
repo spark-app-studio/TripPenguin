@@ -51,6 +51,55 @@ export default function TripPlanner() {
   
   const [currentStep, setCurrentStep] = useState<Step>("dream");
   
+  // Helper function to normalize season from AI response to radio button values
+  const normalizeSeason = (season: string | undefined): string => {
+    if (!season) return "summer";
+    
+    const normalized = season.toLowerCase().trim();
+    
+    // Direct matches
+    if (["summer", "winter", "thanksgiving", "spring", "off_season"].includes(normalized)) {
+      return normalized;
+    }
+    
+    // Year-round / Anytime phrases
+    if (normalized.includes("year") || normalized.includes("anytime") || normalized.includes("any time") || 
+        normalized.includes("flexible") || normalized.includes("all season")) {
+      return "off_season";
+    }
+    
+    // Summer (June, July, August)
+    if (normalized.includes("summer") || normalized.includes("june") || normalized.includes("july") || normalized.includes("august")) {
+      return "summer";
+    }
+    
+    // Winter / December-February
+    if (normalized.includes("winter") || normalized.includes("december") || 
+        normalized.includes("january") || normalized.includes("february")) {
+      return "winter";
+    }
+    
+    // Thanksgiving / November
+    if (normalized.includes("thanksgiving") || normalized.includes("november")) {
+      return "thanksgiving";
+    }
+    
+    // Spring (March, April, May)
+    if (normalized.includes("spring") || normalized.includes("march") || 
+        normalized.includes("april") || normalized.includes("may")) {
+      return "spring";
+    }
+    
+    // Fall/Autumn (September, October)
+    if (normalized.includes("fall") || normalized.includes("autumn") || 
+        normalized.includes("september") || normalized.includes("october")) {
+      return "off_season";
+    }
+    
+    // Default fallback
+    return "summer";
+  };
+  
   // Helper function to convert trip length preference to days
   const convertTripLengthToDays = (preference: string): number => {
     const lengthMap: Record<string, number> = {
@@ -85,8 +134,8 @@ export default function TripPlanner() {
           
           const numberOfTravelers = quizNumberOfTravelers ? parseInt(quizNumberOfTravelers, 10) : 1;
           
-          // Determine travelers text based on numberOfTravelers
-          const travelersText = numberOfTravelers === 1 ? "Just me" : "Me plus family/friends";
+          // Determine travelers radio value based on numberOfTravelers
+          const travelersValue = numberOfTravelers === 1 ? "just_me" : "with_others";
           
           // Convert itinerary cities to destinations
           const selectedDestinations = itinerary.cities.map((city: any) => ({
@@ -130,9 +179,9 @@ export default function TripPlanner() {
           
           return {
             step1: {
-              travelers: travelersText,
+              travelers: travelersValue,
               numberOfTravelers: numberOfTravelers,
-              travelSeason: itinerary.bestTimeToVisit || "Summer",
+              travelSeason: normalizeSeason(itinerary.bestTimeToVisit),
               tripDuration: itinerary.totalNights || 7,
               selectedDestinations: selectedDestinations,
             },
@@ -161,14 +210,14 @@ export default function TripPlanner() {
           const numberOfTravelers = quizNumberOfTravelers ? parseInt(quizNumberOfTravelers, 10) : 1;
           const tripDuration = quizTripLength ? convertTripLengthToDays(quizTripLength) : 7;
           
-          // Determine travelers text based on numberOfTravelers
-          const travelersText = numberOfTravelers === 1 ? "Just me" : "Me plus family/friends";
+          // Determine travelers radio value based on numberOfTravelers
+          const travelersValue = numberOfTravelers === 1 ? "just_me" : "with_others";
           
           return {
             step1: {
-              travelers: travelersText,
+              travelers: travelersValue,
               numberOfTravelers: numberOfTravelers,
-              travelSeason: destination.bestTimeToVisit || "Summer",
+              travelSeason: normalizeSeason(destination.bestTimeToVisit),
               tripDuration: tripDuration,
               selectedDestinations: [{
                 cityName: destination.cityName,
