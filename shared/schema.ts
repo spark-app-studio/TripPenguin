@@ -238,21 +238,52 @@ export const quizResponseSchema = z.object({
   tripLengthPreference: z.enum(["1-3 days", "4-7 days", "1-2 weeks", "2-3 weeks", "3+ weeks", "flexible"]),
 });
 
-export const destinationRecommendationSchema = z.object({
+// Multi-city itinerary schemas for AI recommendations
+export const itineraryCitySegmentSchema = z.object({
+  order: z.number().int().min(1),
   cityName: z.string(),
   countryName: z.string(),
-  description: z.string(),
-  whyMatch: z.string(),
-  estimatedDailyBudget: z.number(),
-  bestTimeToVisit: z.string(),
-  imageQuery: z.string(), // Used to fetch stock images
-  isCurveball: z.boolean().default(false),
+  arrivalAirport: z.string().optional(), // IATA code like "CDG" for Paris
+  departureAirport: z.string().optional(), // IATA code - may differ for open-jaw tickets
+  stayLengthNights: z.number().int().min(1),
+  activities: z.array(z.string()).min(1), // Array of activity descriptions
+  imageQuery: z.string(), // Used to fetch stock images for this city
 });
 
-export const destinationRecommendationsResponseSchema = z.object({
-  recommendations: z.array(destinationRecommendationSchema).length(3),
+export const costBreakdownSchema = z.object({
+  flights: z.number(),
+  housing: z.number(),
+  food: z.number(),
+  transportation: z.number(),
+  fun: z.number(),
+  preparation: z.number(),
+});
+
+export const itineraryRecommendationSchema = z.object({
+  id: z.string(), // Unique identifier for the itinerary
+  title: z.string(), // Creative name like "The Mediterranean Dream" or "Island Hopper's Paradise"
+  vibeTagline: z.string(), // Short description of the itinerary's vibe
+  isCurveball: z.boolean().default(false),
+  totalCost: z.object({
+    min: z.number(),
+    max: z.number(),
+    currency: z.string().default("USD"),
+  }),
+  costBreakdown: costBreakdownSchema, // Average per category for the entire trip
+  cities: z.array(itineraryCitySegmentSchema).min(2), // At least 2 cities for a multi-city itinerary
+  bestTimeToVisit: z.string(),
+  totalNights: z.number().int().min(1), // Total nights across all cities
+});
+
+export const itineraryRecommendationsResponseSchema = z.object({
+  recommendations: z.array(itineraryRecommendationSchema).length(3),
 });
 
 export type QuizResponse = z.infer<typeof quizResponseSchema>;
-export type DestinationRecommendation = z.infer<typeof destinationRecommendationSchema>;
-export type DestinationRecommendationsResponse = z.infer<typeof destinationRecommendationsResponseSchema>;
+export type ItineraryCitySegment = z.infer<typeof itineraryCitySegmentSchema>;
+export type CostBreakdown = z.infer<typeof costBreakdownSchema>;
+export type ItineraryRecommendation = z.infer<typeof itineraryRecommendationSchema>;
+export type ItineraryRecommendationsResponse = z.infer<typeof itineraryRecommendationsResponseSchema>;
+
+// Legacy type for backward compatibility
+export type DestinationRecommendation = ItineraryRecommendation;

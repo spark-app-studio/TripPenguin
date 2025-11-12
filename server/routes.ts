@@ -17,7 +17,7 @@ import {
 import { z } from "zod";
 import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booking";
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
-import { getDestinationRecommendations } from "./ai-destination";
+import { getItineraryRecommendations } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
 import passport from "passport";
@@ -631,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/ai/destination-recommendations", isAuthenticated, async (req, res) => {
     try {
       const quizResponse = quizResponseSchema.parse(req.body);
-      const recommendations = await getDestinationRecommendations(quizResponse);
+      const recommendations = await getItineraryRecommendations(quizResponse);
       res.json({ recommendations });
     } catch (error) {
       if (error instanceof z.ZodError) {

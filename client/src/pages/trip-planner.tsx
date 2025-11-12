@@ -64,10 +64,86 @@ export default function TripPlanner() {
     return lengthMap[preference] || 7;
   };
 
-  // Initialize tripData with quiz destination if available (lazy initialization)
+  // Initialize tripData with quiz itinerary if available (lazy initialization)
   const [tripData, setTripData] = useState<TripPlanData>(() => {
     // Only hydrate from sessionStorage for new trips (not editing existing trips)
     if (!tripId) {
+      // Check for multi-city itinerary first (new format)
+      const selectedItineraryJson = sessionStorage.getItem("selectedItinerary");
+      if (selectedItineraryJson) {
+        try {
+          const itinerary = JSON.parse(selectedItineraryJson);
+          sessionStorage.removeItem("selectedItinerary");
+          
+          // Get quiz data for numberOfTravelers and tripLength
+          const quizNumberOfTravelers = sessionStorage.getItem("quizNumberOfTravelers");
+          const quizTripLength = sessionStorage.getItem("quizTripLength");
+          
+          // Clean up quiz data from sessionStorage
+          sessionStorage.removeItem("quizNumberOfTravelers");
+          sessionStorage.removeItem("quizTripLength");
+          
+          const numberOfTravelers = quizNumberOfTravelers ? parseInt(quizNumberOfTravelers, 10) : 1;
+          
+          // Determine travelers text based on numberOfTravelers
+          const travelersText = numberOfTravelers === 1 ? "Just me" : "Me plus family/friends";
+          
+          // Convert itinerary cities to destinations
+          const selectedDestinations = itinerary.cities.map((city: any) => ({
+            cityName: city.cityName,
+            countryName: city.countryName,
+            imageUrl: "",
+            numberOfNights: city.stayLengthNights,
+          }));
+          
+          // Pre-populate budget categories from cost breakdown
+          const step2Data = {
+            flights: { 
+              cost: itinerary.costBreakdown.flights?.toString() || "0",
+              notes: "",
+              usePoints: false 
+            },
+            housing: { 
+              cost: itinerary.costBreakdown.housing?.toString() || "0",
+              notes: ""
+            },
+            food: { 
+              cost: itinerary.costBreakdown.food?.toString() || "0",
+              notes: ""
+            },
+            transportation: { 
+              cost: itinerary.costBreakdown.transportation?.toString() || "0",
+              notes: ""
+            },
+            fun: { 
+              cost: itinerary.costBreakdown.fun?.toString() || "0",
+              notes: ""
+            },
+            preparation: { 
+              cost: itinerary.costBreakdown.preparation?.toString() || "0",
+              notes: ""
+            },
+            monthlySavings: "0",
+            currentSavings: "0",
+            creditCardPoints: "0",
+          };
+          
+          return {
+            step1: {
+              travelers: travelersText,
+              numberOfTravelers: numberOfTravelers,
+              travelSeason: itinerary.bestTimeToVisit || "Summer",
+              tripDuration: itinerary.totalNights || 7,
+              selectedDestinations: selectedDestinations,
+            },
+            step2: step2Data,
+          };
+        } catch (error) {
+          console.error("Failed to parse selected itinerary:", error);
+        }
+      }
+      
+      // Fallback to legacy single destination format
       const selectedDestinationJson = sessionStorage.getItem("selectedDestination");
       if (selectedDestinationJson) {
         try {
