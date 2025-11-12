@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   password: varchar("password", { length: 255 }).notNull(),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 2 }),
+  zipCode: varchar("zip_code", { length: 10 }),
   profileImageUrl: varchar("profile_image_url", { length: 500 }),
   acceptedTermsAt: timestamp("accepted_terms_at"),
   emailVerified: boolean("email_verified").default(false),
@@ -124,6 +127,9 @@ export const passwordSchema = z.string()
 export const registerUserSchema = insertUserSchema.extend({
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().length(2, "State must be 2 characters (e.g., CA)"),
+  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
   acceptedTerms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms of service",
   }),

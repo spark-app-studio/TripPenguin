@@ -4,7 +4,14 @@
 
 TripPirate is a trip planning application designed to help users plan overseas trips without going into debt. The application guides users through a three-step process: Dream (defining trip basics), Plan (budgeting and saving), and Do (booking). The app emphasizes budget planning, savings tracking, and organized booking management to transform trip planning from a stressful chore into an exciting journey.
 
-### Recent Updates (Nov 9-11, 2025)
+### Recent Updates (Nov 9-12, 2025)
+
+**User Location Profile Fields** (Nov 12, 2025):
+- Added required city, state, and ZIP code fields to user registration
+- Location data stored in users table (city: varchar(100), state: varchar(2), zipCode: varchar(10))
+- Registration form updated with location fields between name and email sections
+- Validation: city (min 1 char), state (exactly 2 chars), zipCode (min 5 chars)
+- Purpose: AI will use user's location to provide accurate flight recommendations based on departure city during trip planning
 
 1. **Onboarding Quiz Flow** (Nov 11, 2025): AI-powered destination discovery for new trips:
    - 7-question personality quiz ("Find Your Adventure Type") with dream moment free-text field

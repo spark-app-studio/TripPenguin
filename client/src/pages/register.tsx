@@ -37,6 +37,9 @@ export default function Register() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      city: "",
+      state: "",
+      zipCode: "",
       acceptedTerms: false,
     },
   });
@@ -115,6 +118,65 @@ export default function Register() {
                           {...field}
                           placeholder="Doe"
                           data-testid="input-lastname"
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="San Francisco"
+                        data-testid="input-city"
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="CA"
+                          maxLength={2}
+                          data-testid="input-state"
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ZIP Code</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="94102"
+                          data-testid="input-zipcode"
                           value={field.value || ""}
                         />
                       </FormControl>
