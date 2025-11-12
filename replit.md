@@ -40,15 +40,37 @@ TripPirate is a trip planning application designed to help users plan overseas t
    
    - **Remix Feature**: Users can click "Remix" button to generate completely new itineraries using the same quiz responses
    
+   - **Post-Quiz Itinerary Refinement** (Nov 12, 2025): Interactive refinement page at /quiz/refine between quiz results and trip planner:
+     * Users can customize AI-generated itineraries before finalizing their trip plan
+     * **Duration Adjustment**: Slider (1-30 nights) to change trip length with AI regeneration via POST /api/ai/adjust-itinerary-duration
+       - Client-side validation: slider must match current total nights to enable regenerate button
+       - Server validation: Zod schema + comprehensive structural constraints (city count, minimum nights, cost coherence)
+       - AI preserves original cities when extending, allows removal when reducing (if allowCityRemoval=true)
+     * **City Deletion**: Remove unwanted cities with automatic re-numbering (1, 2, 3...) and total nights recalculation
+       - Minimum 1 city required (delete button disabled)
+       - Purely local state management (no AI call)
+       - Clears add-on recommendations when itinerary changes
+     * **Add-On Extensions**: AI-generated trip extension options via POST /api/ai/itinerary-addons
+       - Returns 2-3 progressive add-on options (+2 nights, +4-5 nights) with unique IDs
+       - Each add-on shows: title, description, additional nights, cost delta range, suggested additions
+       - Validation ensures monotonic sizing (larger add-ons cost more) and positive costs
+       - User selects one add-on, applies via POST /api/ai/apply-addon
+       - AI validation preserves all original cities, enforces proportional cost increases (30% tolerance for small add-ons, 20% for large)
+     * **State Management**: Single currentItinerary source of truth with three useMutation hooks (adjust, generate, apply)
+       - Combined isBusy flag disables UI during AI operations
+       - Toast notifications for success/error states
+       - Add-on state resets when itinerary modified
+     * **Finalization**: Saves refined itinerary to sessionStorage and routes to /trip-planner
+   
    - **Data Flow**:
      * Quiz responses are intentionally ephemeral (not stored in database, only used for AI generation)
-     * Flow: Home "New Trip" → Quiz (/quiz) → Multi-City Results (/quiz/results) → Trip Planner with pre-filled data
-     * Pre-fill logic uses sessionStorage to pass: selected itinerary (with all cities + cost breakdown), numberOfTravelers, and tripLengthPreference
+     * Flow: Home "New Trip" → Quiz (/quiz) → Multi-City Results (/quiz/results) → **Refinement (/quiz/refine)** → Trip Planner with refined data
+     * Pre-fill logic uses sessionStorage to pass: selected/refined itinerary (with all cities + cost breakdown), numberOfTravelers, and tripLengthPreference
      * Trip planner automatically populates:
-       - All cities from itinerary in order
+       - All cities from refined itinerary in order
        - Traveler count from quiz
-       - Trip duration (total nights from itinerary)
-       - Budget categories pre-filled with AI cost estimates from itinerary
+       - Trip duration (total nights from refined itinerary)
+       - Budget categories pre-filled with AI cost estimates from refined itinerary
      * Maintains backward compatibility with legacy single-destination format
    
    - Authentication required for entire quiz flow
