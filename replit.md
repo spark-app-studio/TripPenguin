@@ -13,22 +13,44 @@ TripPirate is a trip planning application designed to help users plan overseas t
 - Validation: city (min 1 char), state (exactly 2 chars), zipCode (min 5 chars)
 - Purpose: AI will use user's location to provide accurate flight recommendations based on departure city during trip planning
 
-1. **Onboarding Quiz Flow** (Nov 11-12, 2025): AI-powered destination discovery for new trips:
-   - 12-question comprehensive quiz ("Find Your Adventure Type") covering personality, cultural interests, and trip details
-   - Question categories:
+1. **Onboarding Quiz Flow with Multi-City Itineraries** (Nov 11-12, 2025): AI-powered multi-city itinerary discovery for new trips:
+   - **12-question comprehensive quiz** ("Find Your Adventure Type") covering personality, cultural interests, and trip details:
      * 7 personality questions (trip goals, place preferences, temperature, pace, spending, emotions, regions)
-     * 2 cultural interest questions (favorite movie, favorite book) - AI uses these for themed recommendations (e.g., "Lord of the Rings" → Hobbiton, New Zealand)
+     * 2 cultural interest questions (favorite movie, favorite book) - AI uses these for themed recommendations (e.g., "Lord of the Rings" → Hobbiton tour in New Zealand)
      * 1 dream moment (free-text field for personal travel vision)
      * 2 planning questions (number of travelers, trip length preference)
    - Beautiful progress-tracked UI with support for multiple input types (multiple choice, text input, textarea)
-   - POST /api/ai/destination-recommendations endpoint using GPT-4o-mini
-   - AI incorporates cultural insights (movie/book preferences) to suggest themed itineraries and filming locations
-   - Generates 3 personalized destinations: 2 matched to personality + cultural interests, 1 "curveball surprise"
-   - Each recommendation includes city/country, description, why it matches, daily budget estimate, best time to visit
-   - Quiz responses are intentionally ephemeral (not stored in database, only used for AI generation)
-   - Flow: Home "New Trip" → Quiz (/quiz) → Results (/quiz/results) → Trip Planner with pre-filled data
-   - Pre-fill logic uses sessionStorage to pass: selected destination, numberOfTravelers, and tripLengthPreference to trip planner
-   - Trip planner automatically populates traveler count and trip duration based on quiz responses (e.g., "1-2 weeks" → 10 days)
+   
+   - **Multi-City Itinerary Recommendations**:
+     * POST /api/ai/destination-recommendations endpoint using GPT-4o-mini
+     * AI generates 3 complete multi-city itineraries (not single cities)
+     * Each itinerary includes 2-4 cities optimized for efficient routing
+     * Geography-aware: AI considers open-jaw tickets (flying into one city, out of another)
+     * Creative itinerary names (e.g., "The Mediterranean Dream", "Island Hopper's Paradise")
+     * Each itinerary includes:
+       - Creative title and vibe tagline
+       - Multiple cities in logical travel order
+       - 3-5 activity suggestions per city
+       - Airport codes (IATA) for flight planning
+       - Total cost estimate range (min/max) for all travelers
+       - Cost breakdown across 6 categories: flights, housing, food, transportation, fun, preparation
+       - Best time to visit for the entire itinerary
+     * Itinerary types: 2 matched to personality + cultural interests, 1 "curveball surprise"
+     * AI incorporates cultural insights (movie/book preferences) to suggest themed multi-city routes and filming locations
+   
+   - **Remix Feature**: Users can click "Remix" button to generate completely new itineraries using the same quiz responses
+   
+   - **Data Flow**:
+     * Quiz responses are intentionally ephemeral (not stored in database, only used for AI generation)
+     * Flow: Home "New Trip" → Quiz (/quiz) → Multi-City Results (/quiz/results) → Trip Planner with pre-filled data
+     * Pre-fill logic uses sessionStorage to pass: selected itinerary (with all cities + cost breakdown), numberOfTravelers, and tripLengthPreference
+     * Trip planner automatically populates:
+       - All cities from itinerary in order
+       - Traveler count from quiz
+       - Trip duration (total nights from itinerary)
+       - Budget categories pre-filled with AI cost estimates from itinerary
+     * Maintains backward compatibility with legacy single-destination format
+   
    - Authentication required for entire quiz flow
 
 2. **Secure User Authentication**: Complete session-based authentication system with registration, login, and logout. Features include:
