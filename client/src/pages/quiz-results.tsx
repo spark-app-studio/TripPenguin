@@ -63,7 +63,7 @@ export default function QuizResults() {
       }
     }
     
-    setLocation("/trip-planner");
+    setLocation("/quiz/refine");
   };
 
   const handleRemix = () => {
@@ -268,9 +268,9 @@ export default function QuizResults() {
                     <Button
                       onClick={() => handleStartPlanning(itinerary)}
                       size="lg"
-                      data-testid={`button-start-planning-${index}`}
+                      data-testid={`button-customize-${index}`}
                     >
-                      Start Planning This Trip
+                      Customize Itinerary
                     </Button>
                   </div>
                 </div>
