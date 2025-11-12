@@ -44,6 +44,13 @@ Preferred communication style: Simple, everyday language.
 - **Multi-City Itinerary Recommendations**: Uses GPT-4o-mini to generate 3 complete multi-city itineraries (2-4 cities each) via `POST /api/ai/destination-recommendations`. Itineraries include creative titles, activity suggestions, airport codes, total cost estimates, and a cost breakdown across six categories. Geography-aware for efficient routing and open-jaw tickets.
 - **Remix Feature**: Allows regeneration of itineraries from the same quiz responses.
 - **Interactive Refinement Page**: Users can adjust trip duration (1-30 nights) with AI regeneration via `POST /api/ai/adjust-itinerary-duration`. Supports city deletion and AI-generated "Add-On Extensions" via `POST /api/ai/itinerary-addons`. State is managed client-side, with final refined itineraries saved to `sessionStorage` for pre-population in the trip planner.
+- **Streamlined Quiz-to-Plan Flow** (Nov 12, 2025): Users who finalize refined itineraries skip the Dream step entirely and go directly to the Plan step (Step 2) with all itinerary data preserved:
+  * Quiz finalization sets `tripSource="quiz"` flag in sessionStorage
+  * Trip planner detects quiz origin, initializes at "plan" step instead of "dream"
+  * Auto-creates trip and destinations in database before rendering Plan step
+  * Pre-populated budget data (from AI cost breakdown) preserved via `step2Submitted` flag
+  * Hydration guard prevents overwriting quiz budgets until user saves their first edit
+  * Back navigation from Plan step returns to trips list for quiz flows (no Dream step to return to)
 
 **Trip Management**:
 - **Full Database Persistence**: All trip data (destinations, budget categories, bookings) persists to PostgreSQL with full CRUD.

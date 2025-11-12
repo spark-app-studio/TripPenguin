@@ -63,6 +63,9 @@ export default function TripPlanner() {
     return isQuizFlow ? "plan" : "dream";
   });
   
+  // Track whether Step 2 has been submitted (for quiz flow budget preservation)
+  const [step2Submitted, setStep2Submitted] = useState(false);
+  
   // Helper function to normalize season from AI response to radio button values
   const normalizeSeason = (season: string | undefined): string => {
     if (!season) return "summer";
@@ -270,36 +273,51 @@ export default function TripPlanner() {
         })),
       };
 
-      const step2Data = {
-        flights: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "flights")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "flights")?.notes || "",
-          usePoints: false 
-        },
-        housing: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "housing")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "housing")?.notes || ""
-        },
-        food: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "food")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "food")?.notes || ""
-        },
-        transportation: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "transportation")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "transportation")?.notes || ""
-        },
-        fun: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "fun")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "fun")?.notes || ""
-        },
-        preparation: { 
-          cost: existingTrip.budgetCategories.find(c => c.category === "preparation")?.estimatedCost.toString() || "0",
-          notes: existingTrip.budgetCategories.find(c => c.category === "preparation")?.notes || ""
-        },
-        monthlySavings: existingTrip.monthlySavingsAmount?.toString() || "0",
-        currentSavings: existingTrip.currentSavings?.toString() || "0",
-        creditCardPoints: "0",
-      };
+      // Only overwrite step2 data if:
+      // 1. Budget categories exist in the database, OR
+      // 2. We don't have pre-populated data, OR  
+      // 3. Step 2 has been submitted (so we should use backend data)
+      // This preserves quiz-flow pre-populated budgets when the trip is freshly created
+      const hasBudgetCategories = existingTrip.budgetCategories.length > 0;
+      const hasPrePopulatedBudget = !step2Submitted && tripData.step2 && (
+        parseFloat(tripData.step2.flights.cost || "0") > 0 ||
+        parseFloat(tripData.step2.housing.cost || "0") > 0 ||
+        parseFloat(tripData.step2.food.cost || "0") > 0
+      );
+      
+      let step2Data = tripData.step2;
+      if (hasBudgetCategories || !hasPrePopulatedBudget || step2Submitted) {
+        step2Data = {
+          flights: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "flights")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "flights")?.notes || "",
+            usePoints: false 
+          },
+          housing: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "housing")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "housing")?.notes || ""
+          },
+          food: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "food")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "food")?.notes || ""
+          },
+          transportation: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "transportation")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "transportation")?.notes || ""
+          },
+          fun: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "fun")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "fun")?.notes || ""
+          },
+          preparation: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "preparation")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "preparation")?.notes || ""
+          },
+          monthlySavings: existingTrip.monthlySavingsAmount?.toString() || "0",
+          currentSavings: existingTrip.currentSavings?.toString() || "0",
+          creditCardPoints: "0",
+        };
+      }
 
       const step3Data = existingTrip.bookings.map(b => ({
         id: b.id,
@@ -312,16 +330,18 @@ export default function TripPlanner() {
 
       setTripData({ step1: step1Data, step2: step2Data, step3: step3Data });
       
-      // Determine current step based on data completeness
-      if (step3Data.length > 0) {
-        setCurrentStep("summary");
-      } else if (step2Data.flights.cost !== "0" || step2Data.housing.cost !== "0") {
-        setCurrentStep("book");
-      } else if (step1Data.selectedDestinations.length > 0) {
-        setCurrentStep("plan");
+      // Determine current step based on data completeness (but don't override quiz flow)
+      if (!isQuizFlow) {
+        if (step3Data.length > 0) {
+          setCurrentStep("summary");
+        } else if (step2Data && (step2Data.flights.cost !== "0" || step2Data.housing.cost !== "0")) {
+          setCurrentStep("book");
+        } else if (step1Data.selectedDestinations.length > 0) {
+          setCurrentStep("plan");
+        }
       }
     }
-  }, [existingTrip]);
+  }, [existingTrip, isQuizFlow]);
 
   // Initialize trip from quiz flow
   useEffect(() => {
@@ -501,6 +521,7 @@ export default function TripPlanner() {
 
       // Update state AFTER all async operations complete
       setTripData(prevData => ({ ...prevData, step2: data }));
+      setStep2Submitted(true);
       setCurrentStep("book");
     } catch (error) {
       console.error("Failed to save step 2 data:", error);
