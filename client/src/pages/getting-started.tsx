@@ -646,7 +646,7 @@ export default function GettingStarted() {
 
   const renderStaycationDistanceScreen = () => {
     const options = [
-      { value: "home", label: "We're staying at home" },
+      { value: "home", label: "Staying in my general area" },
       { value: "30-60min", label: "Within 30 minutes to 1 hour" },
       { value: "2-3hrs", label: "Within 2–3 hours" },
     ];
