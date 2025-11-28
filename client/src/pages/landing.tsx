@@ -240,12 +240,9 @@ export default function Landing() {
               const Icon = item.icon;
               return (
                 <div key={item.step} className="text-center">
-                  <div className="relative mb-6">
+                  <div className="mb-6">
                     <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
                       <Icon className="w-8 h-8 text-primary" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                      {item.step}
                     </div>
                   </div>
                   <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
