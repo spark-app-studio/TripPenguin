@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { BudgetCategoryCard } from "@/components/BudgetCategoryCard";
 import { BudgetAlert } from "@/components/BudgetAlert";
+import { BookingButton, BookingStatusBadge, SavingsProgressIndicator } from "@/components/BookingButton";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useItinerary } from "@/hooks/useItinerary";
+import { useTripBudget, CategoryCosts } from "@/hooks/useTripBudget";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
@@ -2374,6 +2376,36 @@ export default function Step2Plan({
   const foodSavingsProgress = finalFoodCost > 0 
     ? Math.min(100, (savingsAllocatedToFood / finalFoodCost) * 100) 
     : 0;
+
+  // =============================================================================
+  // CENTRALIZED BUDGET CALCULATIONS
+  // =============================================================================
+  // Using the useTripBudget hook for consistent calculations across all categories.
+  // This provides:
+  // - Total trip cost with points applied
+  // - Sequential savings allocation (Flights → Accommodations → Transport → Activities → Food → Prep)
+  // - Earliest booking dates for each category
+  // - AI-recommended monthly savings
+  // =============================================================================
+  
+  // Build category costs object for centralized budget calculation
+  const categoryCostsForBudget: CategoryCosts = useMemo(() => ({
+    flights: estimatedFlightCost,
+    accommodations: finalAccommodationCost,
+    transportation: finalTransportCost,
+    activities: finalActivityCost,
+    food: finalFoodCost,
+    preparation: prepStats.totalCost
+  }), [estimatedFlightCost, finalAccommodationCost, finalTransportCost, finalActivityCost, finalFoodCost, prepStats.totalCost]);
+  
+  // Use the centralized budget hook for all calculations
+  const tripBudget = useTripBudget({
+    categoryCosts: categoryCostsForBudget,
+    currentSavings: currentSavingsNum,
+    monthlySavings: monthlySavingsNum,
+    pointsToUse: parseInt(budgetData.flights.pointsToUse || "0", 10),
+    usePoints: budgetData.flights.usePoints
+  });
   
   // Get activity pace description
   const getActivityPaceDescription = (pace: ActivityPace): string => {
@@ -2801,44 +2833,21 @@ export default function Step2Plan({
                   </div>
                 </div>
                 
-                {/* Book Flights Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        size="lg"
-                        disabled={!canBookFlightsNow}
-                        onClick={() => {
-                          toast({
-                            title: "Ready to Book!",
-                            description: "Opening flight booking options...",
-                          });
-                        }}
-                        className={`gap-2 ${canBookFlightsNow ? 'bg-primary hover:bg-primary/90' : 'opacity-60'}`}
-                        data-testid="button-book-flights"
-                      >
-                        {canBookFlightsNow ? (
-                          <>
-                            <CheckCircle2 className="w-5 h-5" />
-                            Book the Flights
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-5 h-5" />
-                            Book the Flights
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    {canBookFlightsNow ? (
-                      <p>You've saved enough for flights! Click to explore booking options.</p>
-                    ) : (
-                      <p>This button becomes active once you've saved enough for flights. The goal is to help you avoid booking flights before the money is actually available so you don't go into debt.</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
+                {/* Book Flights Button - Uses centralized budget calculations */}
+                <BookingButton
+                  category="flights"
+                  isFunded={tripBudget.categories.flights.isFunded}
+                  monthsToFund={tripBudget.categories.flights.monthsToFund}
+                  earliestDate={tripBudget.categories.flights.earliestBookingDate}
+                  label="Book the Flights"
+                  onClick={() => {
+                    toast({
+                      title: "Ready to Book!",
+                      description: "Opening flight booking options...",
+                    });
+                  }}
+                  testId="button-book-flights"
+                />
               </div>
             </CardHeader>
             
@@ -3427,37 +3436,17 @@ export default function Step2Plan({
                   )}
                 </div>
 
-                {/* Book Stays Button */}
+                {/* Book Stays Button - Uses centralized budget calculations */}
                 <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          className="w-full gap-2"
-                          size="lg"
-                          disabled={!canBookAccommodationNow}
-                          data-testid="button-book-stays"
-                        >
-                          {canBookAccommodationNow ? (
-                            <>
-                              <MapPin className="w-5 h-5" />
-                              Book Your Stays
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-5 h-5" />
-                              Book Stays
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!canBookAccommodationNow && (
-                      <TooltipContent className="max-w-xs">
-                        <p>You need ${combinedSavingsGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
+                  <BookingButton
+                    category="accommodations"
+                    isFunded={tripBudget.categories.accommodations.isFunded}
+                    monthsToFund={tripBudget.categories.accommodations.monthsToFund}
+                    earliestDate={tripBudget.categories.accommodations.earliestBookingDate}
+                    label="Book Your Stays"
+                    className="w-full"
+                    testId="button-book-stays"
+                  />
                 </div>
               </div>
 
@@ -3754,37 +3743,17 @@ export default function Step2Plan({
                   )}
                 </div>
 
-                {/* Book Transport Button */}
+                {/* Book Transport Button - Uses centralized budget calculations */}
                 <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          className="w-full gap-2"
-                          size="lg"
-                          disabled={!canBookTransportNow}
-                          data-testid="button-book-transport"
-                        >
-                          {canBookTransportNow ? (
-                            <>
-                              <ChevronRight className="w-5 h-5" />
-                              Book Transportation
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-5 h-5" />
-                              Book Transport
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!canBookTransportNow && (
-                      <TooltipContent className="max-w-xs">
-                        <p>You need ${combinedWithTransportGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
+                  <BookingButton
+                    category="transportation"
+                    isFunded={tripBudget.categories.transportation.isFunded}
+                    monthsToFund={tripBudget.categories.transportation.monthsToFund}
+                    earliestDate={tripBudget.categories.transportation.earliestBookingDate}
+                    label="Book Transportation"
+                    className="w-full"
+                    testId="button-book-transport"
+                  />
                 </div>
               </div>
 
@@ -4060,37 +4029,17 @@ export default function Step2Plan({
                   )}
                 </div>
 
-                {/* Book Activities Button */}
+                {/* Book Activities Button - Uses centralized budget calculations */}
                 <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          className="w-full gap-2"
-                          size="lg"
-                          disabled={!canBookActivitiesNow}
-                          data-testid="button-book-activities"
-                        >
-                          {canBookActivitiesNow ? (
-                            <>
-                              <Sparkles className="w-5 h-5" />
-                              Book Activities
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-5 h-5" />
-                              Book Activities
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!canBookActivitiesNow && (
-                      <TooltipContent className="max-w-xs">
-                        <p>You need ${combinedWithActivityGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
+                  <BookingButton
+                    category="activities"
+                    isFunded={tripBudget.categories.activities.isFunded}
+                    monthsToFund={tripBudget.categories.activities.monthsToFund}
+                    earliestDate={tripBudget.categories.activities.earliestBookingDate}
+                    label="Book Activities"
+                    className="w-full"
+                    testId="button-book-activities"
+                  />
                 </div>
               </div>
 
@@ -4535,37 +4484,17 @@ export default function Step2Plan({
                   )}
                 </div>
 
-                {/* Plan Dining Button */}
+                {/* Plan Dining Button - Uses centralized budget calculations */}
                 <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          className="w-full gap-2"
-                          size="lg"
-                          disabled={!canPlanFoodNow}
-                          data-testid="button-plan-dining"
-                        >
-                          {canPlanFoodNow ? (
-                            <>
-                              <Utensils className="w-5 h-5" />
-                              Book Food Experiences
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-5 h-5" />
-                              Plan Dining
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!canPlanFoodNow && (
-                      <TooltipContent className="max-w-xs">
-                        <p>You need ${combinedWithFoodGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
+                  <BookingButton
+                    category="food"
+                    isFunded={tripBudget.categories.food.isFunded}
+                    monthsToFund={tripBudget.categories.food.monthsToFund}
+                    earliestDate={tripBudget.categories.food.earliestBookingDate}
+                    label="Plan Dining"
+                    className="w-full"
+                    testId="button-plan-dining"
+                  />
                 </div>
               </div>
 
