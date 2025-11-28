@@ -61,49 +61,59 @@ export default function QuizResults() {
 
   // Mutation for itinerary recommendations (international/domestic)
   const itineraryMutation = useMutation({
-    mutationFn: async (data: { quiz?: QuizResponse; gsData?: GettingStartedData }) => {
+    mutationFn: async (input: { quiz?: QuizResponse; gsData?: GettingStartedData }) => {
       // Build ExtendedQuizResponse format that backend expects
       let extendedQuiz: ExtendedQuizResponse;
       
-      if (data.gsData) {
+      if (input.gsData) {
         // New Getting Started flow - use gsData with tripType
-        extendedQuiz = {
-          tripType: data.gsData.tripType as "international" | "domestic" | "staycation",
-          numberOfTravelers: data.gsData.adults + data.gsData.kids,
-          adults: data.gsData.adults,
-          kids: data.gsData.kids,
-          childAges: data.gsData.childAges || [],
-          usRegion: data.gsData.usRegion,
-          tripLength: data.gsData.tripLength,
-          internationalRegion: data.gsData.internationalRegion,
-          dayFullness: data.gsData.dayFullness,
-          budgetStyle: data.gsData.budgetStyle,
-          postcardImage: data.gsData.postcardImage,
-          favoriteMedia: data.gsData.favoriteMedia,
-          kidActivities: data.gsData.kidActivities || [],
-          accessibilityNeeds: data.gsData.accessibilityNeeds || [],
+        // Map dayFullness to dayPace enum
+        const mapDayPace = (dayFullness?: string): "relaxed" | "balanced" | "packed" | undefined => {
+          if (!dayFullness) return undefined;
+          if (dayFullness === "relaxed" || dayFullness === "balanced" || dayFullness === "packed") {
+            return dayFullness;
+          }
+          return "balanced";
         };
-      } else if (data.quiz) {
+        
+        extendedQuiz = {
+          tripType: input.gsData.tripType as "international" | "domestic" | "staycation",
+          numberOfTravelers: input.gsData.adults + input.gsData.kids,
+          adults: input.gsData.adults,
+          kids: input.gsData.kids,
+          childAges: input.gsData.childAges || [],
+          usRegion: input.gsData.usRegion,
+          tripLength: input.gsData.tripLength,
+          internationalRegion: input.gsData.internationalRegion,
+          dayPace: mapDayPace(input.gsData.dayFullness),
+          postcardImage: input.gsData.postcardImage,
+          favoriteMedia: input.gsData.favoriteMedia,
+          kidActivities: input.gsData.kidActivities || [],
+          accessibilityNeeds: input.gsData.accessibilityNeeds || [],
+        };
+      } else if (input.quiz) {
         // Legacy quiz flow - convert to ExtendedQuizResponse with default tripType
         extendedQuiz = {
           tripType: "international", // Default for legacy quiz
-          numberOfTravelers: data.quiz.numberOfTravelers,
-          adults: data.quiz.numberOfTravelers,
+          numberOfTravelers: input.quiz.numberOfTravelers,
+          adults: input.quiz.numberOfTravelers,
           kids: 0,
           childAges: [],
-          tripLength: data.quiz.tripLengthPreference,
-          dayFullness: data.quiz.activityLevel,
-          budgetStyle: data.quiz.budgetStyle,
-          postcardImage: data.quiz.dreamMoment,
-          favoriteMedia: data.quiz.favoriteMovieOrBook,
+          tripLength: input.quiz.tripLengthPreference,
+          dayPace: input.quiz.dayPace,
+          spendingPriority: input.quiz.spendingPriority,
+          postcardImage: input.quiz.dreamMoment,
+          favoriteMedia: `${input.quiz.favoriteMovie}, ${input.quiz.favoriteBook}`,
+          tripGoal: input.quiz.tripGoal,
+          placeType: input.quiz.placeType,
         };
       } else {
         throw new Error("No quiz data available");
       }
       
       const res = await apiRequest("POST", "/api/ai/destination-recommendations", extendedQuiz);
-      const data2 = await res.json() as { recommendations: ItineraryRecommendation[] };
-      return data2.recommendations;
+      const responseData = await res.json() as { recommendations: ItineraryRecommendation[] };
+      return responseData.recommendations;
     },
     onError: (error) => {
       toast({
@@ -150,8 +160,12 @@ export default function QuizResults() {
   useEffect(() => {
     if (tripType === "staycation" && gettingStartedData && !staycationMutation.data && !staycationMutation.isPending) {
       staycationMutation.mutate(gettingStartedData);
-    } else if ((tripType === "international" || tripType === "domestic" || !tripType) && quizData && !itineraryMutation.data && !itineraryMutation.isPending) {
-      itineraryMutation.mutate(quizData);
+    } else if ((tripType === "international" || tripType === "domestic") && gettingStartedData && !itineraryMutation.data && !itineraryMutation.isPending) {
+      // Getting Started flow with tripType
+      itineraryMutation.mutate({ gsData: gettingStartedData });
+    } else if (!tripType && quizData && !itineraryMutation.data && !itineraryMutation.isPending) {
+      // Legacy quiz flow without tripType
+      itineraryMutation.mutate({ quiz: quizData });
     }
   }, [tripType, quizData, gettingStartedData]);
 
@@ -192,8 +206,10 @@ export default function QuizResults() {
   const handleRemix = () => {
     if (tripType === "staycation" && gettingStartedData) {
       staycationMutation.mutate(gettingStartedData);
+    } else if ((tripType === "international" || tripType === "domestic") && gettingStartedData) {
+      itineraryMutation.mutate({ gsData: gettingStartedData });
     } else if (quizData) {
-      itineraryMutation.mutate(quizData);
+      itineraryMutation.mutate({ quiz: quizData });
     }
   };
 
