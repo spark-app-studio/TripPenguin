@@ -79,19 +79,20 @@ export default function QuizResults() {
   const staycationMutation = useMutation({
     mutationFn: async (gsData: GettingStartedData) => {
       // Build the extended quiz request for staycations
+      // Ensure arrays are always arrays (not undefined) for Zod validation
       const extendedQuiz: ExtendedQuizResponse = {
         tripType: "staycation",
         numberOfTravelers: gsData.adults + gsData.kids,
         adults: gsData.adults,
         kids: gsData.kids,
-        childAges: gsData.childAges,
+        childAges: gsData.childAges || [],
         timeAvailable: gsData.timeAvailable as "afternoon" | "full-day" | "weekend" | undefined,
         travelDistance: gsData.travelDistance as "30-min" | "1-hour" | "2-hours" | "3-hours" | undefined,
-        staycationGoal: gsData.staycationGoal,
+        staycationGoal: gsData.staycationGoal || [],
         staycationBudget: gsData.staycationBudget as "free-cheap" | "moderate" | "splurge" | undefined,
-        departureLocation: gsData.departureLocation,
-        kidActivities: gsData.kidActivities,
-        accessibilityNeeds: gsData.accessibilityNeeds,
+        departureLocation: gsData.departureLocation || "",
+        kidActivities: gsData.kidActivities || [],
+        accessibilityNeeds: gsData.accessibilityNeeds || [],
       };
       
       const res = await apiRequest("POST", "/api/ai/staycation-recommendations", extendedQuiz);
