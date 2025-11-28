@@ -140,13 +140,14 @@ export default function QuizResults() {
   const handleStartPlanningStaycation = (staycation: StaycationRecommendation) => {
     sessionStorage.setItem("selectedStaycation", JSON.stringify(staycation));
     sessionStorage.setItem("tripType", "staycation");
+    sessionStorage.setItem("tripSource", "quiz");
     
     if (gettingStartedData) {
       sessionStorage.setItem("quizNumberOfTravelers", String(gettingStartedData.adults + gettingStartedData.kids));
     }
     
-    // For staycations, go directly to trip planner
-    setLocation("/trips");
+    // Go to trip planner to create the trip
+    setLocation("/trip/new");
   };
 
   const handleRemix = () => {

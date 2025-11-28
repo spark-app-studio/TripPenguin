@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { TripWithDetails, InsertTrip, Trip } from "@shared/schema";
+import type { TripWithDetails, InsertTrip, Trip, StaycationRecommendation } from "@shared/schema";
 import Step1Dream from "./step1-dream";
 import Step2Plan from "./step2-plan";
 import Step3Book from "./step3-book";
@@ -204,6 +204,83 @@ export default function TripPlanner() {
           };
         } catch (error) {
           console.error("Failed to parse selected itinerary:", error);
+        }
+      }
+      
+      // Check for staycation
+      const selectedStaycationJson = sessionStorage.getItem("selectedStaycation");
+      if (selectedStaycationJson) {
+        try {
+          const staycation = JSON.parse(selectedStaycationJson) as StaycationRecommendation;
+          sessionStorage.removeItem("selectedStaycation");
+          sessionStorage.removeItem("tripType");
+          
+          // Get quiz data for numberOfTravelers
+          const quizNumberOfTravelers = sessionStorage.getItem("quizNumberOfTravelers");
+          sessionStorage.removeItem("quizNumberOfTravelers");
+          
+          const numberOfTravelers = quizNumberOfTravelers ? parseInt(quizNumberOfTravelers, 10) : 1;
+          const travelersValue = numberOfTravelers === 1 ? "just_me" : "with_others";
+          
+          // Map staycation duration to days
+          const durationToDays: Record<string, number> = {
+            "afternoon": 1,
+            "full-day": 1,
+            "weekend": 2,
+          };
+          const tripDuration = durationToDays[staycation.tripDuration] || 1;
+          
+          // Map staycation cost breakdown to budget categories
+          // Staycation has: gas, food, activities, parking, misc
+          // Trip budget has: flights, housing, food, transportation, fun, preparation
+          const step2Data = {
+            flights: { 
+              cost: "0", // No flights for staycation
+              notes: "Local trip - no flights needed",
+              usePoints: false 
+            },
+            housing: { 
+              cost: "0", // Usually no housing for staycation unless weekend
+              notes: staycation.tripDuration === "weekend" ? "Check if overnight stay is needed" : ""
+            },
+            food: { 
+              cost: staycation.costBreakdown.food?.toString() || "0",
+              notes: ""
+            },
+            transportation: { 
+              cost: ((staycation.costBreakdown.gas || 0) + (staycation.costBreakdown.parking || 0)).toString(),
+              notes: `Gas: $${staycation.costBreakdown.gas || 0}, Parking: $${staycation.costBreakdown.parking || 0}`
+            },
+            fun: { 
+              cost: staycation.costBreakdown.activities?.toString() || "0",
+              notes: ""
+            },
+            preparation: { 
+              cost: staycation.costBreakdown.misc?.toString() || "0",
+              notes: "Misc expenses"
+            },
+            monthlySavings: "0",
+            currentSavings: "0",
+            creditCardPoints: "0",
+          };
+          
+          return {
+            step1: {
+              travelers: travelersValue,
+              numberOfTravelers: numberOfTravelers,
+              travelSeason: normalizeSeason(staycation.bestTimeToVisit),
+              tripDuration: tripDuration,
+              selectedDestinations: [{
+                cityName: staycation.destination.name,
+                countryName: "Local Staycation",
+                imageUrl: "",
+                numberOfNights: tripDuration,
+              }],
+            },
+            step2: step2Data,
+          };
+        } catch (error) {
+          console.error("Failed to parse selected staycation:", error);
         }
       }
       
