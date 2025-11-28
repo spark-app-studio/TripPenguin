@@ -28,7 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useItinerary } from "@/hooks/useItinerary";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
@@ -484,6 +485,228 @@ function generateMockActivities(
   return dayActivities;
 }
 
+// Restaurant/Food option interface
+interface FoodOption {
+  id: string;
+  name: string;
+  description: string;
+  cuisine: string;
+  priceRange: "$" | "$$" | "$$$" | "$$$$";
+  estimatedCost: number; // per person
+  type: "restaurant" | "food-tour" | "tasting" | "cooking-class" | "market" | "street-food";
+  reservationRequired: boolean;
+  reservationAdvance?: string; // e.g., "2 weeks in advance"
+  url: string;
+}
+
+// Day food options interface
+interface DayFoodOptions {
+  dayNumber: number;
+  cityName: string;
+  options: FoodOption[];
+}
+
+// Generate mock food options for a city
+function generateMockFoodOptions(
+  cityName: string, 
+  countryName: string, 
+  numberOfNights: number
+): DayFoodOptions[] {
+  const citySlug = cityName.toLowerCase().replace(/\s/g, '-');
+  const isInternational = !["New York", "Los Angeles", "Chicago", "Miami", "Seattle", "Denver", "Austin", "Boston", "San Francisco", "Las Vegas", "Orlando", "Phoenix", "Atlanta", "Dallas", "Houston"].some(
+    city => cityName.toLowerCase().includes(city.toLowerCase())
+  );
+  
+  // Restaurant options pool
+  const restaurants: FoodOption[] = [
+    { 
+      id: `${citySlug}-rest-1`, 
+      name: `${cityName} Bistro`, 
+      description: "Upscale local cuisine with seasonal ingredients and stunning ambiance.", 
+      cuisine: isInternational ? "Local Fusion" : "American Contemporary",
+      priceRange: "$$$", 
+      estimatedCost: isInternational ? 65 : 55, 
+      type: "restaurant",
+      reservationRequired: true,
+      reservationAdvance: "2 weeks in advance",
+      url: `https://example.com/restaurants/${citySlug}-bistro`
+    },
+    { 
+      id: `${citySlug}-rest-2`, 
+      name: "The Local Kitchen", 
+      description: "Cozy neighborhood spot known for authentic regional dishes and warm service.", 
+      cuisine: isInternational ? "Traditional Local" : "Farm-to-Table",
+      priceRange: "$$", 
+      estimatedCost: isInternational ? 40 : 35, 
+      type: "restaurant",
+      reservationRequired: false,
+      url: `https://example.com/restaurants/${citySlug}-local-kitchen`
+    },
+    { 
+      id: `${citySlug}-rest-3`, 
+      name: "Fine Dining at The Grand", 
+      description: "Award-winning fine dining experience with tasting menus and wine pairings.", 
+      cuisine: "Fine Dining",
+      priceRange: "$$$$", 
+      estimatedCost: isInternational ? 120 : 95, 
+      type: "restaurant",
+      reservationRequired: true,
+      reservationAdvance: "3-4 weeks in advance",
+      url: `https://example.com/restaurants/${citySlug}-grand`
+    },
+    { 
+      id: `${citySlug}-rest-4`, 
+      name: "Casual Eats Corner", 
+      description: "Relaxed spot perfect for lunch with quick, tasty options and outdoor seating.", 
+      cuisine: "Casual Dining",
+      priceRange: "$", 
+      estimatedCost: isInternational ? 20 : 15, 
+      type: "restaurant",
+      reservationRequired: false,
+      url: `https://example.com/restaurants/${citySlug}-casual`
+    },
+    { 
+      id: `${citySlug}-rest-5`, 
+      name: "Rooftop Bar & Grill", 
+      description: "Scenic rooftop dining with city views and creative cocktails.", 
+      cuisine: "Modern Grill",
+      priceRange: "$$$", 
+      estimatedCost: isInternational ? 55 : 45, 
+      type: "restaurant",
+      reservationRequired: true,
+      reservationAdvance: "1 week in advance",
+      url: `https://example.com/restaurants/${citySlug}-rooftop`
+    },
+  ];
+  
+  // Food experiences pool
+  const foodExperiences: FoodOption[] = [
+    { 
+      id: `${citySlug}-tour-1`, 
+      name: `${cityName} Food Walking Tour`, 
+      description: "3-hour guided tour sampling the best local flavors across 6-8 stops.", 
+      cuisine: "Various Local",
+      priceRange: "$$", 
+      estimatedCost: isInternational ? 85 : 70, 
+      type: "food-tour",
+      reservationRequired: true,
+      reservationAdvance: "3-5 days in advance",
+      url: `https://example.com/tours/${citySlug}-food`
+    },
+    { 
+      id: `${citySlug}-tasting-1`, 
+      name: "Wine & Cheese Tasting", 
+      description: "Curated selection of regional wines paired with artisanal cheeses.", 
+      cuisine: "Wine & Cheese",
+      priceRange: "$$", 
+      estimatedCost: isInternational ? 55 : 45, 
+      type: "tasting",
+      reservationRequired: true,
+      reservationAdvance: "2-3 days in advance",
+      url: `https://example.com/tastings/${citySlug}`
+    },
+    { 
+      id: `${citySlug}-cooking-1`, 
+      name: "Local Cooking Class", 
+      description: "Hands-on cooking experience learning traditional recipes from local chefs.", 
+      cuisine: "Traditional Local",
+      priceRange: "$$$", 
+      estimatedCost: isInternational ? 95 : 80, 
+      type: "cooking-class",
+      reservationRequired: true,
+      reservationAdvance: "1 week in advance",
+      url: `https://example.com/cooking/${citySlug}`
+    },
+    { 
+      id: `${citySlug}-market-1`, 
+      name: "Morning Market Tour", 
+      description: "Explore local markets, sample fresh produce, and learn about regional ingredients.", 
+      cuisine: "Market Fresh",
+      priceRange: "$", 
+      estimatedCost: isInternational ? 35 : 25, 
+      type: "market",
+      reservationRequired: false,
+      url: `https://example.com/markets/${citySlug}`
+    },
+    { 
+      id: `${citySlug}-street-1`, 
+      name: "Street Food Adventure", 
+      description: "Guided evening tour of the best street food vendors and hidden gems.", 
+      cuisine: "Street Food",
+      priceRange: "$", 
+      estimatedCost: isInternational ? 40 : 30, 
+      type: "street-food",
+      reservationRequired: false,
+      url: `https://example.com/streetfood/${citySlug}`
+    },
+  ];
+  
+  // Generate food options for each day
+  const dayFoodOptions: DayFoodOptions[] = [];
+  const allOptions = [...restaurants, ...foodExperiences];
+  const cityHash = cityName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  for (let day = 1; day <= numberOfNights; day++) {
+    // Each day gets 3-4 restaurant options + 1-2 food experiences
+    const startIndex = ((day - 1) * 4 + cityHash) % restaurants.length;
+    const expStartIndex = ((day - 1) + cityHash) % foodExperiences.length;
+    
+    const dayOptions: FoodOption[] = [];
+    
+    // Add 3-4 restaurants for variety
+    for (let i = 0; i < 4; i++) {
+      const restaurant = restaurants[(startIndex + i) % restaurants.length];
+      dayOptions.push({
+        ...restaurant,
+        id: `${restaurant.id}-day${day}`
+      });
+    }
+    
+    // Add 1-2 food experiences
+    for (let i = 0; i < 2; i++) {
+      const experience = foodExperiences[(expStartIndex + i) % foodExperiences.length];
+      dayOptions.push({
+        ...experience,
+        id: `${experience.id}-day${day}`
+      });
+    }
+    
+    dayFoodOptions.push({
+      dayNumber: day,
+      cityName,
+      options: dayOptions
+    });
+  }
+  
+  return dayFoodOptions;
+}
+
+// Get food type label
+function getFoodTypeLabel(type: FoodOption["type"]): string {
+  switch (type) {
+    case "restaurant": return "Restaurant";
+    case "food-tour": return "Food Tour";
+    case "tasting": return "Tasting";
+    case "cooking-class": return "Cooking Class";
+    case "market": return "Market Tour";
+    case "street-food": return "Street Food";
+    default: return "Dining";
+  }
+}
+
+// Get food type color
+function getFoodTypeColor(type: FoodOption["type"]): string {
+  switch (type) {
+    case "restaurant": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+    case "food-tour": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+    case "tasting": return "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400";
+    case "cooking-class": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+    case "market": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    case "street-food": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+  }
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -794,6 +1017,69 @@ export default function Step2Plan({
       case "relaxation": return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
     }
+  };
+
+  // Food selection state
+  // Maps "cityName-dayNumber-foodId" -> boolean (selected or not)
+  const [selectedFoodOptions, setSelectedFoodOptions] = useState<Record<string, boolean>>({});
+  
+  // Food budget mode: "selections" = pick specific restaurants, "daily" = use daily budget slider
+  const [foodBudgetMode, setFoodBudgetMode] = useState<"selections" | "daily">("selections");
+  
+  // Daily food budget per person (for slider mode)
+  const [dailyFoodBudget, setDailyFoodBudget] = useState(75);
+  
+  // Generate food options for each destination and day
+  const foodOptionsByCity = useMemo(() => {
+    const result: Record<string, DayFoodOptions[]> = {};
+    if (displayedDestinationDetails) {
+      displayedDestinationDetails.forEach((dest) => {
+        result[dest.cityName] = generateMockFoodOptions(
+          dest.cityName, 
+          dest.countryName, 
+          dest.numberOfNights
+        );
+      });
+    }
+    return result;
+  }, [displayedDestinationDetails]);
+  
+  // Calculate total selected food options count and cost
+  const selectedFoodStats = useMemo(() => {
+    let totalCost = 0;
+    let totalCount = 0;
+    let totalAvailable = 0;
+    let restaurantCount = 0;
+    let experienceCount = 0;
+    
+    Object.entries(foodOptionsByCity).forEach(([cityName, days]) => {
+      days.forEach((day) => {
+        totalAvailable += day.options.length;
+        day.options.forEach((option) => {
+          const key = `${cityName}-${day.dayNumber}-${option.id}`;
+          if (selectedFoodOptions[key]) {
+            totalCost += option.estimatedCost * numberOfTravelers;
+            totalCount += 1;
+            if (option.type === "restaurant") {
+              restaurantCount += 1;
+            } else {
+              experienceCount += 1;
+            }
+          }
+        });
+      });
+    });
+    
+    return { totalCost, totalCount, totalAvailable, restaurantCount, experienceCount };
+  }, [foodOptionsByCity, selectedFoodOptions, numberOfTravelers]);
+  
+  // Handle food selection toggle
+  const handleToggleFoodOption = (cityName: string, dayNumber: number, foodId: string) => {
+    const key = `${cityName}-${dayNumber}-${foodId}`;
+    setSelectedFoodOptions(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   // Calculate totals
@@ -1200,6 +1486,49 @@ export default function Step2Plan({
   // Calculate percentage of activity cost saved
   const activitySavingsProgress = finalActivityCost > 0 
     ? Math.min(100, (savingsAllocatedToActivities / finalActivityCost) * 100) 
+    : 0;
+
+  // Food cost calculations
+  const finalFoodCost = useMemo(() => {
+    if (foodBudgetMode === "daily") {
+      // Daily budget mode: daily budget × trip duration × travelers
+      return dailyFoodBudget * tripDuration * numberOfTravelers;
+    } else {
+      // Selections mode: sum of selected food options, or estimate
+      if (selectedFoodStats.totalCount > 0) {
+        return selectedFoodStats.totalCost;
+      }
+      // AI estimate: ~$50/day/person for international, $40/day/person for domestic
+      const isInternational = displayedDestinationDetails?.some(d => 
+        !["USA", "United States", "US"].includes(d.countryName)
+      );
+      return tripDuration * numberOfTravelers * (isInternational ? 50 : 40);
+    }
+  }, [foodBudgetMode, dailyFoodBudget, tripDuration, numberOfTravelers, selectedFoodStats, displayedDestinationDetails]);
+  
+  // Combined flight + accommodation + transport + activities + food savings calculations  
+  const totalAllCategories = totalFlightsAccomTransportActivities + finalFoodCost;
+  const savingsAfterActivities = Math.max(0, savingsAfterTransport - finalActivityCost);
+  const savingsAllocatedToFood = Math.min(savingsAfterActivities, finalFoodCost);
+  const foodSavingsGap = Math.max(0, finalFoodCost - savingsAllocatedToFood);
+  const combinedWithFoodGap = combinedWithActivityGap + foodSavingsGap;
+  
+  // Calculate months needed for all bookings including food
+  const monthsToAllIncludingFood = monthlySavingsNum > 0 ? Math.ceil(combinedWithFoodGap / monthlySavingsNum) : 0;
+  
+  // Calculate earliest food planning date
+  const earliestFoodPlanningDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToAllIncludingFood);
+    return date;
+  }, [monthsToAllIncludingFood]);
+  
+  // Check if food can be planned/booked today
+  const canPlanFoodNow = combinedWithFoodGap === 0 || new Date() >= earliestFoodPlanningDate;
+  
+  // Calculate percentage of food cost saved
+  const foodSavingsProgress = finalFoodCost > 0 
+    ? Math.min(100, (savingsAllocatedToFood / finalFoodCost) * 100) 
     : 0;
   
   // Get activity pace description
@@ -2941,6 +3270,481 @@ export default function Step2Plan({
                     <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready to book!</span> You have enough saved to cover flights, accommodations, transportation, and ${finalActivityCost.toLocaleString()} in activities. 
                       Start reserving your adventures now!
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Food Costs Section */}
+          <Card data-testid="card-food-costs">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Utensils className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Food Costs</CardTitle>
+                    <CardDescription>Plan your dining experiences and budget</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {foodBudgetMode === "selections" && selectedFoodStats.totalCount > 0 && (
+                    <Badge variant="default">
+                      {selectedFoodStats.restaurantCount} restaurants, {selectedFoodStats.experienceCount} experiences
+                    </Badge>
+                  )}
+                  {foodBudgetMode === "daily" && (
+                    <Badge variant="secondary">
+                      ${dailyFoodBudget}/day/person
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Budget Mode Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                <div>
+                  <p className="font-medium">How would you like to budget for food?</p>
+                  <p className="text-sm text-muted-foreground">
+                    {foodBudgetMode === "selections" 
+                      ? "Pick specific restaurants and experiences for accurate costs"
+                      : "Set a daily budget for a quick estimate"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={foodBudgetMode === "selections" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFoodBudgetMode("selections")}
+                    data-testid="button-food-mode-selections"
+                  >
+                    Pick Restaurants
+                  </Button>
+                  <Button
+                    variant={foodBudgetMode === "daily" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFoodBudgetMode("daily")}
+                    data-testid="button-food-mode-daily"
+                  >
+                    Daily Budget
+                  </Button>
+                </div>
+              </div>
+
+              {/* Daily Budget Slider (when in daily mode) */}
+              {foodBudgetMode === "daily" && (
+                <div className="p-4 rounded-lg border bg-background space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Daily Food Budget</p>
+                      <p className="text-sm text-muted-foreground">Per person, per day (meals + snacks)</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold" data-testid="text-daily-food-budget">${dailyFoodBudget}</p>
+                      <p className="text-xs text-muted-foreground">per person/day</p>
+                    </div>
+                  </div>
+                  <Slider
+                    value={[dailyFoodBudget]}
+                    onValueChange={(value) => setDailyFoodBudget(value[0])}
+                    min={25}
+                    max={200}
+                    step={5}
+                    className="py-2"
+                    data-testid="slider-daily-food-budget"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>$25 (Budget)</span>
+                    <span>$75 (Moderate)</span>
+                    <span>$125 (Upscale)</span>
+                    <span>$200 (Luxury)</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 mt-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Total food estimate: </span>
+                      ${finalFoodCost.toLocaleString()} 
+                      <span className="text-muted-foreground ml-1">
+                        ({tripDuration} days × {numberOfTravelers} traveler{numberOfTravelers > 1 ? 's' : ''} × ${dailyFoodBudget}/day)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Food Cost Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Total Food Costs</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {foodBudgetMode === "daily" 
+                            ? "Calculated from your daily budget setting."
+                            : selectedFoodStats.totalCount > 0 
+                              ? "Sum of your selected restaurants and experiences."
+                              : "AI estimate based on typical food costs. Select options below for exact pricing."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-food-cost">
+                    ${finalFoodCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {foodBudgetMode === "daily" 
+                      ? "from daily budget" 
+                      : selectedFoodStats.totalCount > 0 
+                        ? "from your selections" 
+                        : "AI estimated"}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Allocated</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${savingsAllocatedToFood >= finalFoodCost ? 'text-green-600' : ''}`} data-testid="text-food-savings">
+                    ${savingsAllocatedToFood.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (after other expenses)
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${foodSavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-food-gap">
+                    {foodSavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${foodSavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {foodSavingsGap === 0 ? 'Food budget covered!' : 'to save for dining'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Food Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Food Budget Progress</span>
+                  <span className="font-medium">{foodSavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={foodSavingsProgress} className="h-3" />
+              </div>
+
+              {foodBudgetMode === "selections" && (
+                <>
+                  <Separator />
+
+                  {/* Food Options by City and Day */}
+                  <div className="space-y-8">
+                    <h3 className="font-semibold text-lg">Plan Your Dining</h3>
+                    
+                    {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
+                      displayedDestinationDetails.map((dest, destIdx) => {
+                        const cityFoodOptions = foodOptionsByCity[dest.cityName] || [];
+                        
+                        return (
+                          <div 
+                            key={dest.cityName} 
+                            className="space-y-4"
+                            data-testid={`food-city-${destIdx}`}
+                          >
+                            {/* City Header */}
+                            <div className="flex items-center gap-3 pb-2 border-b">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500 text-white text-lg font-bold">
+                                {destIdx + 1}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-lg">{dest.cityName}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {dest.countryName} • {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Days in this city */}
+                            {cityFoodOptions.map((day) => {
+                              const selectedCount = day.options.filter(opt => 
+                                selectedFoodOptions[`${dest.cityName}-${day.dayNumber}-${opt.id}`]
+                              ).length;
+                              
+                              // Separate restaurants from experiences
+                              const restaurants = day.options.filter(opt => opt.type === "restaurant");
+                              const experiences = day.options.filter(opt => opt.type !== "restaurant");
+                              
+                              return (
+                                <div 
+                                  key={`${dest.cityName}-day-${day.dayNumber}`}
+                                  className="p-4 rounded-lg border bg-muted/20"
+                                  data-testid={`food-day-${destIdx}-${day.dayNumber}`}
+                                >
+                                  {/* Day Header */}
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                      <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                                      <span className="font-medium">Day {day.dayNumber} in {dest.cityName}</span>
+                                    </div>
+                                    {selectedCount > 0 && (
+                                      <Badge variant="default" className="gap-1">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        {selectedCount} selected
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Restaurants Section */}
+                                  <div className="mb-4">
+                                    <h5 className="text-sm font-medium text-muted-foreground mb-3">Restaurants</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {restaurants.map((option) => {
+                                        const optionKey = `${dest.cityName}-${day.dayNumber}-${option.id}`;
+                                        const isSelected = selectedFoodOptions[optionKey] || false;
+                                        
+                                        return (
+                                          <div
+                                            key={option.id}
+                                            className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                              isSelected 
+                                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                                : 'bg-background hover-elevate'
+                                            }`}
+                                            onClick={() => handleToggleFoodOption(dest.cityName, day.dayNumber, option.id)}
+                                            data-testid={`food-option-${option.id}`}
+                                          >
+                                            <div className="flex items-start justify-between mb-2">
+                                              <div className="flex items-center gap-2">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getFoodTypeColor(option.type)}`}>
+                                                  {getFoodTypeLabel(option.type)}
+                                                </span>
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                  {option.priceRange}
+                                                </span>
+                                              </div>
+                                              {isSelected ? (
+                                                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                              ) : (
+                                                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                              )}
+                                            </div>
+                                            <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                            <p className="text-xs text-muted-foreground mb-2">
+                                              {option.cuisine}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                              {option.description}
+                                            </p>
+                                            {option.reservationRequired && (
+                                              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                                <Clock className="w-3 h-3" />
+                                                <span>Reserve {option.reservationAdvance}</span>
+                                              </div>
+                                            )}
+                                            <div className="flex items-end justify-between">
+                                              <span className="font-bold text-sm">
+                                                ${option.estimatedCost}/person
+                                              </span>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-xs gap-1 text-muted-foreground"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  window.open(option.url, '_blank');
+                                                }}
+                                                data-testid={`button-view-food-${option.id}`}
+                                              >
+                                                <ExternalLink className="w-3 h-3" />
+                                                View
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Food Experiences Section */}
+                                  {experiences.length > 0 && (
+                                    <div>
+                                      <h5 className="text-sm font-medium text-muted-foreground mb-3">Food Experiences</h5>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {experiences.map((option) => {
+                                          const optionKey = `${dest.cityName}-${day.dayNumber}-${option.id}`;
+                                          const isSelected = selectedFoodOptions[optionKey] || false;
+                                          
+                                          return (
+                                            <div
+                                              key={option.id}
+                                              className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                                isSelected 
+                                                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                                  : 'bg-background hover-elevate'
+                                              }`}
+                                              onClick={() => handleToggleFoodOption(dest.cityName, day.dayNumber, option.id)}
+                                              data-testid={`food-option-${option.id}`}
+                                            >
+                                              <div className="flex items-start justify-between mb-2">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getFoodTypeColor(option.type)}`}>
+                                                  {getFoodTypeLabel(option.type)}
+                                                </span>
+                                                {isSelected ? (
+                                                  <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                                ) : (
+                                                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                                )}
+                                              </div>
+                                              <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                                {option.description}
+                                              </p>
+                                              {option.reservationRequired && (
+                                                <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                                  <Clock className="w-3 h-3" />
+                                                  <span>Reserve {option.reservationAdvance}</span>
+                                                </div>
+                                              )}
+                                              <div className="flex items-end justify-between">
+                                                <span className="font-bold text-sm">
+                                                  ${option.estimatedCost}/person
+                                                </span>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 text-xs gap-1 text-muted-foreground"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(option.url, '_blank');
+                                                  }}
+                                                  data-testid={`button-view-experience-${option.id}`}
+                                                >
+                                                  <ExternalLink className="w-3 h-3" />
+                                                  View
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Utensils className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No destinations added yet. Add destinations to see dining options.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Plan */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Plan Dining</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalAllCategories.toLocaleString()} total for all trip expenses including food.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canPlanFoodNow ? 'text-green-600' : ''}`} data-testid="text-earliest-food-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canPlanFoodNow 
+                      ? "Ready now!" 
+                      : earliestFoodPlanningDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canPlanFoodNow && monthsToAllIncludingFood > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToAllIncludingFood} month{monthsToAllIncludingFood > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Plan Dining Button */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          className="w-full gap-2"
+                          size="lg"
+                          disabled={!canPlanFoodNow}
+                          data-testid="button-plan-dining"
+                        >
+                          {canPlanFoodNow ? (
+                            <>
+                              <Utensils className="w-5 h-5" />
+                              Book Food Experiences
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-5 h-5" />
+                              Plan Dining
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!canPlanFoodNow && (
+                      <TooltipContent className="max-w-xs">
+                        <p>You need ${combinedWithFoodGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canPlanFoodNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestFoodPlanningDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can plan dining without going into debt. 
+                      At your current savings rate, you'll have enough for all trip expenses by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canPlanFoodNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to plan!</span> You have enough saved to cover all travel expenses including ${finalFoodCost.toLocaleString()} for dining. 
+                      Start making reservations at your favorite spots!
                     </p>
                   </div>
                 </div>
