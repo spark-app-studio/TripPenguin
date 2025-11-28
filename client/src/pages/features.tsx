@@ -135,6 +135,14 @@ export default function Features() {
               <span className="text-xl font-bold">TripPirate</span>
             </Link>
             
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/features" className="text-foreground text-sm font-medium transition-colors">Features</Link>
+              <a href="/#how-it-works" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">How It Works</a>
+              <a href="/#about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</a>
+              <a href="/#faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</a>
+              <Link href="/terms-of-service" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Privacy</Link>
+            </nav>
+
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
