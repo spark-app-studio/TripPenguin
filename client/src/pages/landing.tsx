@@ -122,7 +122,7 @@ export default function Landing() {
               <a href="#how-it-works" className="text-white/80 hover:text-white text-sm font-medium transition-colors">How It Works</a>
               <Link href="/about" className="text-white/80 hover:text-white text-sm font-medium transition-colors">About</Link>
               <Link href="/faq" className="text-white/80 hover:text-white text-sm font-medium transition-colors">FAQ</Link>
-              <Link href="/terms-of-service" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Privacy</Link>
+              <Link href="/privacy" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Privacy</Link>
             </nav>
 
             <div className="flex items-center gap-3">
