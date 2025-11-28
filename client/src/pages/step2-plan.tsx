@@ -29,7 +29,7 @@ import { useItinerary } from "@/hooks/useItinerary";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
@@ -707,6 +707,338 @@ function getFoodTypeColor(type: FoodOption["type"]): string {
   }
 }
 
+// Trip Preparation Item Interface
+interface PrepItem {
+  id: string;
+  category: "luggage" | "clothing" | "electronics" | "toiletries" | "gear" | "documents";
+  name: string;
+  description: string;
+  estimatedCost: number;
+  priority: "essential" | "recommended" | "optional";
+  url: string;
+}
+
+// Generate preparation items based on destinations, season, and travel style
+function generatePrepItems(
+  destinations: DestinationDetail[],
+  season: string,
+  tripDuration: number,
+  dayPace: "relaxed" | "balanced" | "packed"
+): PrepItem[] {
+  const items: PrepItem[] = [];
+  
+  // Determine if international
+  const isInternational = destinations.some(d => 
+    !["USA", "United States", "US", "United States of America"].includes(d.countryName)
+  );
+  
+  // Determine if trip needs warm or cold weather gear
+  const isWarmWeather = ["summer", "spring"].includes(season.toLowerCase());
+  const isColdWeather = ["winter", "fall", "off_season"].includes(season.toLowerCase());
+  
+  // Determine travel style (minimalist for relaxed, more prepared for packed)
+  const isMinimalist = dayPace === "relaxed";
+  const isHeavyPacker = dayPace === "packed";
+  
+  // LUGGAGE
+  if (tripDuration <= 5) {
+    items.push({
+      id: "luggage-carry-on",
+      category: "luggage",
+      name: "Carry-On Suitcase",
+      description: "22x14x9 inches, fits overhead bins. Perfect for shorter trips.",
+      estimatedCost: 120,
+      priority: "essential",
+      url: "https://example.com/travel-gear/carry-on-suitcase"
+    });
+  } else {
+    items.push({
+      id: "luggage-checked",
+      category: "luggage",
+      name: "Medium Checked Suitcase",
+      description: "25-28 inch expandable suitcase with spinner wheels.",
+      estimatedCost: 180,
+      priority: "essential",
+      url: "https://example.com/travel-gear/checked-suitcase"
+    });
+  }
+  
+  items.push({
+    id: "luggage-daypack",
+    category: "luggage",
+    name: "Travel Daypack",
+    description: "Foldable 20L daypack for sightseeing and day trips.",
+    estimatedCost: 35,
+    priority: "recommended",
+    url: "https://example.com/travel-gear/daypack"
+  });
+  
+  if (!isMinimalist) {
+    items.push({
+      id: "luggage-packing-cubes",
+      category: "gear",
+      name: "Packing Cubes Set",
+      description: "6-piece set to organize clothing and maximize suitcase space.",
+      estimatedCost: 25,
+      priority: "recommended",
+      url: "https://example.com/travel-gear/packing-cubes"
+    });
+  }
+  
+  // CLOTHING - Based on season
+  if (isWarmWeather) {
+    items.push({
+      id: "clothing-sun-hat",
+      category: "clothing",
+      name: "Packable Sun Hat",
+      description: "UPF 50+ protection, folds flat for packing.",
+      estimatedCost: 28,
+      priority: "recommended",
+      url: "https://example.com/travel-clothing/sun-hat"
+    });
+    items.push({
+      id: "clothing-quick-dry-shorts",
+      category: "clothing",
+      name: "Quick-Dry Travel Shorts",
+      description: "Lightweight, moisture-wicking, wrinkle-resistant.",
+      estimatedCost: 45,
+      priority: "optional",
+      url: "https://example.com/travel-clothing/quick-dry-shorts"
+    });
+    items.push({
+      id: "clothing-sunglasses",
+      category: "clothing",
+      name: "Polarized Sunglasses",
+      description: "UV400 protection with durable travel case.",
+      estimatedCost: 35,
+      priority: "recommended",
+      url: "https://example.com/travel-gear/sunglasses"
+    });
+  }
+  
+  if (isColdWeather) {
+    items.push({
+      id: "clothing-packable-jacket",
+      category: "clothing",
+      name: "Packable Down Jacket",
+      description: "Lightweight, compressible, warm to 32°F.",
+      estimatedCost: 95,
+      priority: "essential",
+      url: "https://example.com/travel-clothing/down-jacket"
+    });
+    items.push({
+      id: "clothing-thermal-layers",
+      category: "clothing",
+      name: "Merino Wool Base Layer",
+      description: "Naturally odor-resistant, temperature regulating.",
+      estimatedCost: 65,
+      priority: "recommended",
+      url: "https://example.com/travel-clothing/base-layer"
+    });
+    items.push({
+      id: "clothing-beanie",
+      category: "clothing",
+      name: "Packable Beanie",
+      description: "Warm wool blend, fits in pocket.",
+      estimatedCost: 18,
+      priority: "optional",
+      url: "https://example.com/travel-clothing/beanie"
+    });
+  }
+  
+  // Walking shoes for all trips
+  items.push({
+    id: "clothing-walking-shoes",
+    category: "clothing",
+    name: "Comfortable Walking Shoes",
+    description: "Cushioned, supportive, broken in before trip.",
+    estimatedCost: 85,
+    priority: "essential",
+    url: "https://example.com/travel-footwear/walking-shoes"
+  });
+  
+  // ELECTRONICS
+  if (isInternational) {
+    items.push({
+      id: "electronics-power-adapter",
+      category: "electronics",
+      name: "Universal Power Adapter",
+      description: "Works in 150+ countries with multiple USB ports.",
+      estimatedCost: 25,
+      priority: "essential",
+      url: "https://example.com/travel-electronics/universal-adapter"
+    });
+    items.push({
+      id: "electronics-voltage-converter",
+      category: "electronics",
+      name: "Voltage Converter",
+      description: "For devices not rated for 220V (hair dryers, curling irons).",
+      estimatedCost: 35,
+      priority: "optional",
+      url: "https://example.com/travel-electronics/voltage-converter"
+    });
+  }
+  
+  items.push({
+    id: "electronics-power-bank",
+    category: "electronics",
+    name: "Portable Power Bank",
+    description: "20,000mAh capacity, TSA-approved for carry-on.",
+    estimatedCost: 40,
+    priority: "recommended",
+    url: "https://example.com/travel-electronics/power-bank"
+  });
+  
+  if (isHeavyPacker) {
+    items.push({
+      id: "electronics-travel-camera",
+      category: "electronics",
+      name: "Compact Travel Camera",
+      description: "Lightweight mirrorless or high-end compact camera.",
+      estimatedCost: 350,
+      priority: "optional",
+      url: "https://example.com/travel-electronics/camera"
+    });
+  }
+  
+  // TOILETRIES
+  items.push({
+    id: "toiletries-travel-bottles",
+    category: "toiletries",
+    name: "TSA-Approved Travel Bottles",
+    description: "Leakproof silicone bottles, 3.4oz each, clear pouch.",
+    estimatedCost: 15,
+    priority: "essential",
+    url: "https://example.com/travel-toiletries/bottles"
+  });
+  
+  items.push({
+    id: "toiletries-hanging-bag",
+    category: "toiletries",
+    name: "Hanging Toiletry Bag",
+    description: "Compact organizer with hook for hotel bathrooms.",
+    estimatedCost: 22,
+    priority: "recommended",
+    url: "https://example.com/travel-toiletries/bag"
+  });
+  
+  if (isWarmWeather) {
+    items.push({
+      id: "toiletries-sunscreen",
+      category: "toiletries",
+      name: "Travel Sunscreen SPF 50",
+      description: "Reef-safe, TSA-approved size. Apply every 2 hours.",
+      estimatedCost: 12,
+      priority: "essential",
+      url: "https://example.com/travel-toiletries/sunscreen"
+    });
+  }
+  
+  // TRAVEL GEAR
+  items.push({
+    id: "gear-travel-pillow",
+    category: "gear",
+    name: "Memory Foam Travel Pillow",
+    description: "Compressible neck pillow with carrying case.",
+    estimatedCost: 30,
+    priority: tripDuration > 7 ? "recommended" : "optional",
+    url: "https://example.com/travel-gear/neck-pillow"
+  });
+  
+  if (isInternational || tripDuration > 7) {
+    items.push({
+      id: "gear-money-belt",
+      category: "gear",
+      name: "RFID-Blocking Money Belt",
+      description: "Hidden under-clothing pouch for passport and cash.",
+      estimatedCost: 18,
+      priority: "recommended",
+      url: "https://example.com/travel-gear/money-belt"
+    });
+  }
+  
+  items.push({
+    id: "gear-luggage-locks",
+    category: "gear",
+    name: "TSA-Approved Luggage Locks",
+    description: "Set of 2 combination locks, TSA-accepted.",
+    estimatedCost: 12,
+    priority: "recommended",
+    url: "https://example.com/travel-gear/locks"
+  });
+  
+  items.push({
+    id: "gear-reusable-water-bottle",
+    category: "gear",
+    name: "Collapsible Water Bottle",
+    description: "Foldable, BPA-free, TSA-friendly when empty.",
+    estimatedCost: 15,
+    priority: "optional",
+    url: "https://example.com/travel-gear/water-bottle"
+  });
+  
+  // DOCUMENTS
+  if (isInternational) {
+    items.push({
+      id: "documents-passport-holder",
+      category: "documents",
+      name: "RFID Passport Holder",
+      description: "Blocks scanning, holds passport + cards + boarding pass.",
+      estimatedCost: 15,
+      priority: "recommended",
+      url: "https://example.com/travel-documents/passport-holder"
+    });
+  }
+  
+  items.push({
+    id: "documents-travel-insurance",
+    category: "documents",
+    name: "Travel Insurance",
+    description: "Coverage for medical emergencies, trip cancellation, lost luggage.",
+    estimatedCost: Math.round(tripDuration * 8),
+    priority: "essential",
+    url: "https://example.com/travel-insurance"
+  });
+  
+  return items;
+}
+
+// Get prep category label
+function getPrepCategoryLabel(category: PrepItem["category"]): string {
+  switch (category) {
+    case "luggage": return "Luggage";
+    case "clothing": return "Clothing & Apparel";
+    case "electronics": return "Electronics";
+    case "toiletries": return "Toiletries";
+    case "gear": return "Travel Gear";
+    case "documents": return "Documents & Insurance";
+    default: return "Other";
+  }
+}
+
+// Get prep category icon color
+function getPrepCategoryColor(category: PrepItem["category"]): string {
+  switch (category) {
+    case "luggage": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+    case "clothing": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+    case "electronics": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+    case "toiletries": return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400";
+    case "gear": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    case "documents": return "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400";
+    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+  }
+}
+
+// Get priority badge variant
+function getPriorityBadge(priority: PrepItem["priority"]): { label: string; className: string } {
+  switch (priority) {
+    case "essential": return { label: "Essential", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" };
+    case "recommended": return { label: "Recommended", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" };
+    case "optional": return { label: "Optional", className: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" };
+    default: return { label: "Other", className: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" };
+  }
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -1081,6 +1413,77 @@ export default function Step2Plan({
       [key]: !prev[key]
     }));
   };
+
+  // Trip Preparation state
+  // Maps "prepItemId" -> "own" | "need" | undefined (not set)
+  const [prepItemStatus, setPrepItemStatus] = useState<Record<string, "own" | "need">>({});
+  
+  // Generate preparation items based on trip details
+  const prepItems = useMemo(() => {
+    if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) {
+      return [];
+    }
+    return generatePrepItems(
+      displayedDestinationDetails,
+      itinerary?.travelSeason || travelSeason,
+      displayedDuration,
+      activityPace
+    );
+  }, [displayedDestinationDetails, itinerary?.travelSeason, travelSeason, displayedDuration, activityPace]);
+  
+  // Handle prep item status toggle
+  const handleTogglePrepStatus = (itemId: string, status: "own" | "need") => {
+    setPrepItemStatus(prev => ({
+      ...prev,
+      [itemId]: prev[itemId] === status ? undefined : status
+    }));
+  };
+  
+  // Calculate prep stats
+  const prepStats = useMemo(() => {
+    let totalCost = 0;
+    let needToBuyCount = 0;
+    let alreadyOwnCount = 0;
+    let essentialCost = 0;
+    let recommendedCost = 0;
+    let optionalCost = 0;
+    
+    prepItems.forEach((item) => {
+      const status = prepItemStatus[item.id];
+      if (status === "need") {
+        totalCost += item.estimatedCost;
+        needToBuyCount += 1;
+        if (item.priority === "essential") essentialCost += item.estimatedCost;
+        if (item.priority === "recommended") recommendedCost += item.estimatedCost;
+        if (item.priority === "optional") optionalCost += item.estimatedCost;
+      } else if (status === "own") {
+        alreadyOwnCount += 1;
+      }
+    });
+    
+    return { 
+      totalCost, 
+      needToBuyCount, 
+      alreadyOwnCount, 
+      essentialCost, 
+      recommendedCost, 
+      optionalCost,
+      totalItems: prepItems.length,
+      unmarkedCount: prepItems.length - needToBuyCount - alreadyOwnCount
+    };
+  }, [prepItems, prepItemStatus]);
+  
+  // Group prep items by category
+  const prepItemsByCategory = useMemo(() => {
+    const grouped: Record<string, PrepItem[]> = {};
+    prepItems.forEach((item) => {
+      if (!grouped[item.category]) {
+        grouped[item.category] = [];
+      }
+      grouped[item.category].push(item);
+    });
+    return grouped;
+  }, [prepItems]);
 
   // Calculate totals
   const totalEstimated =
@@ -3745,6 +4148,280 @@ export default function Step2Plan({
                     <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready to plan!</span> You have enough saved to cover all travel expenses including ${finalFoodCost.toLocaleString()} for dining. 
                       Start making reservations at your favorite spots!
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Trip Preparation Section */}
+          <Card data-testid="card-trip-preparation">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/30">
+                    <Briefcase className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Trip Preparation</CardTitle>
+                    <CardDescription>Gear, supplies, and travel essentials</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {prepStats.alreadyOwnCount > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Check className="w-3 h-3" />
+                      {prepStats.alreadyOwnCount} owned
+                    </Badge>
+                  )}
+                  {prepStats.needToBuyCount > 0 && (
+                    <Badge variant="default" className="gap-1">
+                      <ShoppingCart className="w-3 h-3" />
+                      {prepStats.needToBuyCount} to buy
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Warning Banner */}
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">Wait Before Buying</p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      We recommend waiting to buy gear until you have enough money saved for your trip, to avoid going into debt. 
+                      Use this checklist to plan ahead and mark items you already own.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prep Cost Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Estimated Prep Cost</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Total cost of items marked as "Need to buy". Mark items you already own to reduce this.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-prep-cost">
+                    ${prepStats.totalCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    from {prepStats.needToBuyCount} item{prepStats.needToBuyCount !== 1 ? 's' : ''} to buy
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Already Own</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${prepStats.alreadyOwnCount > 0 ? 'text-green-600' : ''}`} data-testid="text-prep-owned">
+                    {prepStats.alreadyOwnCount} item{prepStats.alreadyOwnCount !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    of {prepStats.totalItems} total
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Not Yet Marked</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${prepStats.unmarkedCount === 0 ? 'text-green-600' : 'text-muted-foreground'}`} data-testid="text-prep-unmarked">
+                    {prepStats.unmarkedCount} item{prepStats.unmarkedCount !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {prepStats.unmarkedCount === 0 ? 'All items reviewed!' : 'still to review'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Cost breakdown by priority */}
+              {prepStats.needToBuyCount > 0 && (
+                <div className="p-4 rounded-lg bg-muted/30 border">
+                  <p className="text-sm font-medium mb-3">Shopping List Breakdown</p>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-xs text-red-600 dark:text-red-400 mb-1">Essential</p>
+                      <p className="font-bold">${prepStats.essentialCost.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-1">Recommended</p>
+                      <p className="font-bold">${prepStats.recommendedCost.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Optional</p>
+                      <p className="font-bold">${prepStats.optionalCost.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Preparation Checklist by Category */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Preparation Checklist</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Based on your {getSeasonDisplay(itinerary?.travelSeason || travelSeason).toLowerCase()} trip
+                  </p>
+                </div>
+                
+                {Object.entries(prepItemsByCategory).map(([category, items]) => {
+                  const categoryIcon = {
+                    luggage: Package,
+                    clothing: Shirt,
+                    electronics: Zap,
+                    toiletries: Droplets,
+                    gear: Compass,
+                    documents: FileText
+                  }[category as PrepItem["category"]] || Package;
+                  
+                  const CategoryIcon = categoryIcon;
+                  
+                  return (
+                    <div 
+                      key={category}
+                      className="space-y-3"
+                      data-testid={`prep-category-${category}`}
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <div className={`p-1.5 rounded ${getPrepCategoryColor(category as PrepItem["category"])}`}>
+                          <CategoryIcon className="w-4 h-4" />
+                        </div>
+                        <h4 className="font-medium">{getPrepCategoryLabel(category as PrepItem["category"])}</h4>
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          {items.length} item{items.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+
+                      {/* Items in this category */}
+                      <div className="space-y-2">
+                        {items.map((item) => {
+                          const status = prepItemStatus[item.id];
+                          const priorityBadge = getPriorityBadge(item.priority);
+                          
+                          return (
+                            <div
+                              key={item.id}
+                              className={`p-4 rounded-lg border transition-all ${
+                                status === "own" 
+                                  ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' 
+                                  : status === "need"
+                                    ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900'
+                                    : 'bg-background'
+                              }`}
+                              data-testid={`prep-item-${item.id}`}
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <h5 className="font-medium">{item.name}</h5>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${priorityBadge.className}`}>
+                                      {priorityBadge.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    {item.description}
+                                  </p>
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-bold text-sm">
+                                      ~${item.estimatedCost}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 text-xs gap-1 text-muted-foreground"
+                                      onClick={() => window.open(item.url, '_blank')}
+                                      data-testid={`button-view-prep-${item.id}`}
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      View Example
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {/* Own/Need Toggle Buttons */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Button
+                                    variant={status === "own" ? "default" : "outline"}
+                                    size="sm"
+                                    className={`gap-1 ${status === "own" ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                    onClick={() => handleTogglePrepStatus(item.id, "own")}
+                                    data-testid={`button-own-${item.id}`}
+                                  >
+                                    <Check className="w-3 h-3" />
+                                    Already Own
+                                  </Button>
+                                  <Button
+                                    variant={status === "need" ? "default" : "outline"}
+                                    size="sm"
+                                    className={`gap-1 ${status === "need" ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+                                    onClick={() => handleTogglePrepStatus(item.id, "need")}
+                                    data-testid={`button-need-${item.id}`}
+                                  >
+                                    <ShoppingCart className="w-3 h-3" />
+                                    Need to Buy
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {prepItems.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Briefcase className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No destinations added yet. Add destinations to see preparation suggestions.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Summary Box */}
+              {prepStats.needToBuyCount > 0 && (
+                <>
+                  <Separator />
+                  <div className="p-4 rounded-lg bg-muted/50 border">
+                    <div className="flex items-start gap-3">
+                      <ShoppingCart className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Your Shopping List</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          You've identified {prepStats.needToBuyCount} item{prepStats.needToBuyCount !== 1 ? 's' : ''} to purchase 
+                          for an estimated total of <span className="font-bold">${prepStats.totalCost.toLocaleString()}</span>. 
+                          Consider purchasing essential items first ($
+                          {prepStats.essentialCost.toLocaleString()}) and optional items as your budget allows.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {prepStats.unmarkedCount === 0 && prepStats.totalItems > 0 && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">Checklist complete!</span> You've reviewed all {prepStats.totalItems} preparation items. 
+                      {prepStats.alreadyOwnCount > 0 && ` You already own ${prepStats.alreadyOwnCount} item${prepStats.alreadyOwnCount !== 1 ? 's' : ''}.`}
+                      {prepStats.needToBuyCount > 0 && ` ${prepStats.needToBuyCount} item${prepStats.needToBuyCount !== 1 ? 's' : ''} to purchase for $${prepStats.totalCost.toLocaleString()}.`}
                     </p>
                   </div>
                 </div>

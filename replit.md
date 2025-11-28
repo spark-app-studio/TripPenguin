@@ -102,6 +102,26 @@ Preferred communication style: Simple, everyday language.
 - **Activity Savings Gap**: Difference between final cost and allocated savings.
 - **Book Activities Button**: Disabled until savings gap is zero or earliest booking date is reached.
 
+**Food Costs Section**:
+- Dedicated section for dining budget tracking.
+- **Two Budget Modes**: "Pick Restaurants" (select specific venues) or "Daily Budget" (slider $25-$200/day/person).
+- **Restaurant Options**: Mock restaurants organized by city and day with cuisine type, price range, description, and reservation recommendations.
+- **Food Experiences**: Food tours, cooking classes, tastings, market tours, and street food adventures.
+- **Selection Mechanism**: Click to toggle food selection; costs update.
+- **Savings Allocation**: Savings flow to food after flights, stays, transport, and activities are covered.
+- **Food Savings Gap**: Difference between final cost and allocated savings.
+- **Plan Dining Button**: Disabled until savings gap is zero or earliest planning date is reached.
+
+**Trip Preparation Section**:
+- Dedicated section for gear, supplies, and travel essentials.
+- **Smart Suggestions**: Items generated based on destinations (international vs. domestic), travel season (warm vs. cold weather gear), trip duration (carry-on vs. checked luggage), and travel style from quiz (minimalist vs. heavy packer).
+- **Item Categories**: Luggage, Clothing & Apparel, Electronics (adapters, converters, power banks), Toiletries, Travel Gear (packing cubes, money belt, locks), Documents & Insurance.
+- **Priority Levels**: Essential, Recommended, Optional - each with color-coded badges.
+- **Own/Need Toggle**: Each item has "Already Own" and "Need to Buy" buttons to track what needs purchasing.
+- **Cost Aggregation**: Total estimated prep cost calculated from items marked "Need to Buy", broken down by priority level.
+- **Mock Product Links**: Each item includes an example product URL.
+- **Warning Banner**: Prominent reminder to wait until savings are sufficient before purchasing gear to avoid debt.
+
 ## External Dependencies
 
 **AI/ML Services**:
