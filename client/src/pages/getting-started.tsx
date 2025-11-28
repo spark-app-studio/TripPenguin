@@ -1576,39 +1576,80 @@ export default function GettingStarted() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold">TripPirate</span>
             </Link>
 
+            {/* Navigation Links - hidden on mobile */}
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+              <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+              <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+              <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Privacy</Link>
+            </nav>
+
+            {/* Progress bar - shows when quiz has started */}
             {currentScreen > 0 && (
-              <div className="flex-1 max-w-xs mx-8">
+              <div className="flex-1 max-w-xs">
                 <Progress value={progress} className="h-2" />
               </div>
             )}
 
-            <Button
-              variant="ghost"
-              onClick={() => setLocation("/")}
-              data-testid="button-exit"
-            >
-              Exit
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="ghost" size="sm" data-testid="button-login">
+                  Log in
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/")}
+                data-testid="button-exit"
+              >
+                Exit
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="py-8 lg:py-16">
+      <main className="flex-1 py-8 lg:py-16">
         <AnimatePresence mode="wait">
           {renderScreen()}
         </AnimatePresence>
       </main>
+
+      {/* Footer */}
+      <footer className="py-8 bg-background border-t mt-auto">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Plane className="h-5 w-5 text-primary" />
+              <span className="font-bold">TripPirate</span>
+              <span className="text-muted-foreground text-sm">— Family adventures, finally within reach.</span>
+            </div>
+            <nav className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
+              <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+              <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
+              <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <a href="mailto:contact@trippirate.com" className="hover:text-foreground transition-colors">Contact</a>
+            </nav>
+          </div>
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            © 2025 TripPirate
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
