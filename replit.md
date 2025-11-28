@@ -41,6 +41,7 @@ Preferred communication style: Simple, everyday language.
 - **"Find Your Adventure Type" Quiz**: A 12-question quiz personalizing trip recommendations.
 - **Three Trip Types**: Staycation (local, driving distance), Domestic (multi-city US), International (multi-city global).
 - **Multi-City Itinerary Recommendations**: Uses GPT-4o-mini to generate 3 complete multi-city itineraries, including titles, activity suggestions, airport codes, total cost estimates, and a cost breakdown. Geography-aware for efficient routing.
+- **Domestic US Trip Guardrails**: When tripType is "domestic", the AI prompt enforces US-only destinations with strict guardrails - all cities must have countryName="United States", uses US airport codes, focuses on selected US region (New England, Mid-Atlantic, Southeast, Midwest, Mountains West, Southwest, Pacific Coast), and provides domestic-appropriate cost estimates.
 - **Staycation Recommendations**: Strict driving distance enforcement and quiz-driven personalization for single destination itineraries with detailed plans.
 - **Remix Feature**: Allows regeneration of itineraries from the same quiz responses.
 - **Interactive Refinement Page**: Users can adjust trip duration, delete cities, and add "Add-On Extensions" with AI regeneration. State is managed client-side for pre-population in the trip planner.

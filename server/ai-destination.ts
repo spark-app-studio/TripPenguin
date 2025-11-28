@@ -30,7 +30,7 @@ function sanitizeInput(input: string): string {
     .trim();
 }
 
-function mapQuizToPersonality(quiz: QuizResponse): string {
+function mapQuizToPersonality(quiz: ExtendedQuizResponse): string {
   const traits: string[] = [];
 
   if (quiz.tripGoal === "rest") {
@@ -53,12 +53,6 @@ function mapQuizToPersonality(quiz: QuizResponse): string {
     traits.push("energized by modern skylines and urban nightlife");
   }
 
-  if (quiz.temperature === "warm") {
-    traits.push("prefers warm, sunny weather");
-  } else if (quiz.temperature === "cool") {
-    traits.push("enjoys cool, crisp climates");
-  }
-
   if (quiz.dayPace === "relaxed") {
     traits.push("wants mostly chill days with minimal planning");
   } else if (quiz.dayPace === "balanced") {
@@ -77,42 +71,44 @@ function mapQuizToPersonality(quiz: QuizResponse): string {
     traits.push("loves collecting meaningful souvenirs and memory items");
   }
 
-  if (quiz.desiredEmotion === "wonder") {
-    traits.push("wants to feel wonder");
-  } else if (quiz.desiredEmotion === "freedom") {
-    traits.push("wants to feel freedom");
-  } else if (quiz.desiredEmotion === "connection") {
-    traits.push("wants to feel connection");
-  } else if (quiz.desiredEmotion === "awe") {
-    traits.push("wants to feel awe");
-  }
-
+  // For international trips, include region preference
   let regionPreference = "";
-  if (quiz.region !== "surprise") {
+  if (quiz.tripType === "international" && quiz.internationalRegion && quiz.internationalRegion !== "surprise") {
     const regionMap: Record<string, string> = {
       europe: "Europe",
       asia: "Asia",
       southAmerica: "South America",
       tropicalIslands: "Tropical Islands",
     };
-    regionPreference = regionMap[quiz.region] || "";
+    regionPreference = regionMap[quiz.internationalRegion] || "";
   }
 
   return `${traits.join("; ")}${regionPreference ? `. Interested in ${regionPreference}` : ""}.`;
 }
 
-function buildCulturalInsightsText(quiz: QuizResponse): string {
+function buildCulturalInsightsText(quiz: ExtendedQuizResponse): string {
   const insights: string[] = [];
   
-  if (quiz.favoriteMovie) {
-    insights.push(`Favorite Movie: "${sanitizeInput(quiz.favoriteMovie)}"`);
-  }
-  
-  if (quiz.favoriteBook) {
-    insights.push(`Favorite Book: "${sanitizeInput(quiz.favoriteBook)}"`);
+  // Extended schema uses favoriteMedia instead of separate movie/book
+  if (quiz.favoriteMedia) {
+    insights.push(`Favorite Media/Entertainment: "${sanitizeInput(quiz.favoriteMedia)}"`);
   }
   
   return insights.length > 0 ? insights.join(", ") : "";
+}
+
+function getTripLengthDays(quiz: ExtendedQuizResponse): number {
+  // Extended schema uses tripLength instead of tripLengthPreference
+  const tripLength = quiz.tripLength || "4-7 days";
+  const durationMap: Record<string, number> = {
+    "1-3 days": 3,
+    "4-7 days": 7,
+    "1-2 weeks": 10,
+    "2-3 weeks": 17,
+    "3+ weeks": 21,
+    "flexible": 10,
+  };
+  return durationMap[tripLength] || 10;
 }
 
 function getTripDurationDays(tripLength: string): number {
@@ -127,22 +123,185 @@ function getTripDurationDays(tripLength: string): number {
   return durationMap[tripLength] || 10;
 }
 
+function getUSRegionDescription(usRegion?: string): string {
+  const regionMap: Record<string, string> = {
+    "new-england": "New England (Maine, New Hampshire, Vermont, Massachusetts, Rhode Island, Connecticut) - coastal towns, fall foliage, colonial history, lighthouses, lobster shacks",
+    "mid-atlantic": "Mid-Atlantic (New York, New Jersey, Pennsylvania, Delaware, Maryland, Washington D.C.) - world-class museums, historic sites, iconic cities, diverse neighborhoods",
+    "southeast": "Southeast (Virginia, North Carolina, South Carolina, Georgia, Florida, Alabama, Mississippi, Louisiana, Tennessee, Kentucky) - beaches, Southern hospitality, music cities, warm weather",
+    "midwest": "Midwest (Ohio, Michigan, Indiana, Illinois, Wisconsin, Minnesota, Iowa, Missouri, Kansas, Nebraska, North Dakota, South Dakota) - Great Lakes, friendly towns, American heartland",
+    "mountains-west": "Mountain West (Colorado, Wyoming, Montana, Idaho, Utah) - Rocky Mountains, ski towns, national parks, wilderness adventures, alpine scenery",
+    "southwest": "Southwest (Arizona, New Mexico, Nevada, Texas) - desert landscapes, canyonlands, stargazing, Native American heritage, vibrant culture",
+    "pacific-coast": "Pacific Coast (California, Oregon, Washington, Alaska, Hawaii) - ocean cliffs, redwood forests, coastal drives, diverse landscapes",
+    "surprise": "anywhere in the United States that best matches their preferences",
+  };
+  return regionMap[usRegion || "surprise"] || "anywhere in the United States";
+}
+
 export async function getItineraryRecommendations(
-  quiz: QuizResponse
+  quiz: ExtendedQuizResponse
 ): Promise<ItineraryRecommendation[]> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.");
   }
 
-  const sanitizedDreamMoment = sanitizeInput(quiz.dreamMoment);
+  // Extended schema uses postcardImage instead of dreamMoment
+  const sanitizedDreamMoment = sanitizeInput(quiz.postcardImage || "");
   const personalityProfile = mapQuizToPersonality(quiz);
   const culturalInsights = buildCulturalInsightsText(quiz);
-  const tripDurationDays = getTripDurationDays(quiz.tripLengthPreference);
+  // Extended schema uses tripLength instead of tripLengthPreference
+  const tripDurationDays = getTripLengthDays(quiz);
+  const tripLengthLabel = quiz.tripLength || "4-7 days";
   const numberOfTravelers = quiz.numberOfTravelers;
+  
+  // Check if this is a domestic US trip
+  const isDomesticTrip = quiz.tripType === "domestic";
+  const usRegionDescription = isDomesticTrip ? getUSRegionDescription(quiz.usRegion) : "";
 
-  const systemPrompt = `You are an expert travel advisor specializing in creating multi-city itineraries. You help people discover perfect travel routes that efficiently combine multiple destinations into unforgettable journeys. You consider geography, flight logistics, and open-jaw routing (flying into one city and out of another) to create efficient, exciting itineraries. You pay special attention to cultural interests like favorite movies and books to create themed experiences (e.g., "Lord of the Rings" fans → Hobbiton tour in New Zealand).`;
+  // Different prompts based on trip type
+  let systemPrompt: string;
+  let userPrompt: string;
 
-  const userPrompt = `Create 3 multi-city itineraries for this traveler:
+  if (isDomesticTrip) {
+    // DOMESTIC US TRIP - Enforce USA-only destinations
+    systemPrompt = `You are an expert travel advisor specializing in creating multi-city itineraries WITHIN THE UNITED STATES. You help Americans discover amazing domestic travel routes that efficiently combine multiple US destinations into unforgettable journeys. You consider geography, flight logistics, and open-jaw routing (flying into one city and out of another) to create efficient, exciting itineraries.
+
+CRITICAL CONSTRAINT: ALL destinations MUST be within the UNITED STATES. This is a DOMESTIC trip - NO international destinations allowed. Every city must be in a US state.
+
+You pay special attention to cultural interests like favorite movies and books to create themed experiences using US filming locations (e.g., "Yellowstone" fans → Montana ranch experience, "Breaking Bad" fans → Albuquerque tour).`;
+
+    userPrompt = `Create 3 multi-city DOMESTIC US itineraries for this traveler:
+
+===== CRITICAL: US-ONLY DESTINATIONS =====
+This is a DOMESTIC US trip. EVERY city MUST be in the United States.
+- countryName MUST be "United States" for ALL cities
+- ONLY include cities in US states
+- NO international destinations whatsoever
+- Focus on: ${usRegionDescription}
+
+Traveler Personality: ${personalityProfile}
+
+${culturalInsights ? `Cultural Interests: ${culturalInsights}\nIMPORTANT: Use their favorite movie/book to inspire themed itineraries. Include US filming locations, book settings, or destinations within America that match the themes and atmospheres of their favorites.\n` : ""}
+Dream Moment: "${sanitizedDreamMoment}"
+
+Trip Planning Details:
+- Number of travelers: ${numberOfTravelers}
+- Trip length preference: ${tripLengthLabel} (approximately ${tripDurationDays} days total)
+- REGION FOCUS: ${usRegionDescription}
+
+Create exactly 3 MULTI-CITY US itineraries:
+
+ITINERARY REQUIREMENTS:
+- Each itinerary must include 2-4 AMERICAN cities
+- ALL cities MUST be in the United States (countryName = "United States")
+- Cities should be geographically logical within the US (consider domestic flight routes, driving distances, regional clustering)
+- Optimize for efficient routing: consider flying into one city and out of another (open-jaw tickets)
+- Include specific US airport IATA codes (e.g., "LAX", "JFK", "ORD", "DEN", "ATL")
+- Total nights across all cities should approximately match ${tripDurationDays} days
+${quiz.usRegion && quiz.usRegion !== "surprise" ? `- PRIORITIZE destinations in the ${usRegionDescription} region` : "- Can include cities from any US region that matches their preferences"}
+
+ITINERARY STRUCTURE:
+- Itinerary 1: Perfect match for personality + cultural interests (US destinations only)
+- Itinerary 2: Another great US route with different cities/theme
+- Itinerary 3: "Hidden Gem USA" - lesser-known but amazing American destinations
+
+For each itinerary, provide:
+1. id: unique identifier (e.g., "itinerary-1", "itinerary-2", "itinerary-3")
+2. title: Creative, fun name reflecting the American journey (e.g., "Pacific Coast Highway Dream", "Southern Charm Trail", "Rocky Mountain High")
+3. vibeTagline: Short 1-sentence vibe description (max 100 chars)
+4. isCurveball: true only for itinerary 3
+5. totalCost: Estimated cost range for ALL ${numberOfTravelers} traveler(s) for the ENTIRE domestic trip
+   - min: Conservative estimate (budget-conscious choices)
+   - max: Higher-end estimate (comfortable choices)
+   - currency: "USD"
+6. costBreakdown: Average costs for the entire trip across all 6 categories (in USD for ALL ${numberOfTravelers} travelers):
+   - flights: DOMESTIC flights within the US for all travelers
+   - housing: Hotels/accommodations for all nights, all travelers
+   - food: All meals and drinks for all days, all travelers
+   - transportation: Local transport (rental cars, Ubers, public transit) for all travelers
+   - fun: Activities, tours, attractions, entrance fees for all travelers
+   - preparation: Travel insurance, gear, parking fees for all travelers (no visas needed for domestic)
+7. cities: Array of 2-4 US city segments in travel order, each with:
+   - order: 1, 2, 3, etc.
+   - cityName: US city name (e.g., "San Francisco", "Nashville", "Denver")
+   - countryName: MUST be "United States" for ALL cities
+   - arrivalAirport: US airport IATA code (e.g., "SFO", "BNA", "DEN")
+   - departureAirport: US airport IATA code - may differ from arrival for open-jaw routing
+   - stayLengthNights: Number of nights in this city
+   - activities: Array of 3-5 specific US activity suggestions
+   - imageQuery: Search query for beautiful images (e.g., "San Francisco Golden Gate sunset")
+8. bestTimeToVisit: Best season/months for this entire US itinerary
+9. totalNights: Sum of all stayLengthNights across cities
+
+COST CALCULATION GUIDANCE FOR DOMESTIC US TRIPS:
+- Base estimates on ${numberOfTravelers} traveler(s)
+- Domestic flights are typically $150-400 per person per segment
+- Housing: ${tripDurationDays} nights × accommodation cost × ${numberOfTravelers} travelers
+- Food: ${tripDurationDays} days × 3 meals × $40-80/person/day depending on city
+- Rental cars are often essential in the US - factor in $50-100/day + gas
+- No visa or international preparation costs needed
+- Add 15-25% buffer between min and max estimates
+
+EXAMPLE US CITIES BY REGION:
+- Pacific Coast: San Francisco, Los Angeles, San Diego, Seattle, Portland
+- Mountain West: Denver, Salt Lake City, Phoenix, Sedona, Jackson Hole, Aspen
+- Southwest: Austin, Santa Fe, Albuquerque, Tucson, Las Vegas
+- Southeast: Nashville, Charleston, Savannah, New Orleans, Miami, Atlanta
+- Northeast: New York City, Boston, Philadelphia, Washington D.C., Portland ME
+- Midwest: Chicago, Minneapolis, Detroit, Cleveland, Kansas City
+
+Format response as valid JSON matching this structure:
+{
+  "recommendations": [
+    {
+      "id": "itinerary-1",
+      "title": "Creative US Itinerary Name",
+      "vibeTagline": "One-sentence vibe description",
+      "isCurveball": false,
+      "totalCost": {
+        "min": 2500,
+        "max": 4000,
+        "currency": "USD"
+      },
+      "costBreakdown": {
+        "flights": 800,
+        "housing": 1200,
+        "food": 600,
+        "transportation": 400,
+        "fun": 400,
+        "preparation": 100
+      },
+      "cities": [
+        {
+          "order": 1,
+          "cityName": "Nashville",
+          "countryName": "United States",
+          "arrivalAirport": "BNA",
+          "departureAirport": "BNA",
+          "stayLengthNights": 3,
+          "activities": ["Visit the Country Music Hall of Fame", "Explore Broadway honky-tonks", "Tour the Ryman Auditorium", "Enjoy hot chicken at Prince's"],
+          "imageQuery": "Nashville Tennessee Broadway night"
+        },
+        {
+          "order": 2,
+          "cityName": "New Orleans",
+          "countryName": "United States",
+          "arrivalAirport": "MSY",
+          "departureAirport": "MSY",
+          "stayLengthNights": 4,
+          "activities": ["French Quarter walking tour", "Beignets at Cafe Du Monde", "Jazz clubs on Frenchmen Street", "Garden District mansions tour", "Swamp boat tour"],
+          "imageQuery": "New Orleans French Quarter"
+        }
+      ],
+      "bestTimeToVisit": "March-May or September-November",
+      "totalNights": 7
+    }
+  ]
+}`;
+  } else {
+    // INTERNATIONAL TRIP - Original prompt
+    systemPrompt = `You are an expert travel advisor specializing in creating multi-city itineraries. You help people discover perfect travel routes that efficiently combine multiple destinations into unforgettable journeys. You consider geography, flight logistics, and open-jaw routing (flying into one city and out of another) to create efficient, exciting itineraries. You pay special attention to cultural interests like favorite movies and books to create themed experiences (e.g., "Lord of the Rings" fans → Hobbiton tour in New Zealand).`;
+
+    userPrompt = `Create 3 multi-city itineraries for this traveler:
 
 Traveler Personality: ${personalityProfile}
 
@@ -151,7 +310,7 @@ Dream Moment: "${sanitizedDreamMoment}"
 
 Trip Planning Details:
 - Number of travelers: ${numberOfTravelers}
-- Trip length preference: ${quiz.tripLengthPreference} (approximately ${tripDurationDays} days total)
+- Trip length preference: ${tripLengthLabel} (approximately ${tripDurationDays} days total)
 
 Create exactly 3 MULTI-CITY itineraries:
 
@@ -251,6 +410,7 @@ Format response as valid JSON matching this structure:
     }
   ]
 }`;
+  }
 
   try {
     const completion = await openai.chat.completions.create({
@@ -272,6 +432,18 @@ Format response as valid JSON matching this structure:
     
     // Validate with Zod schema
     const validated = itineraryRecommendationsResponseSchema.parse(parsed);
+    
+    // For domestic trips, verify all cities are in the United States
+    if (isDomesticTrip) {
+      for (const itinerary of validated.recommendations) {
+        for (const city of itinerary.cities) {
+          if (city.countryName !== "United States") {
+            console.warn(`Domestic trip returned non-US city: ${city.cityName}, ${city.countryName}. Overriding to United States.`);
+            city.countryName = "United States";
+          }
+        }
+      }
+    }
     
     return validated.recommendations;
   } catch (error) {

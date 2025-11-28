@@ -640,7 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ai/destination-recommendations", isAuthenticated, async (req, res) => {
     try {
-      const quizResponse = quizResponseSchema.parse(req.body);
+      // Use extended schema to support tripType and usRegion for domestic trips
+      const quizResponse = extendedQuizResponseSchema.parse(req.body);
       const recommendations = await getItineraryRecommendations(quizResponse);
       res.json({ recommendations });
     } catch (error) {
