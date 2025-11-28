@@ -28,6 +28,10 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Check if coming from getting-started quiz
+  const hasQuizData = typeof window !== "undefined" && sessionStorage.getItem("quizData");
+  const redirectAfterAuth = typeof window !== "undefined" && sessionStorage.getItem("redirectAfterAuth");
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerUserSchema),
@@ -53,9 +57,19 @@ export default function Register() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Welcome to TripPirate!",
-        description: "Your account has been created successfully.",
+        description: hasQuizData 
+          ? "Your account is ready. Let's see your personalized recommendations!"
+          : "Your account has been created successfully.",
       });
-      setLocation("/");
+      
+      // Redirect to quiz results if coming from getting-started flow
+      const redirect = sessionStorage.getItem("redirectAfterAuth");
+      if (redirect) {
+        sessionStorage.removeItem("redirectAfterAuth");
+        setLocation(redirect);
+      } else {
+        setLocation("/");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -82,7 +96,9 @@ export default function Register() {
           </div>
           <CardTitle className="text-2xl text-center">Create an account</CardTitle>
           <CardDescription className="text-center">
-            Start planning your dream trip today
+            {hasQuizData 
+              ? "Sign up to see your personalized trip recommendations!"
+              : "Start planning your dream trip today"}
           </CardDescription>
         </CardHeader>
         <CardContent>

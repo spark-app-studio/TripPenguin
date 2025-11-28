@@ -26,6 +26,9 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Check if coming from getting-started quiz
+  const hasQuizData = typeof window !== "undefined" && sessionStorage.getItem("quizData");
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginUserSchema),
@@ -42,11 +45,23 @@ export default function Login() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Check for redirect from quiz
+      const redirect = sessionStorage.getItem("redirectAfterAuth");
+      
       toast({
         title: "Welcome back!",
-        description: "You've successfully logged in.",
+        description: redirect 
+          ? "Let's see your personalized recommendations!"
+          : "You've successfully logged in.",
       });
-      setLocation("/");
+      
+      if (redirect) {
+        sessionStorage.removeItem("redirectAfterAuth");
+        setLocation(redirect);
+      } else {
+        setLocation("/");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -73,7 +88,9 @@ export default function Login() {
           </div>
           <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Sign in to continue planning your trips
+            {hasQuizData 
+              ? "Sign in to see your personalized recommendations!"
+              : "Sign in to continue planning your trips"}
           </CardDescription>
         </CardHeader>
         <CardContent>
