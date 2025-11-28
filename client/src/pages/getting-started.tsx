@@ -814,12 +814,28 @@ export default function GettingStarted() {
   // Accessibility Screen (shared)
   const renderAccessibilityScreen = () => {
     const options = [
+      { value: "none", label: "None — we're all set!" },
       { value: "mobility", label: "Mobility considerations" },
       { value: "wheelchair", label: "Wheelchair accessibility" },
       { value: "stroller", label: "Stroller-friendly needs" },
       { value: "sensory", label: "Sensory-friendly environments" },
       { value: "food-allergy", label: "Food or allergy considerations" },
     ];
+
+    const handleAccessibilitySelect = (value: string) => {
+      if (value === "none") {
+        // If selecting "none", clear all other selections and just set "none"
+        updateQuizData({ accessibilityNeeds: ["none"] });
+      } else {
+        // If selecting anything else, remove "none" if present and toggle the selection
+        const currentNeeds = quizData.accessibilityNeeds?.filter(n => n !== "none") || [];
+        if (currentNeeds.includes(value)) {
+          updateQuizData({ accessibilityNeeds: currentNeeds.filter(n => n !== value) });
+        } else {
+          updateQuizData({ accessibilityNeeds: [...currentNeeds, value] });
+        }
+      }
+    };
 
     return (
       <motion.div
@@ -837,7 +853,7 @@ export default function GettingStarted() {
           Anything we should keep in mind?
         </h2>
         <p className="text-muted-foreground text-center mb-8">
-          Optional — skip if not needed. This simply helps us make better suggestions.
+          Select any that apply, or choose "None" to continue.
         </p>
 
         <div className="space-y-3">
@@ -846,7 +862,7 @@ export default function GettingStarted() {
               key={opt.value}
               title={opt.label}
               selected={quizData.accessibilityNeeds?.includes(opt.value) || false}
-              onClick={() => toggleArrayItem("accessibilityNeeds", opt.value)}
+              onClick={() => handleAccessibilitySelect(opt.value)}
               testId={`card-accessibility-${opt.value}`}
             />
           ))}
