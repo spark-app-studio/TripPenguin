@@ -91,19 +91,19 @@ const initialQuizData: QuizData = {
 
 export default function GettingStarted() {
   const [, setLocation] = useLocation();
-  const [currentScreen, setCurrentScreen] = useState(0);
+  const [currentScreen, setCurrentScreen] = useState(0); // Start at trip type selection (screen 0)
   const [quizData, setQuizData] = useState<QuizData>(initialQuizData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Calculate total screens based on trip type
+  // Calculate total screens based on trip type (removed welcome screen)
   const getTotalScreens = () => {
-    if (!quizData.tripType) return 2;
-    if (quizData.tripType === "staycation") return quizData.kids > 0 ? 10 : 9;
-    return quizData.kids > 0 ? 15 : 14;
+    if (!quizData.tripType) return 1; // Just trip type selection
+    if (quizData.tripType === "staycation") return quizData.kids > 0 ? 9 : 8;
+    return quizData.kids > 0 ? 14 : 13;
   };
 
   const totalScreens = getTotalScreens();
-  const progress = currentScreen === 0 ? 0 : ((currentScreen) / (totalScreens - 1)) * 100;
+  const progress = ((currentScreen) / (totalScreens - 1)) * 100;
 
   const handleNext = () => {
     if (currentScreen < totalScreens - 1) {
@@ -1544,51 +1544,50 @@ export default function GettingStarted() {
 
   // Determine which screen to render based on current index and trip type
   const renderScreen = () => {
-    // Welcome and trip type selection (screens 0-1)
-    if (currentScreen === 0) return renderWelcomeScreen();
-    if (currentScreen === 1) return renderTripTypeScreen();
+    // Trip type selection is now screen 0
+    if (currentScreen === 0) return renderTripTypeScreen();
 
     // After trip type selection, different flows
     if (quizData.tripType === "staycation") {
-      // Staycation flow: 8 screens (+ welcome + type = 10 total, or 9 without kids)
+      // Staycation flow: 7-8 screens after trip type
       const staycationScreens = [
-        renderTravelersScreen,      // 2
-        renderStaycationTimeScreen, // 3
-        renderStaycationDistanceScreen, // 4
-        renderStaycationGoalScreen, // 5
-        ...(quizData.kids > 0 ? [renderKidActivitiesScreen] : []), // 6 (conditional)
-        renderAccessibilityScreen,  // 6 or 7
-        renderStaycationBudgetScreen, // 7 or 8
-        renderLocationScreen,       // 8 or 9
+        renderTravelersScreen,      // 1
+        renderStaycationTimeScreen, // 2
+        renderStaycationDistanceScreen, // 3
+        renderStaycationGoalScreen, // 4
+        ...(quizData.kids > 0 ? [renderKidActivitiesScreen] : []), // 5 (conditional)
+        renderAccessibilityScreen,  // 5 or 6
+        renderStaycationBudgetScreen, // 6 or 7
+        renderLocationScreen,       // 7 or 8
       ];
-      const screenIndex = currentScreen - 2;
+      const screenIndex = currentScreen - 1;
       if (screenIndex >= 0 && screenIndex < staycationScreens.length) {
         return staycationScreens[screenIndex]();
       }
     } else {
-      // Domestic/International flow: 13 screens (+ welcome + type = 15 total, or 14 without kids)
+      // Domestic/International flow: 12-13 screens after trip type
       const tripScreens = [
-        renderTravelersScreen,      // 2
-        renderTripLengthScreen,     // 3
-        renderDatesScreen,          // 4
-        renderRegionScreen,         // 5
-        renderTripDesireScreen,     // 6
-        renderPostcardScreen,       // 7
-        renderFavoriteMediaScreen,  // 8
-        ...(quizData.kids > 0 ? [renderKidActivitiesScreen] : []), // 9 (conditional)
-        renderAccessibilityScreen,  // 9 or 10
-        renderAbsoluteNosScreen,    // 10 or 11
-        renderDayFullnessScreen,    // 11 or 12
-        renderBudgetStyleScreen,    // 12 or 13
-        renderLocationScreen,       // 13 or 14
+        renderTravelersScreen,      // 1
+        renderTripLengthScreen,     // 2
+        renderDatesScreen,          // 3
+        renderRegionScreen,         // 4
+        renderTripDesireScreen,     // 5
+        renderPostcardScreen,       // 6
+        renderFavoriteMediaScreen,  // 7
+        ...(quizData.kids > 0 ? [renderKidActivitiesScreen] : []), // 8 (conditional)
+        renderAccessibilityScreen,  // 8 or 9
+        renderAbsoluteNosScreen,    // 9 or 10
+        renderDayFullnessScreen,    // 10 or 11
+        renderBudgetStyleScreen,    // 11 or 12
+        renderLocationScreen,       // 12 or 13
       ];
-      const screenIndex = currentScreen - 2;
+      const screenIndex = currentScreen - 1;
       if (screenIndex >= 0 && screenIndex < tripScreens.length) {
         return tripScreens[screenIndex]();
       }
     }
 
-    return renderWelcomeScreen();
+    return renderTripTypeScreen();
   };
 
   return (
@@ -1610,12 +1609,10 @@ export default function GettingStarted() {
               <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Privacy</Link>
             </nav>
 
-            {/* Progress bar - shows when quiz has started */}
-            {currentScreen > 0 && (
-              <div className="flex-1 max-w-xs">
-                <Progress value={progress} className="h-2" />
-              </div>
-            )}
+            {/* Progress bar - always visible since quiz starts immediately */}
+            <div className="flex-1 max-w-xs">
+              <Progress value={progress} className="h-2" />
+            </div>
 
             <div className="flex items-center gap-2">
               <Link href="/login">
