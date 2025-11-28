@@ -251,9 +251,9 @@ export const extendedQuizResponseSchema = z.object({
   
   // Staycation-specific fields (required when tripType === "staycation")
   timeAvailable: z.enum(["afternoon", "full-day", "weekend"]).optional(),
-  travelDistance: z.enum(["30-min", "1-hour", "2-hours", "3-hours"]).optional(),
+  travelDistance: z.enum(["home", "2-3hrs"]).optional(),
   staycationGoal: z.array(z.string()).optional(),
-  staycationBudget: z.enum(["free-cheap", "moderate", "splurge"]).optional(),
+  staycationBudget: z.enum(["0-100", "150-300", "400-700", "700+"]).optional(),
   departureLocation: z.string().optional(), // User's home city/ZIP for local recommendations
   
   // Domestic-specific fields

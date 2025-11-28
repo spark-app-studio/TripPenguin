@@ -312,22 +312,21 @@ export async function getStaycationRecommendations(
   
   // Map travel distance to max drive time - enforce maximum of 3 hours
   const distanceMap: Record<string, number> = {
-    "30-min": 30,
-    "1-hour": 60,
-    "2-hours": 120,
-    "3-hours": 180,
+    "home": 60, // Staying in general area = ~1 hour max
+    "2-3hrs": 180, // Within 2-3 hours
   };
   // Cap at 180 minutes (3 hours) maximum
-  const maxDriveMinutes = Math.min(distanceMap[quiz.travelDistance || "2-hours"] || 120, 180);
+  const maxDriveMinutes = Math.min(distanceMap[quiz.travelDistance || "2-3hrs"] || 120, 180);
   const maxDriveHours = Math.round(maxDriveMinutes / 60 * 10) / 10;
   
   // Map budget preference
   const budgetMap: Record<string, string> = {
-    "free-cheap": "free or very low cost (under $50 for the whole group)",
-    "moderate": "moderate spending ($50-150 for the whole group)",
-    "splurge": "treat yourself, willing to spend more for quality experiences ($150-300+)",
+    "0-100": "very low cost ($0-100 total for the whole group)",
+    "150-300": "moderate spending ($150-300 total for the whole group)",
+    "400-700": "comfortable budget ($400-700 total for the whole group)",
+    "700+": "treat yourself, premium experiences ($700+ for the whole group)",
   };
-  const budgetDescription = budgetMap[quiz.staycationBudget || "moderate"] || "moderate spending";
+  const budgetDescription = budgetMap[quiz.staycationBudget || "150-300"] || "moderate spending";
   
   // Build detailed goals description from quiz answers
   const goals = quiz.staycationGoal || [];
