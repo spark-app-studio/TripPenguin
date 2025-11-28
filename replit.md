@@ -86,11 +86,20 @@ Preferred communication style: Simple, everyday language.
 - **Full-Width Card**: Dedicated flight cost tracking section beneath the Trip Financing Summary.
 - **Estimated Flight Cost**: Placeholder estimation function based on destinations (domestic ~$350/person, international ~$1150/person) with multi-city premium. Uses user-entered budget if available.
 - **Savings Allocation**: Current savings applied to flights first (until flights are covered), then to other categories.
-- **Flight Savings Gap**: `EstimatedFlightCost - SavingsAllocatedToFlights`.
+- **Flight Savings Gap**: `EstimatedFlightCost - SavingsAllocatedToFlights` (reduced by points value when applicable).
 - **Earliest Flight Booking Date**: `today + ceil(FlightSavingsGap / MonthlySavings)`.
 - **Book Flights Button**: Disabled until `FlightSavingsGap === 0` or today >= earliest booking date. Includes tooltip explaining the debt-free goal.
 - **Progress Bar**: Visual indicator of flight savings progress.
 - **Contextual Helper Text**: Explains why booking is disabled (when applicable) or confirms readiness to book.
+
+**Flight Points Subsection** (Nov 28, 2025):
+- **Use Points Toggle**: Switch to enable/disable using credit card points for flights. When disabled, points are reset.
+- **Points Input**: User can manually enter number of points to use. Shows points required for full coverage.
+- **Connect Card Account**: Stub function simulates fetching points balance (45k-150k random). Shows balance with dollar equivalent and last updated timestamp.
+- **Points Conversion**: 1 point = $0.012 (typical travel card rate). Points dollar value reduces `estimatedFlightCost` before calculating `flightSavingsGap`.
+- **Coverage Display**: Shows points value, coverage percentage, and remaining cash needed. Visual confirmation when points fully cover flights.
+- **Advisory Note**: Responsible credit card usage guidance - only open cards if you can handle payments and stay debt-free.
+- **Credit Card Offers Panel**: 3 mock credit card offers (Chase Sapphire Preferred, Amex Gold, Capital One Venture X) with bonuses, requirements, annual fees, and "View Offer" links (placeholder URLs).
 
 ## External Dependencies
 

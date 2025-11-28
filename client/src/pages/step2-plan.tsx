@@ -26,10 +26,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useItinerary } from "@/hooks/useItinerary";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle } from "lucide-react";
 
 interface BudgetData {
-  flights: { cost: string; notes: string; usePoints: boolean };
+  flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
   housing: { cost: string; notes: string };
   food: { cost: string; notes: string };
   transportation: { cost: string; notes: string };
@@ -40,6 +42,40 @@ interface BudgetData {
   currentSavings: string;
   creditCardPoints: string;
 }
+
+// Mock credit card offers data
+const mockCreditCardOffers = [
+  {
+    id: "chase-sapphire",
+    name: "Chase Sapphire Preferred",
+    bonus: "60,000 points",
+    bonusValue: "$750",
+    requirement: "after $4,000 spend in 3 months",
+    annualFee: "$95",
+    url: "https://example.com/chase-sapphire"
+  },
+  {
+    id: "amex-gold",
+    name: "American Express Gold",
+    bonus: "75,000 points",
+    bonusValue: "$900",
+    requirement: "after $6,000 spend in 6 months",
+    annualFee: "$250",
+    url: "https://example.com/amex-gold"
+  },
+  {
+    id: "capital-one-venture",
+    name: "Capital One Venture X",
+    bonus: "75,000 miles",
+    bonusValue: "$750",
+    requirement: "after $4,000 spend in 3 months",
+    annualFee: "$395",
+    url: "https://example.com/venture-x"
+  }
+];
+
+// Points to dollar conversion rate (1 point = $0.012, typical for travel cards)
+const POINTS_CONVERSION_RATE = 0.012;
 
 interface DestinationDetail {
   cityName: string;
@@ -151,7 +187,7 @@ export default function Step2Plan({
   })) || destinationDetails;
   
   const [budgetData, setBudgetData] = useState<BudgetData>({
-    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false },
+    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false, pointsToUse: "0" },
     housing: initialData?.housing || { cost: "0", notes: "" },
     food: initialData?.food || { cost: "0", notes: "" },
     transportation: initialData?.transportation || { cost: "0", notes: "" },
@@ -162,6 +198,11 @@ export default function Step2Plan({
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
   });
+
+  // Connected credit card points state
+  const [connectedPointsBalance, setConnectedPointsBalance] = useState<number | null>(null);
+  const [isConnectingCard, setIsConnectingCard] = useState(false);
+  const [pointsLastUpdated, setPointsLastUpdated] = useState<Date | null>(null);
 
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [aiAdvice, setAiAdvice] = useState<BudgetAdviceResponse | null>(null);
@@ -307,6 +348,46 @@ export default function Step2Plan({
     onComplete(budgetData);
   };
 
+  // Stub function to simulate connecting credit card account to fetch points
+  const handleConnectCardAccount = async () => {
+    setIsConnectingCard(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Mock points balance between 45,000 and 150,000
+    const mockPoints = Math.floor(Math.random() * 105000) + 45000;
+    setConnectedPointsBalance(mockPoints);
+    setPointsLastUpdated(new Date());
+    
+    // Auto-fill pointsToUse with connected balance if empty
+    if (!budgetData.flights.pointsToUse || budgetData.flights.pointsToUse === "0") {
+      setBudgetData({
+        ...budgetData,
+        flights: { ...budgetData.flights, pointsToUse: mockPoints.toString() }
+      });
+    }
+    
+    toast({
+      title: "Card Connected",
+      description: `Successfully linked your card. Points balance: ${mockPoints.toLocaleString()}`,
+    });
+    
+    setIsConnectingCard(false);
+  };
+
+  // Toggle use points - reset points when disabled
+  const handleToggleUsePoints = (enabled: boolean) => {
+    setBudgetData({
+      ...budgetData,
+      flights: {
+        ...budgetData.flights,
+        usePoints: enabled,
+        pointsToUse: enabled ? budgetData.flights.pointsToUse : "0"
+      }
+    });
+  };
+
   // Placeholder function to estimate flight cost based on destinations
   // This simulates an API call that would normally check flight prices
   // In production, this would use actual flight price APIs
@@ -359,7 +440,24 @@ export default function Step2Plan({
 
   // Flight savings calculations
   const flightCostFromBudget = parseFloat(budgetData.flights.cost || "0");
-  const estimatedFlightCost = flightCostFromBudget > 0 ? flightCostFromBudget : estimateFlightCost;
+  const baseEstimatedFlightCost = flightCostFromBudget > 0 ? flightCostFromBudget : estimateFlightCost;
+  
+  // Points calculations - only apply if usePoints is enabled
+  const pointsToUse = budgetData.flights.usePoints 
+    ? parseInt(budgetData.flights.pointsToUse || "0", 10) 
+    : 0;
+  const availablePoints = connectedPointsBalance || 0;
+  const effectivePointsToUse = Math.min(pointsToUse, availablePoints > 0 ? availablePoints : pointsToUse);
+  const pointsDollarValue = effectivePointsToUse * POINTS_CONVERSION_RATE;
+  
+  // Calculate points required to fully cover flights
+  const pointsRequiredForFullCoverage = Math.ceil(baseEstimatedFlightCost / POINTS_CONVERSION_RATE);
+  const pointsCoveragePercentage = baseEstimatedFlightCost > 0 
+    ? Math.min(100, (pointsDollarValue / baseEstimatedFlightCost) * 100) 
+    : 0;
+  
+  // Net flight cost after applying points
+  const estimatedFlightCost = Math.max(0, baseEstimatedFlightCost - pointsDollarValue);
   
   // Allocate current savings to flights first (until flights are covered)
   const savingsAllocatedToFlights = Math.min(currentSavingsNum, estimatedFlightCost);
@@ -378,7 +476,7 @@ export default function Step2Plan({
   // Check if flights can be booked today
   const canBookFlightsNow = flightSavingsGap === 0 || new Date() >= earliestFlightBookingDate;
   
-  // Calculate percentage of flight cost saved
+  // Calculate percentage of flight cost saved (cash portion only)
   const flightSavingsProgress = estimatedFlightCost > 0 
     ? Math.min(100, (savingsAllocatedToFlights / estimatedFlightCost) * 100) 
     : 0;
@@ -917,6 +1015,196 @@ export default function Step2Plan({
                 </div>
                 <Progress value={flightSavingsProgress} className="h-3" />
               </div>
+
+              <Separator />
+
+              {/* Flight Points Subsection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold">Flight Points</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="use-points" className="text-sm">Use points for flights?</Label>
+                    <Switch
+                      id="use-points"
+                      checked={budgetData.flights.usePoints}
+                      onCheckedChange={handleToggleUsePoints}
+                      data-testid="switch-use-points"
+                    />
+                  </div>
+                </div>
+
+                {budgetData.flights.usePoints && (
+                  <div className="space-y-4 p-4 rounded-lg bg-muted/30 border">
+                    {/* Points Balance & Input */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="points-to-use">Points to Use</Label>
+                        <Input
+                          id="points-to-use"
+                          type="number"
+                          min="0"
+                          value={budgetData.flights.pointsToUse}
+                          onChange={(e) => setBudgetData({
+                            ...budgetData,
+                            flights: { ...budgetData.flights, pointsToUse: e.target.value }
+                          })}
+                          placeholder="Enter points amount"
+                          data-testid="input-points-to-use"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {pointsRequiredForFullCoverage.toLocaleString()} points needed for full coverage
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Connected Balance</Label>
+                        {connectedPointsBalance !== null ? (
+                          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-lg font-bold text-primary">
+                                  {connectedPointsBalance.toLocaleString()} pts
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  ≈ ${(connectedPointsBalance * POINTS_CONVERSION_RATE).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} value
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleConnectCardAccount}
+                                disabled={isConnectingCard}
+                                className="gap-1"
+                                data-testid="button-refresh-points"
+                              >
+                                <RefreshCw className={`w-4 h-4 ${isConnectingCard ? 'animate-spin' : ''}`} />
+                                Refresh
+                              </Button>
+                            </div>
+                            {pointsLastUpdated && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Last updated: {pointsLastUpdated.toLocaleTimeString()}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            onClick={handleConnectCardAccount}
+                            disabled={isConnectingCard}
+                            className="w-full gap-2"
+                            data-testid="button-connect-card"
+                          >
+                            {isConnectingCard ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Connecting...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="w-4 h-4" />
+                                Connect Card to Fetch Points
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Points Coverage Info */}
+                    {pointsToUse > 0 && (
+                      <div className="p-3 rounded-lg bg-background border">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Points Coverage</span>
+                          <Badge variant={pointsCoveragePercentage >= 100 ? "default" : "secondary"}>
+                            {pointsCoveragePercentage.toFixed(0)}% of flights
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Points value</p>
+                            <p className="font-semibold text-green-600">
+                              ${pointsDollarValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Remaining cash needed</p>
+                            <p className="font-semibold">
+                              ${estimatedFlightCost.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        {pointsCoveragePercentage >= 100 && (
+                          <div className="flex items-center gap-1 mt-2 text-green-600 text-sm">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Points fully cover your flights!</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Advisory Note */}
+                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+                      <div className="flex items-start gap-2">
+                        <Gift className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-blue-700 dark:text-blue-400">
+                          <p className="font-medium mb-1">About Credit Card Points</p>
+                          <p>Points can significantly help reduce costs for group overseas travel. However, you should only open a credit card for points if you can responsibly handle payments and stay out of debt. Always pay your balance in full each month.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Credit Card Offers Panel */}
+                {budgetData.flights.usePoints && (
+                  <div className="p-4 rounded-lg border bg-gradient-to-br from-background to-muted/20">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="w-5 h-5 text-amber-500" />
+                      <h4 className="font-semibold">Current Credit Card Offers</h4>
+                      <Badge variant="secondary" className="text-xs">Featured</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {mockCreditCardOffers.map((offer) => (
+                        <div 
+                          key={offer.id} 
+                          className="p-4 rounded-lg bg-background border hover-elevate transition-all"
+                          data-testid={`card-offer-${offer.id}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h5 className="font-medium text-sm">{offer.name}</h5>
+                            <CreditCard className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <div className="space-y-1 mb-3">
+                            <p className="text-lg font-bold text-primary">{offer.bonus}</p>
+                            <p className="text-xs text-muted-foreground">{offer.requirement}</p>
+                            <p className="text-sm text-green-600">Est. value: {offer.bonusValue}</p>
+                            <p className="text-xs text-muted-foreground">Annual fee: {offer.annualFee}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1"
+                            onClick={() => window.open(offer.url, '_blank')}
+                            data-testid={`button-view-offer-${offer.id}`}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View Offer
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3 text-center">
+                      These are example offers for illustration purposes. Always research current offers before applying.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
               
               {/* Helper Text */}
               {!canBookFlightsNow && (
@@ -924,7 +1212,7 @@ export default function Step2Plan({
                   <div className="flex items-start gap-2">
                     <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                      <span className="font-medium">Why is booking disabled?</span> You still need ${flightSavingsGap.toLocaleString()} more for flights. 
+                      <span className="font-medium">Why is booking disabled?</span> You still need ${flightSavingsGap.toLocaleString()} more for flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (after ${pointsToUse.toLocaleString()} points applied)` : ''}. 
                       At ${monthlySavingsNum.toLocaleString()}/month, you'll be ready to book in {monthsToFlights} month{monthsToFlights > 1 ? 's' : ''}. 
                       This helps you avoid going into debt for your trip.
                     </p>
@@ -937,7 +1225,7 @@ export default function Step2Plan({
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-green-700 dark:text-green-400">
-                      <span className="font-medium">You're ready!</span> You've saved enough to cover your flights. 
+                      <span className="font-medium">You're ready!</span> You've saved enough to cover your flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (with ${pointsToUse.toLocaleString()} points reducing your cost by $${pointsDollarValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})` : ''}. 
                       Book now to lock in prices 6-12 months before your trip for the best deals.
                     </p>
                   </div>
