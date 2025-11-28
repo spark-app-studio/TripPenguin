@@ -24,6 +24,31 @@ import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
 type RegisterFormData = z.infer<typeof registerUserSchema>;
 
+// Parse location string like "San Francisco, CA 94102" into city, state, zip
+function parseLocation(location: string): { city: string; state: string; zipCode: string } {
+  const result = { city: "", state: "", zipCode: "" };
+  if (!location) return result;
+  
+  // Try to extract ZIP code (5 digits at the end)
+  const zipMatch = location.match(/\b(\d{5})(?:-\d{4})?\s*$/);
+  if (zipMatch) {
+    result.zipCode = zipMatch[1];
+    location = location.replace(zipMatch[0], "").trim();
+  }
+  
+  // Try to extract state (2 letters before ZIP or at the end)
+  const stateMatch = location.match(/,?\s*([A-Z]{2})\s*$/i);
+  if (stateMatch) {
+    result.state = stateMatch[1].toUpperCase();
+    location = location.replace(stateMatch[0], "").trim();
+  }
+  
+  // Rest is the city (remove trailing comma if present)
+  result.city = location.replace(/,\s*$/, "").trim();
+  
+  return result;
+}
+
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -32,6 +57,26 @@ export default function Register() {
   // Check if coming from getting-started quiz
   const hasQuizData = typeof window !== "undefined" && sessionStorage.getItem("quizData");
   const redirectAfterAuth = typeof window !== "undefined" && sessionStorage.getItem("redirectAfterAuth");
+  
+  // Get location data from getting-started quiz if available
+  const getLocationDefaults = () => {
+    if (typeof window === "undefined") return { city: "", state: "", zipCode: "" };
+    
+    const gettingStartedJson = sessionStorage.getItem("gettingStartedData");
+    if (gettingStartedJson) {
+      try {
+        const gsData = JSON.parse(gettingStartedJson);
+        if (gsData.departureLocation) {
+          return parseLocation(gsData.departureLocation);
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+    return { city: "", state: "", zipCode: "" };
+  };
+  
+  const locationDefaults = getLocationDefaults();
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerUserSchema),
@@ -41,9 +86,9 @@ export default function Register() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
-      city: "",
-      state: "",
-      zipCode: "",
+      city: locationDefaults.city,
+      state: locationDefaults.state,
+      zipCode: locationDefaults.zipCode,
       acceptedTerms: false,
     },
   });
