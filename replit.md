@@ -115,6 +115,23 @@ Preferred communication style: Simple, everyday language.
 - **Book Stays Button**: Disabled until `CombinedSavingsGap === 0` or date reached. Placeholder for booking flow.
 - **Helper Text**: Explains why booking is disabled or confirms readiness to book.
 
+**Transportation Costs Section** (Nov 28, 2025):
+- **Full-Width Card**: Dedicated transportation tracking section beneath Accommodation Costs.
+- **Transport Segments**: Generated based on itinerary - airport arrival, within-city transport for each destination, city-to-city transfers, and airport departure.
+- **Segment Types**:
+  * **Airport Arrival/Departure**: Shuttle, rideshare, taxi options with varying costs and durations.
+  * **Within-City**: Metro/subway pass, bus pass, rideshare budget (scaled by number of nights).
+  * **City-to-City**: Train, bus, regional flight options with travel times.
+- **Option Details**: Each option shows type badge, name, description, duration, cost, and mock URL link.
+- **Selection Mechanism**: User can select one transport option per segment. Once selected, other options hide and "Change Selection" button appears.
+- **Estimated Transportation Costs**: Shows AI-estimated total (middle-cost option per segment) before selection; recalculates as sum of selected options after all selections made.
+- **Savings Allocation**: Savings flow to transportation after flights and accommodations are fully covered.
+- **Transport Savings Gap**: `FinalTransportCost - SavingsAllocatedToTransport`.
+- **Combined With Transport Gap**: `FlightSavingsGap + AccommodationSavingsGap + TransportSavingsGap` for booking date calculation.
+- **Earliest Booking Date**: `today + ceil(CombinedWithTransportGap / MonthlySavings)`.
+- **Book Transportation Button**: Disabled until `CombinedWithTransportGap === 0` or date reached. Placeholder for booking flow.
+- **Helper Text**: Explains why booking is disabled or confirms readiness to book.
+
 ## External Dependencies
 
 **AI/ML Services**:

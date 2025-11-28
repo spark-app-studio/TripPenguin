@@ -163,6 +163,209 @@ function generateMockAccommodations(cityName: string, countryName: string): Acco
   ];
 }
 
+// Transportation option interface
+interface TransportOption {
+  id: string;
+  type: "metro" | "train" | "bus" | "rideshare" | "taxi" | "shuttle";
+  name: string;
+  cost: number;
+  description: string;
+  duration: string;
+  url: string;
+}
+
+// Transportation segment interface
+interface TransportSegment {
+  id: string;
+  segmentType: "airport-arrival" | "within-city" | "city-to-city" | "airport-departure";
+  fromLocation: string;
+  toLocation: string;
+  options: TransportOption[];
+}
+
+// Generate mock transport options for different segment types
+function generateTransportOptions(
+  segmentType: "airport-arrival" | "within-city" | "city-to-city" | "airport-departure",
+  cityName: string,
+  toCity?: string,
+  numberOfNights?: number
+): TransportOption[] {
+  const cityHash = cityName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const isInternational = !["New York", "Los Angeles", "Chicago", "Miami", "Seattle", "Denver", "Austin", "Boston", "San Francisco", "Las Vegas", "Orlando", "Phoenix", "Atlanta", "Dallas", "Houston"].some(
+    city => cityName.toLowerCase().includes(city.toLowerCase())
+  );
+
+  const citySlug = cityName.toLowerCase().replace(/\s/g, '-');
+  
+  if (segmentType === "airport-arrival" || segmentType === "airport-departure") {
+    const baseShuttleCost = isInternational ? 25 : 18;
+    const baseRideshareCost = isInternational ? 35 : 25;
+    const baseTaxiCost = isInternational ? 55 : 40;
+    
+    return [
+      {
+        id: `${citySlug}-${segmentType}-shuttle`,
+        type: "shuttle",
+        name: `${cityName} Airport Shuttle`,
+        cost: Math.round((baseShuttleCost + (cityHash % 15)) / 5) * 5,
+        description: "Shared shuttle service with multiple stops. Book online for best rates.",
+        duration: "45-60 min",
+        url: `https://example.com/shuttle/${citySlug}-airport`
+      },
+      {
+        id: `${citySlug}-${segmentType}-rideshare`,
+        type: "rideshare",
+        name: "Uber/Lyft",
+        cost: Math.round((baseRideshareCost + (cityHash % 20)) / 5) * 5,
+        description: "On-demand rideshare. Prices vary by time of day and demand.",
+        duration: "25-40 min",
+        url: "https://example.com/rideshare"
+      },
+      {
+        id: `${citySlug}-${segmentType}-taxi`,
+        type: "taxi",
+        name: `${cityName} Taxi`,
+        cost: Math.round((baseTaxiCost + (cityHash % 25)) / 5) * 5,
+        description: "Traditional taxi service. Fixed rates often available from airport.",
+        duration: "25-40 min",
+        url: `https://example.com/taxi/${citySlug}`
+      }
+    ];
+  }
+  
+  if (segmentType === "within-city") {
+    const nights = numberOfNights || 3;
+    const baseMetroCost = isInternational ? 8 : 5;
+    const baseBusCost = isInternational ? 6 : 4;
+    const baseRideshareBudget = isInternational ? 15 : 12;
+    
+    return [
+      {
+        id: `${citySlug}-metro-pass`,
+        type: "metro",
+        name: `${cityName} Metro/Subway Pass`,
+        cost: Math.round((baseMetroCost * nights + (cityHash % 10)) / 5) * 5,
+        description: `${nights}-day unlimited metro pass. Covers all subway and light rail lines.`,
+        duration: "Unlimited rides",
+        url: `https://example.com/transit/${citySlug}-metro`
+      },
+      {
+        id: `${citySlug}-bus-pass`,
+        type: "bus",
+        name: `${cityName} Bus Pass`,
+        cost: Math.round((baseBusCost * nights + (cityHash % 8)) / 5) * 5,
+        description: `${nights}-day unlimited bus pass. Extensive network coverage.`,
+        duration: "Unlimited rides",
+        url: `https://example.com/transit/${citySlug}-bus`
+      },
+      {
+        id: `${citySlug}-rideshare-budget`,
+        type: "rideshare",
+        name: "Rideshare Budget",
+        cost: Math.round((baseRideshareBudget * nights + (cityHash % 20)) / 5) * 5,
+        description: `Estimated budget for ${nights} days of occasional Uber/Lyft rides.`,
+        duration: "As needed",
+        url: "https://example.com/rideshare"
+      }
+    ];
+  }
+  
+  if (segmentType === "city-to-city" && toCity) {
+    const toCityHash = toCity.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const combinedHash = cityHash + toCityHash;
+    const toCitySlug = toCity.toLowerCase().replace(/\s/g, '-');
+    
+    const baseTrainCost = isInternational ? 80 : 50;
+    const baseBusCost = isInternational ? 35 : 25;
+    const baseFlightCost = isInternational ? 150 : 100;
+    
+    return [
+      {
+        id: `${citySlug}-to-${toCitySlug}-train`,
+        type: "train",
+        name: `Train: ${cityName} → ${toCity}`,
+        cost: Math.round((baseTrainCost + (combinedHash % 60)) / 5) * 5,
+        description: "High-speed or regional train. Scenic views and comfortable seating.",
+        duration: `${2 + (combinedHash % 4)}h ${(combinedHash % 6) * 10}min`,
+        url: `https://example.com/trains/${citySlug}-to-${toCitySlug}`
+      },
+      {
+        id: `${citySlug}-to-${toCitySlug}-bus`,
+        type: "bus",
+        name: `Bus: ${cityName} → ${toCity}`,
+        cost: Math.round((baseBusCost + (combinedHash % 30)) / 5) * 5,
+        description: "Intercity coach bus. WiFi and power outlets available.",
+        duration: `${3 + (combinedHash % 5)}h ${(combinedHash % 6) * 10}min`,
+        url: `https://example.com/buses/${citySlug}-to-${toCitySlug}`
+      },
+      {
+        id: `${citySlug}-to-${toCitySlug}-flight`,
+        type: "shuttle",
+        name: `Regional Flight: ${cityName} → ${toCity}`,
+        cost: Math.round((baseFlightCost + (combinedHash % 100)) / 10) * 10,
+        description: "Short domestic/regional flight. Fastest option for longer distances.",
+        duration: `${1 + (combinedHash % 2)}h ${(combinedHash % 4) * 15}min`,
+        url: `https://example.com/flights/${citySlug}-to-${toCitySlug}`
+      }
+    ];
+  }
+  
+  return [];
+}
+
+// Generate all transport segments for the itinerary
+function generateTransportSegments(destinations: { cityName: string; countryName: string; numberOfNights: number }[]): TransportSegment[] {
+  if (!destinations || destinations.length === 0) return [];
+  
+  const segments: TransportSegment[] = [];
+  
+  // Airport arrival to first city
+  const firstCity = destinations[0];
+  segments.push({
+    id: `arrival-${firstCity.cityName.toLowerCase().replace(/\s/g, '-')}`,
+    segmentType: "airport-arrival",
+    fromLocation: `${firstCity.cityName} Airport`,
+    toLocation: firstCity.cityName,
+    options: generateTransportOptions("airport-arrival", firstCity.cityName)
+  });
+  
+  // For each destination
+  destinations.forEach((dest, idx) => {
+    // Within city transport
+    segments.push({
+      id: `within-${dest.cityName.toLowerCase().replace(/\s/g, '-')}`,
+      segmentType: "within-city",
+      fromLocation: dest.cityName,
+      toLocation: dest.cityName,
+      options: generateTransportOptions("within-city", dest.cityName, undefined, dest.numberOfNights)
+    });
+    
+    // City to city transport (if not the last city)
+    if (idx < destinations.length - 1) {
+      const nextCity = destinations[idx + 1];
+      segments.push({
+        id: `${dest.cityName.toLowerCase().replace(/\s/g, '-')}-to-${nextCity.cityName.toLowerCase().replace(/\s/g, '-')}`,
+        segmentType: "city-to-city",
+        fromLocation: dest.cityName,
+        toLocation: nextCity.cityName,
+        options: generateTransportOptions("city-to-city", dest.cityName, nextCity.cityName)
+      });
+    }
+  });
+  
+  // Airport departure from last city
+  const lastCity = destinations[destinations.length - 1];
+  segments.push({
+    id: `departure-${lastCity.cityName.toLowerCase().replace(/\s/g, '-')}`,
+    segmentType: "airport-departure",
+    fromLocation: lastCity.cityName,
+    toLocation: `${lastCity.cityName} Airport`,
+    options: generateTransportOptions("airport-departure", lastCity.cityName)
+  });
+  
+  return segments;
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -369,6 +572,16 @@ export default function Step2Plan({
       });
     }
     return result;
+  }, [displayedDestinationDetails]);
+
+  // Transportation selection state
+  // Maps segment id -> selected TransportOption id (or null if not selected)
+  const [selectedTransport, setSelectedTransport] = useState<Record<string, string | null>>({});
+  
+  // Generate transport segments for the itinerary
+  const transportSegments = useMemo(() => {
+    if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return [];
+    return generateTransportSegments(displayedDestinationDetails);
   }, [displayedDestinationDetails]);
 
   // Calculate totals
@@ -666,6 +879,109 @@ export default function Step2Plan({
       ...prev,
       [cityName]: prev[cityName] === optionId ? null : optionId
     }));
+  };
+
+  // Handle transport selection
+  const handleSelectTransport = (segmentId: string, optionId: string) => {
+    setSelectedTransport(prev => ({
+      ...prev,
+      [segmentId]: prev[segmentId] === optionId ? null : optionId
+    }));
+  };
+
+  // Estimate transportation cost (AI estimate before selections)
+  const estimatedTransportCost = useMemo(() => {
+    // If user has manually entered transportation cost, use that
+    const transportBudget = parseFloat(budgetData.transportation.cost || "0");
+    if (transportBudget > 0) {
+      return transportBudget;
+    }
+    
+    // Otherwise estimate based on typical rates
+    let totalCost = 0;
+    transportSegments.forEach(segment => {
+      // Use the middle-cost option as the estimate
+      if (segment.options.length > 0) {
+        const sortedOptions = [...segment.options].sort((a, b) => a.cost - b.cost);
+        const middleIndex = Math.floor(sortedOptions.length / 2);
+        totalCost += sortedOptions[middleIndex].cost;
+      }
+    });
+    return totalCost;
+  }, [budgetData.transportation.cost, transportSegments]);
+
+  // Calculate actual transport cost based on selections
+  const selectedTransportCost = useMemo(() => {
+    let totalCost = 0;
+    let allSelected = true;
+    
+    transportSegments.forEach(segment => {
+      const selectedId = selectedTransport[segment.id];
+      if (selectedId) {
+        const selected = segment.options.find(opt => opt.id === selectedId);
+        if (selected) {
+          totalCost += selected.cost;
+        }
+      } else {
+        allSelected = false;
+      }
+    });
+    
+    return { cost: totalCost, allSelected };
+  }, [selectedTransport, transportSegments]);
+
+  // Final transport cost - use selected if all are chosen, otherwise AI estimate
+  const finalTransportCost = selectedTransportCost.allSelected && selectedTransportCost.cost > 0
+    ? selectedTransportCost.cost
+    : estimatedTransportCost;
+
+  // Combined flight + accommodation + transport savings calculations
+  const totalFlightsAccomTransport = estimatedFlightCost + finalAccommodationCost + finalTransportCost;
+  const savingsAfterAccommodation = Math.max(0, savingsAfterFlights - finalAccommodationCost);
+  const savingsAllocatedToTransport = Math.min(savingsAfterAccommodation, finalTransportCost);
+  const transportSavingsGap = Math.max(0, finalTransportCost - savingsAllocatedToTransport);
+  const combinedWithTransportGap = combinedSavingsGap + transportSavingsGap;
+  
+  // Calculate months needed for flights + accommodation + transport
+  const monthsToAllBookings = monthlySavingsNum > 0 ? Math.ceil(combinedWithTransportGap / monthlySavingsNum) : 0;
+  
+  // Calculate earliest transport booking date
+  const earliestTransportBookingDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToAllBookings);
+    return date;
+  }, [monthsToAllBookings]);
+  
+  // Check if transport can be booked today
+  const canBookTransportNow = combinedWithTransportGap === 0 || new Date() >= earliestTransportBookingDate;
+  
+  // Calculate percentage of transport cost saved
+  const transportSavingsProgress = finalTransportCost > 0 
+    ? Math.min(100, (savingsAllocatedToTransport / finalTransportCost) * 100) 
+    : 0;
+
+  // Get transport type icon name
+  const getTransportTypeName = (type: TransportOption["type"]): string => {
+    const typeMap: Record<TransportOption["type"], string> = {
+      metro: "Metro/Subway",
+      train: "Train",
+      bus: "Bus",
+      rideshare: "Rideshare",
+      taxi: "Taxi",
+      shuttle: "Shuttle/Flight"
+    };
+    return typeMap[type] || type;
+  };
+
+  // Get segment type label
+  const getSegmentTypeLabel = (segmentType: TransportSegment["segmentType"]): string => {
+    const labelMap: Record<TransportSegment["segmentType"], string> = {
+      "airport-arrival": "Airport Arrival",
+      "within-city": "Getting Around",
+      "city-to-city": "City Transfer",
+      "airport-departure": "Airport Departure"
+    };
+    return labelMap[segmentType] || segmentType;
   };
 
   // Get season display name
@@ -1740,6 +2056,333 @@ export default function Step2Plan({
                     <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready to book!</span> You have enough saved to cover both flights (${estimatedFlightCost.toLocaleString()}) and accommodations (${finalAccommodationCost.toLocaleString()}). 
                       Book now to secure the best rates and availability.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Transportation Costs Section */}
+          <Card data-testid="card-transportation-costs">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <ChevronRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Transportation Costs</CardTitle>
+                    <CardDescription>Plan how you'll get around during your trip</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
+                    {Object.values(selectedTransport).filter(Boolean).length} of {transportSegments.length} selected
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Transportation Cost Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Total Transportation Costs</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {selectedTransportCost.allSelected 
+                            ? "This is the sum of your selected transport options."
+                            : "This is an AI estimate based on typical transport costs. Select specific options below for exact pricing."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-transport-cost">
+                    ${finalTransportCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedTransportCost.allSelected ? "from your selections" : "AI estimated"}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Allocated</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${savingsAllocatedToTransport >= finalTransportCost ? 'text-green-600' : ''}`} data-testid="text-transport-savings">
+                    ${savingsAllocatedToTransport.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (after flights & accommodation)
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${transportSavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-transport-gap">
+                    {transportSavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${transportSavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {transportSavingsGap === 0 ? 'Transportation covered!' : 'to save for transport'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Transport Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Transportation Savings Progress</span>
+                  <span className="font-medium">{transportSavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={transportSavingsProgress} className="h-3" />
+              </div>
+
+              <Separator />
+
+              {/* Transport Segments */}
+              <div className="space-y-6">
+                <h3 className="font-semibold text-lg">Choose Your Transport</h3>
+                
+                {transportSegments.length > 0 ? (
+                  transportSegments.map((segment, idx) => {
+                    const selectedId = selectedTransport[segment.id];
+                    const selectedOption = selectedId
+                      ? segment.options.find(opt => opt.id === selectedId)
+                      : null;
+                    
+                    return (
+                      <div 
+                        key={segment.id} 
+                        className="p-4 rounded-lg border bg-muted/20"
+                        data-testid={`transport-segment-${idx}`}
+                      >
+                        {/* Segment Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                              segment.segmentType === "airport-arrival" || segment.segmentType === "airport-departure"
+                                ? "bg-blue-500 text-white"
+                                : segment.segmentType === "city-to-city"
+                                ? "bg-purple-500 text-white"
+                                : "bg-green-500 text-white"
+                            }`}>
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">{segment.fromLocation}</h4>
+                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                <h4 className="font-semibold">{segment.toLocation}</h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {getSegmentTypeLabel(segment.segmentType)}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedOption && (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              ${selectedOption.cost}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Transport Options */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {segment.options.map((option) => {
+                            const isSelected = selectedId === option.id;
+                            
+                            // If an option is selected, only show the selected one
+                            if (selectedId && !isSelected) {
+                              return null;
+                            }
+                            
+                            return (
+                              <div
+                                key={option.id}
+                                className={`p-4 rounded-lg border transition-all ${
+                                  isSelected 
+                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                    : 'bg-background hover-elevate cursor-pointer'
+                                }`}
+                                onClick={() => handleSelectTransport(segment.id, option.id)}
+                                data-testid={`transport-option-${option.id}`}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getTransportTypeName(option.type)}
+                                  </Badge>
+                                  {isSelected && (
+                                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                                  )}
+                                </div>
+                                <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                  {option.description}
+                                </p>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {option.duration}
+                                  </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                  <p className="text-lg font-bold">${option.cost}</p>
+                                </div>
+                                {isSelected ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectTransport(segment.id, option.id);
+                                    }}
+                                    data-testid={`button-change-transport-${option.id}`}
+                                  >
+                                    Change Selection
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectTransport(segment.id, option.id);
+                                    }}
+                                    data-testid={`button-select-transport-${option.id}`}
+                                  >
+                                    Select This Option
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-2 gap-1 text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(option.url, '_blank');
+                                  }}
+                                  data-testid={`button-view-transport-${option.id}`}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  View Details
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ChevronRight className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No destinations added yet. Add destinations to see transport options.</p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Book */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Book Transport</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalFlightsAccomTransport.toLocaleString()} total for flights, accommodations, and transport.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookTransportNow ? 'text-green-600' : ''}`} data-testid="text-earliest-transport-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookTransportNow 
+                      ? "Ready now!" 
+                      : earliestTransportBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookTransportNow && monthsToAllBookings > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToAllBookings} month{monthsToAllBookings > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Transport Button */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          className="w-full gap-2"
+                          size="lg"
+                          disabled={!canBookTransportNow}
+                          data-testid="button-book-transport"
+                        >
+                          {canBookTransportNow ? (
+                            <>
+                              <ChevronRight className="w-5 h-5" />
+                              Book Transportation
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-5 h-5" />
+                              Book Transport
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!canBookTransportNow && (
+                      <TooltipContent className="max-w-xs">
+                        <p>You need ${combinedWithTransportGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canBookTransportNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestTransportBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book transportation without going into debt. 
+                      At your current savings rate, you'll have enough for flights, accommodations, and transport by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canBookTransportNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover flights (${estimatedFlightCost.toLocaleString()}), accommodations (${finalAccommodationCost.toLocaleString()}), and transportation (${finalTransportCost.toLocaleString()}). 
+                      Book now to secure your travel arrangements.
                     </p>
                   </div>
                 </div>
