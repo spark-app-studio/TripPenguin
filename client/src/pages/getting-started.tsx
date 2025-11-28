@@ -119,13 +119,45 @@ export default function GettingStarted() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Store quiz data in sessionStorage
+    
+    // Convert getting-started data to quiz format for compatibility
+    const quizCompatibleData = {
+      numberOfTravelers: quizData.adults + quizData.kids,
+      childAges: quizData.childAges,
+      tripType: quizData.tripType,
+      tripLengthPreference: quizData.tripType === "staycation" 
+        ? quizData.timeAvailable 
+        : quizData.tripLength,
+      travelDates: quizData.travelDates,
+      exactDates: quizData.exactDates,
+      flexibleDates: quizData.flexibleDates,
+      destinationPreference: quizData.tripType === "international" 
+        ? quizData.internationalRegion 
+        : quizData.tripType === "domestic" 
+          ? quizData.usRegion 
+          : "local",
+      travelDistance: quizData.travelDistance,
+      tripDesire: quizData.tripDesire || quizData.staycationGoal?.[0],
+      postcardImage: quizData.postcardImage || quizData.internationalPostcard,
+      favoriteMedia: quizData.favoriteMedia,
+      kidActivities: quizData.kidActivities,
+      accessibilityNeeds: quizData.accessibilityNeeds,
+      absoluteNos: quizData.absoluteNos,
+      dayFullness: quizData.dayFullness,
+      budgetStyle: quizData.budgetStyle,
+      staycationBudget: quizData.staycationBudget,
+      departureLocation: quizData.departureLocation,
+    };
+    
+    // Store quiz data in sessionStorage for after authentication
+    sessionStorage.setItem("quizData", JSON.stringify(quizCompatibleData));
     sessionStorage.setItem("gettingStartedData", JSON.stringify(quizData));
     sessionStorage.setItem("tripSource", "getting-started");
+    sessionStorage.setItem("redirectAfterAuth", "/quiz/results");
     
-    // Navigate to results page (or trip planner)
+    // Navigate to registration - user needs account to see AI recommendations
     setTimeout(() => {
-      setLocation("/quiz-results");
+      setLocation("/register");
     }, 500);
   };
 
