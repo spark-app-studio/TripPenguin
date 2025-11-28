@@ -68,6 +68,19 @@ Preferred communication style: Simple, everyday language.
 **AI Integrations**:
 - **AI Booking Integration**: Live OpenAI-powered booking recommendations (GPT-4o-mini) in Step 3. Provides 3 personalized recommendations per booking item, including pricing, providers, pros/cons, and booking tips via `POST /api/ai/booking-recommendations`.
 - **Per-Category AI Budget Guidance**: In Step 2, each budget category card has an "AI Guide" button. GPT-4o-mini provides personalized recommendations, estimated price ranges, detailed explanations, and money-saving tips specific to that category.
+- **AI-Recommended Monthly Savings**: Step 2 calculates recommended monthly savings based on trip cost with adaptive payoff timeframes (6-15 months). Smaller trips recommend 6 months, larger trips up to 15 months. Users can override with manual input.
+
+**Itinerary Management** (Nov 28, 2025):
+- **Shared Itinerary State**: `useItinerary` hook (`client/src/hooks/useItinerary.ts`) provides reactive shared state across components via sessionStorage.
+- **Dedicated Itinerary Page**: `/itinerary` route for viewing/editing detailed trip itinerary with city management, date calculations, and nights per city.
+- **Reactivity**: Changes made on itinerary page automatically sync back to trip planner when navigating between pages.
+- **State Persistence**: Trip planner step and data persisted to sessionStorage (key: `trippirate_planner_state`) for seamless navigation.
+
+**Trip Financing Summary** (Nov 28, 2025):
+- **Total Estimated Trip Cost**: Auto-updates as user changes budget categories (flights + housing + transportation + activities + food + preparation + books/movies).
+- **Current Savings**: Two input methods - manual entry or "Connect Savings Account" button (stub function returns mocked balance). Manual input overrides linked account.
+- **AI Monthly Savings Recommendation**: Calculated based on trip cost with 6-15 month payoff window. Displayed with sparkle icon and tooltip explaining it's AI-generated.
+- **Earliest Travel Date**: Calculated as `today + ceil((TripCost - CurrentSavings) / MonthlySavings)`. Includes helper text explaining debt-free travel goal.
 
 ## External Dependencies
 

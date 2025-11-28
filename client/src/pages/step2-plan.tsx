@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,11 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useItinerary } from "@/hooks/useItinerary";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean };
@@ -216,6 +221,11 @@ export default function Step2Plan({
     });
   };
 
+  // Connected account state
+  const [linkedAccountBalance, setLinkedAccountBalance] = useState<number | null>(null);
+  const [isLinkingAccount, setIsLinkingAccount] = useState(false);
+  const [useManualSavings, setUseManualSavings] = useState(true);
+
   // Calculate totals
   const totalEstimated =
     parseFloat(budgetData.flights.cost || "0") +
@@ -226,8 +236,44 @@ export default function Step2Plan({
     parseFloat(budgetData.preparation.cost || "0") +
     parseFloat(budgetData.booksMovies.cost || "0");
 
-  const currentSavingsNum = parseFloat(budgetData.currentSavings || "0");
-  const monthlySavingsNum = parseFloat(budgetData.monthlySavings || "0");
+  // Determine effective current savings (manual input overrides linked account)
+  const manualSavingsNum = parseFloat(budgetData.currentSavings || "0");
+  const currentSavingsNum = useManualSavings || manualSavingsNum > 0 
+    ? manualSavingsNum 
+    : (linkedAccountBalance || 0);
+
+  // AI-calculated recommended monthly savings based on trip cost
+  const aiRecommendedMonthlySavings = useMemo(() => {
+    if (totalEstimated <= 0) return 0;
+    
+    // Determine target payoff months based on trip cost
+    // Smaller trips (< $2000) -> 6 months
+    // Medium trips ($2000-$5000) -> 9 months
+    // Larger trips ($5000-$10000) -> 12 months
+    // Very large trips (> $10000) -> 15 months
+    let targetMonths: number;
+    if (totalEstimated < 2000) {
+      targetMonths = 6;
+    } else if (totalEstimated < 5000) {
+      targetMonths = 9;
+    } else if (totalEstimated < 10000) {
+      targetMonths = 12;
+    } else {
+      targetMonths = 15;
+    }
+    
+    // Calculate recommended monthly savings
+    const amountToSave = Math.max(0, totalEstimated - currentSavingsNum);
+    const recommended = Math.ceil(amountToSave / targetMonths);
+    
+    return recommended;
+  }, [totalEstimated, currentSavingsNum]);
+
+  // Use user's entered monthly savings if provided, otherwise use AI recommendation
+  const monthlySavingsNum = parseFloat(budgetData.monthlySavings || "0") > 0 
+    ? parseFloat(budgetData.monthlySavings || "0")
+    : aiRecommendedMonthlySavings;
+  
   const remainingToSave = Math.max(0, totalEstimated - currentSavingsNum);
   const monthsToSave = monthlySavingsNum > 0 ? Math.ceil(remainingToSave / monthlySavingsNum) : 0;
 
@@ -235,7 +281,27 @@ export default function Step2Plan({
   const earliestTravelDate = new Date(today);
   earliestTravelDate.setMonth(earliestTravelDate.getMonth() + monthsToSave);
 
-  const savingsProgress = currentSavingsNum > 0 ? (currentSavingsNum / totalEstimated) * 100 : 0;
+  const savingsProgress = totalEstimated > 0 ? (currentSavingsNum / totalEstimated) * 100 : 0;
+
+  // Stub function to simulate connecting a savings account
+  const handleConnectSavingsAccount = async () => {
+    setIsLinkingAccount(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Mock balance between $500 and $5000
+    const mockBalance = Math.floor(Math.random() * 4500) + 500;
+    setLinkedAccountBalance(mockBalance);
+    setUseManualSavings(false);
+    
+    toast({
+      title: "Account Connected",
+      description: `Successfully linked your savings account. Balance: $${mockBalance.toLocaleString()}`,
+    });
+    
+    setIsLinkingAccount(false);
+  };
 
   const handleContinue = () => {
     onComplete(budgetData);
@@ -372,32 +438,84 @@ export default function Step2Plan({
                 <CardTitle>Trip Financing Summary</CardTitle>
               </div>
               <CardDescription>
-                Your overall savings progress and timeline
+                Your overall savings progress and timeline to debt-free travel
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Key Financial Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Estimated Trip Cost */}
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Total Trip Cost</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Total Estimated Trip Cost</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">Sum of all budget categories: flights, accommodations, transportation, activities, food, and misc.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <p className="text-2xl font-bold text-primary" data-testid="text-total-estimated">
-                    ${totalEstimated.toFixed(0)}
+                    ${totalEstimated.toLocaleString()}
                   </p>
                 </div>
+                
+                {/* Current Savings */}
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Current Savings</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Current Savings</p>
+                    {linkedAccountBalance !== null && !useManualSavings && (
+                      <span className="text-xs text-green-600 flex items-center gap-0.5">
+                        <Link className="w-2.5 h-2.5" />
+                        Linked
+                      </span>
+                    )}
+                  </div>
                   <p className="text-2xl font-bold text-green-600" data-testid="text-current-savings">
-                    ${currentSavingsNum.toFixed(0)}
+                    ${currentSavingsNum.toLocaleString()}
                   </p>
                 </div>
+                
+                {/* AI-Recommended Monthly Savings */}
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Monthly Savings</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount to Save Each Month</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Sparkles className="w-3 h-3 text-primary" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-medium mb-1">AI-Calculated Recommendation</p>
+                        <p className="text-sm">Based on your trip cost, we recommend saving over {totalEstimated < 2000 ? '6' : totalEstimated < 5000 ? '9' : totalEstimated < 10000 ? '12' : '15'} months. You can adjust this in the settings below.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <p className="text-2xl font-bold" data-testid="text-monthly-savings">
-                    ${monthlySavingsNum.toFixed(0)}/mo
+                    ${monthlySavingsNum.toLocaleString()}/mo
                   </p>
+                  {parseFloat(budgetData.monthlySavings || "0") === 0 && aiRecommendedMonthlySavings > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI recommended
+                    </p>
+                  )}
                 </div>
+                
+                {/* Earliest Travel Date */}
                 <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Earliest Travel Date</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Travel Date</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Calculated by estimating how long it will take you to save enough for your entire trip, based on your current savings and monthly savings amount. The goal is to help you avoid going into debt for this trip.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <p className="text-lg font-bold flex items-center gap-1" data-testid="text-earliest-date">
                     <CalendarIcon className="w-4 h-4" />
                     {monthsToSave > 0 
@@ -418,51 +536,142 @@ export default function Step2Plan({
                   <Progress value={Math.min(100, savingsProgress)} className="h-3" />
                   <p className="text-sm text-muted-foreground">
                     {remainingToSave > 0 
-                      ? `$${remainingToSave.toFixed(0)} left to save${monthsToSave > 0 ? ` · ${monthsToSave} month${monthsToSave > 1 ? 's' : ''} to go` : ''}`
+                      ? `$${remainingToSave.toLocaleString()} left to save${monthsToSave > 0 ? ` · ${monthsToSave} month${monthsToSave > 1 ? 's' : ''} to go` : ''}`
                       : "You've saved enough for your trip!"
                     }
                   </p>
                 </div>
               )}
 
+              {/* Earliest Travel Date Helper Text */}
+              {monthsToSave > 0 && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">How is this date calculated?</span> We estimate your earliest travel date by dividing the remaining amount you need to save (${remainingToSave.toLocaleString()}) by your monthly savings (${monthlySavingsNum.toLocaleString()}/mo). This helps ensure you can take this trip without going into debt.
+                  </p>
+                </div>
+              )}
+
               {/* Savings Inputs */}
               <Separator />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-savings">Current Savings (USD)</Label>
-                  <Input
-                    id="current-savings"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={budgetData.currentSavings}
-                    onChange={(e) => setBudgetData({ ...budgetData, currentSavings: e.target.value })}
-                    data-testid="input-current-savings"
-                  />
+              
+              {/* Current Savings Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Your Savings</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleConnectSavingsAccount}
+                    disabled={isLinkingAccount}
+                    className="gap-2"
+                    data-testid="button-connect-savings"
+                  >
+                    {isLinkingAccount ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : linkedAccountBalance !== null ? (
+                      <>
+                        <Wallet className="w-4 h-4" />
+                        Reconnect Account
+                      </>
+                    ) : (
+                      <>
+                        <Link className="w-4 h-4" />
+                        Connect Savings Account
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="monthly-savings">Monthly Savings (USD)</Label>
-                  <Input
-                    id="monthly-savings"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={budgetData.monthlySavings}
-                    onChange={(e) => setBudgetData({ ...budgetData, monthlySavings: e.target.value })}
-                    data-testid="input-monthly-savings"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="credit-points">Credit Card Points</Label>
-                  <Input
-                    id="credit-points"
-                    type="number"
-                    min="0"
-                    value={budgetData.creditCardPoints}
-                    onChange={(e) => setBudgetData({ ...budgetData, creditCardPoints: e.target.value })}
-                    placeholder="Optional"
-                    data-testid="input-credit-points"
-                  />
+                
+                {linkedAccountBalance !== null && (
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                          Linked Account Balance: ${linkedAccountBalance.toLocaleString()}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setUseManualSavings(true)}
+                        className="text-xs"
+                        data-testid="button-use-manual"
+                      >
+                        Use manual entry instead
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-savings">
+                      Current Savings (USD)
+                      {linkedAccountBalance !== null && !useManualSavings && (
+                        <span className="text-xs text-muted-foreground ml-1">(Override linked value)</span>
+                      )}
+                    </Label>
+                    <Input
+                      id="current-savings"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={budgetData.currentSavings}
+                      onChange={(e) => {
+                        setBudgetData({ ...budgetData, currentSavings: e.target.value });
+                        if (e.target.value && parseFloat(e.target.value) > 0) {
+                          setUseManualSavings(true);
+                        }
+                      }}
+                      placeholder={linkedAccountBalance ? `Linked: $${linkedAccountBalance}` : "0.00"}
+                      data-testid="input-current-savings"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="monthly-savings" className="flex items-center gap-1">
+                      Monthly Savings (USD)
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Sparkles className="w-3 h-3 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Leave blank to use AI recommendation: ${aiRecommendedMonthlySavings.toLocaleString()}/mo</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <Input
+                      id="monthly-savings"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={budgetData.monthlySavings}
+                      onChange={(e) => setBudgetData({ ...budgetData, monthlySavings: e.target.value })}
+                      placeholder={`AI: $${aiRecommendedMonthlySavings}/mo`}
+                      data-testid="input-monthly-savings"
+                    />
+                    {parseFloat(budgetData.monthlySavings || "0") === 0 && aiRecommendedMonthlySavings > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Using AI recommendation. Enter a value to override.
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="credit-points">Credit Card Points</Label>
+                    <Input
+                      id="credit-points"
+                      type="number"
+                      min="0"
+                      value={budgetData.creditCardPoints}
+                      onChange={(e) => setBudgetData({ ...budgetData, creditCardPoints: e.target.value })}
+                      placeholder="Optional"
+                      data-testid="input-credit-points"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

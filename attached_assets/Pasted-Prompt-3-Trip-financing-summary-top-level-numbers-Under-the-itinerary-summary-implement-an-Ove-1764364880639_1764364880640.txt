@@ -1,0 +1,63 @@
+Prompt 3 – Trip financing summary (top-level numbers)
+
+Under the itinerary summary, implement an Overall Trip Financing Summary card with the following fields and behavior:
+
+“Total estimated trip cost”
+
+Display a numeric value representing the total estimated cost of the selected itinerary.
+
+Assume this comes from itinerary estimates (sum of flights + accommodations + transport + activities + food + misc).
+
+This value must be auto-updated by the app as the user changes options later in the Budget Breakdown sections.
+
+“Current savings”
+
+Show a “Current savings” label and an amount.
+
+Provide two ways to set this value:
+
+(A) A button/link to “Connect savings account” (for now, just stub a function that simulates linking and returns a mocked balance).
+
+(B) An input for the user to enter the amount manually if they don’t want to link an account.
+
+If both exist, the manually entered value should override the linked value (prioritize user input).
+
+“Amount to save each month”
+
+Display a calculated amount the user should save each month.
+
+The AI logic should:
+
+Consider TotalEstimatedTripCost and CurrentSavings.
+
+Assume a payoff timeframe between 6 and 15 months, depending on trip expense:
+
+Smaller/cheaper trips → closer to 6 months.
+
+Larger/more expensive trips → closer to 15 months.
+
+Use a simple function that chooses a target month window based on total cost and computes the recommended monthly savings.
+
+Show this as a read-only calculated field with a tooltip or helper text explaining that this is AI-generated and can be adjusted in settings later.
+
+“Earliest travel date”
+
+Display an estimated earliest travel date.
+
+Base this on:
+
+CurrentSavings
+
+TotalEstimatedTripCost
+
+AmountToSavePerMonth
+
+For now, implement a simple calculation:
+
+Months needed = ceil((TotalEstimatedTripCost - CurrentSavings) / AmountToSavePerMonth)
+
+Earliest travel date = today + MonthsNeeded.
+
+Show helper text under the field explaining:
+
+“This date is calculated by estimating how long it will take you to save enough for your entire trip, based on your current savings and monthly savings amount. The goal is to help you avoid going into debt for this trip.”
