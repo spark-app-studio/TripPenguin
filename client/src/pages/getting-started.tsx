@@ -600,7 +600,6 @@ export default function GettingStarted() {
       { value: "afternoon", label: "One afternoon" },
       { value: "full-day", label: "One full day" },
       { value: "weekend", label: "A weekend (2–3 days)" },
-      { value: "extended", label: "4–5 days" },
     ];
 
     return (
@@ -650,7 +649,6 @@ export default function GettingStarted() {
       { value: "home", label: "We're staying at home" },
       { value: "30-60min", label: "Within 30 minutes to 1 hour" },
       { value: "2-3hrs", label: "Within 2–3 hours" },
-      { value: "5-6hrs", label: "Within 5–6 hours (mini-road trip)" },
     ];
 
     return (
