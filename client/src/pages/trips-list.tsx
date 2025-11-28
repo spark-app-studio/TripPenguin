@@ -1,10 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import type { Trip } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin, Calendar, Users, Trash2, Edit } from "lucide-react";
+import { Plus, MapPin, Calendar, Users, Trash2, Edit, Plane, LogOut, User } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,15 +15,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TripsList() {
   const [, setLocation] = useLocation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const { data: trips, isLoading } = useQuery<Trip[]>({
     queryKey: ["/api/trips"],
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
+      setLocation("/");
+    },
   });
 
   const deleteTripMutation = useMutation({
@@ -74,25 +99,70 @@ export default function TripsList() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold font-serif mb-2">My Trips</h1>
-            <p className="text-lg text-muted-foreground">
-              Plan, budget, and book your dream adventures
-            </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header/Nav */}
+      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/" className="flex items-center gap-2 cursor-pointer">
+              <Plane className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold">TripPirate</span>
+            </Link>
+            
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/trips" className="text-foreground text-sm font-medium transition-colors">My Trips</Link>
+              <Link href="/getting-started" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">New Adventure</Link>
+              <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+              <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+              <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+            </nav>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2" data-testid="button-user-menu">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">{user?.firstName || "Account"}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled className="text-muted-foreground">
+                  {user?.email}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => logoutMutation.mutate()}
+                  className="cursor-pointer"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Button
-            size="lg"
-            onClick={() => setLocation("/trip/new")}
-            className="gap-2"
-            data-testid="button-new-trip"
-          >
-            <Plus className="w-5 h-5" />
-            New Trip
-          </Button>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-4xl font-bold font-serif mb-2">My Trips</h1>
+              <p className="text-lg text-muted-foreground">
+                Plan, budget, and book your dream adventures
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => setLocation("/trip/new")}
+              className="gap-2"
+              data-testid="button-new-trip"
+            >
+              <Plus className="w-5 h-5" />
+              New Trip
+            </Button>
+          </div>
 
         {!trips || trips.length === 0 ? (
           <Card className="text-center py-12">
@@ -180,7 +250,31 @@ export default function TripsList() {
             ))}
           </div>
         )}
-      </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-12 bg-background border-t mt-auto">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <Plane className="h-5 w-5 text-primary" />
+              <span className="font-bold">TripPirate</span>
+              <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
+            </div>
+            <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+              <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+              <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+              <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+              <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            </nav>
+          </div>
+          <div className="mt-8 text-center text-sm text-muted-foreground">
+            © 2025 TripPirate
+          </div>
+        </div>
+      </footer>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
