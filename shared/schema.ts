@@ -238,6 +238,98 @@ export const quizResponseSchema = z.object({
   tripLengthPreference: z.enum(["1-3 days", "4-7 days", "1-2 weeks", "2-3 weeks", "3+ weeks", "flexible"]),
 });
 
+// Extended quiz schema with trip type support for Getting Started flow
+export const extendedQuizResponseSchema = z.object({
+  // Trip type determines which AI prompt and constraints to use
+  tripType: z.enum(["international", "domestic", "staycation"]),
+  
+  // Core traveler info
+  numberOfTravelers: z.number().int().min(1).max(50),
+  adults: z.number().int().min(1).max(20).default(2),
+  kids: z.number().int().min(0).max(20).default(0),
+  childAges: z.array(z.number().int().min(0).max(17)).optional(),
+  
+  // Staycation-specific fields (required when tripType === "staycation")
+  timeAvailable: z.enum(["afternoon", "full-day", "weekend"]).optional(),
+  travelDistance: z.enum(["30-min", "1-hour", "2-hours", "3-hours"]).optional(),
+  staycationGoal: z.array(z.string()).optional(),
+  staycationBudget: z.enum(["free-cheap", "moderate", "splurge"]).optional(),
+  departureLocation: z.string().optional(), // User's home city/ZIP for local recommendations
+  
+  // Domestic-specific fields
+  usRegion: z.string().optional(),
+  tripLength: z.string().optional(),
+  
+  // International-specific fields  
+  internationalRegion: z.string().optional(),
+  
+  // Common fields mapped from legacy quiz
+  tripGoal: z.enum(["rest", "culture", "thrill", "magic"]).optional(),
+  placeType: z.enum(["ocean", "mountains", "ancientCities", "modernSkyline"]).optional(),
+  dayPace: z.enum(["relaxed", "balanced", "packed"]).optional(),
+  spendingPriority: z.enum(["food", "experiences", "comfort", "souvenirs"]).optional(),
+  postcardImage: z.string().optional(),
+  favoriteMedia: z.string().optional(),
+  kidActivities: z.array(z.string()).optional(),
+  accessibilityNeeds: z.array(z.string()).optional(),
+});
+
+export type ExtendedQuizResponse = z.infer<typeof extendedQuizResponseSchema>;
+
+// Staycation recommendation schema (single destination, no flights)
+export const staycationDestinationSchema = z.object({
+  name: z.string(), // e.g., "Muir Woods National Monument"
+  type: z.string(), // e.g., "nature", "museum", "beach", "town"
+  distance: z.string(), // e.g., "45 minutes from San Francisco"
+  driveTime: z.number().int().min(10).max(180), // Minutes
+  address: z.string().optional(),
+  description: z.string(),
+  activities: z.array(z.string()).min(1),
+  bestFor: z.array(z.string()), // e.g., ["families", "couples", "adventure seekers"]
+  imageQuery: z.string(),
+});
+
+export const staycationCostBreakdownSchema = z.object({
+  gas: z.number(), // Estimated fuel cost
+  food: z.number(), // Meals and snacks
+  activities: z.number(), // Entry fees, rentals, etc.
+  parking: z.number(), // Parking fees
+  misc: z.number(), // Tips, souvenirs, etc.
+});
+
+export const staycationRecommendationSchema = z.object({
+  id: z.string(),
+  title: z.string(), // Creative name like "Coastal Escape" or "Mountain Day Trip"
+  vibeTagline: z.string(),
+  isCurveball: z.boolean().default(false),
+  tripDuration: z.enum(["afternoon", "full-day", "weekend"]),
+  totalCost: z.object({
+    min: z.number(),
+    max: z.number(),
+    currency: z.string().default("USD"),
+  }),
+  costBreakdown: staycationCostBreakdownSchema,
+  destination: staycationDestinationSchema,
+  suggestedItinerary: z.array(z.object({
+    time: z.string(), // e.g., "9:00 AM"
+    activity: z.string(),
+    duration: z.string(), // e.g., "2 hours"
+    tips: z.string().optional(),
+  })),
+  packingList: z.array(z.string()).optional(),
+  bestTimeToVisit: z.string(),
+  familyFriendlyRating: z.number().int().min(1).max(5).optional(),
+});
+
+export const staycationRecommendationsResponseSchema = z.object({
+  recommendations: z.array(staycationRecommendationSchema).length(3),
+});
+
+export type StaycationDestination = z.infer<typeof staycationDestinationSchema>;
+export type StaycationCostBreakdown = z.infer<typeof staycationCostBreakdownSchema>;
+export type StaycationRecommendation = z.infer<typeof staycationRecommendationSchema>;
+export type StaycationRecommendationsResponse = z.infer<typeof staycationRecommendationsResponseSchema>;
+
 // Multi-city itinerary schemas for AI recommendations
 export const itineraryCitySegmentSchema = z.object({
   order: z.number().int().min(1),

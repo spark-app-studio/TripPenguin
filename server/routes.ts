@@ -12,6 +12,7 @@ import {
   passwordResetSchema,
   resendVerificationSchema,
   quizResponseSchema,
+  extendedQuizResponseSchema,
   adjustItineraryDurationRequestSchema,
   itineraryAddonsRequestSchema,
   applyAddonRequestSchema,
@@ -22,6 +23,7 @@ import { getBookingRecommendations, bookingSearchParamsSchema } from "./ai-booki
 import { getBudgetAdvice, budgetAdviceParamsSchema } from "./ai-budget";
 import { 
   getItineraryRecommendations,
+  getStaycationRecommendations,
   adjustItineraryDuration,
   generateItineraryAddons,
   applyAddon
@@ -649,6 +651,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI destination recommendation error:", error);
         res.status(500).json({ error: "Failed to get destination recommendations" });
+      }
+    }
+  });
+
+  // Staycation-specific recommendations endpoint
+  app.post("/api/ai/staycation-recommendations", isAuthenticated, async (req, res) => {
+    try {
+      const quizResponse = extendedQuizResponseSchema.parse(req.body);
+      
+      if (quizResponse.tripType !== "staycation") {
+        res.status(400).json({ error: "This endpoint is for staycation trips only. Use /api/ai/destination-recommendations for international/domestic trips." });
+        return;
+      }
+      
+      const recommendations = await getStaycationRecommendations(quizResponse);
+      res.json({ recommendations });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid staycation quiz data", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI staycation recommendation service is not configured" });
+      } else {
+        console.error("AI staycation recommendation error:", error);
+        res.status(500).json({ error: "Failed to get staycation recommendations" });
       }
     }
   });

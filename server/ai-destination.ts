@@ -10,6 +10,9 @@ import {
   itineraryAddonsResponseSchema,
   type ApplyAddonRequest,
   itineraryRecommendationSchema,
+  type ExtendedQuizResponse,
+  type StaycationRecommendation,
+  staycationRecommendationsResponseSchema,
 } from "@shared/schema";
 
 if (!process.env.OPENAI_API_KEY) {
@@ -274,6 +277,206 @@ Format response as valid JSON matching this structure:
   } catch (error) {
     console.error("Error getting itinerary recommendations:", error);
     throw new Error("Failed to get AI itinerary recommendations");
+  }
+}
+
+/**
+ * Get staycation recommendations based on extended quiz data
+ * Staycations are local getaways within driving distance (max 3 hours)
+ */
+export async function getStaycationRecommendations(
+  quiz: ExtendedQuizResponse
+): Promise<StaycationRecommendation[]> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.");
+  }
+
+  const departureLocation = sanitizeInput(quiz.departureLocation || "");
+  const numberOfTravelers = quiz.numberOfTravelers;
+  const adults = quiz.adults || 2;
+  const kids = quiz.kids || 0;
+  const childAges = quiz.childAges || [];
+  
+  // Map time available to duration description
+  const durationMap: Record<string, string> = {
+    "afternoon": "a few hours (3-5 hours)",
+    "full-day": "a full day trip (8-10 hours)",
+    "weekend": "a weekend getaway (1-2 nights)",
+  };
+  const tripDuration = quiz.timeAvailable || "full-day";
+  const durationDescription = durationMap[tripDuration] || "a full day trip";
+  
+  // Map travel distance to max drive time
+  const distanceMap: Record<string, number> = {
+    "30-min": 30,
+    "1-hour": 60,
+    "2-hours": 120,
+    "3-hours": 180,
+  };
+  const maxDriveMinutes = distanceMap[quiz.travelDistance || "2-hours"] || 120;
+  
+  // Map budget preference
+  const budgetMap: Record<string, string> = {
+    "free-cheap": "free or very low cost (under $50 for the whole group)",
+    "moderate": "moderate spending ($50-150 for the whole group)",
+    "splurge": "treat yourself, willing to spend more for quality experiences ($150-300+)",
+  };
+  const budgetDescription = budgetMap[quiz.staycationBudget || "moderate"] || "moderate spending";
+  
+  // Build goals description
+  const goals = quiz.staycationGoal || ["explore"];
+  const goalsDescription = goals.length > 0 
+    ? goals.join(", ") 
+    : "relaxation and quality time";
+
+  // Build family context
+  let familyContext = `${adults} adult(s)`;
+  if (kids > 0) {
+    familyContext += ` and ${kids} kid(s)`;
+    if (childAges.length > 0) {
+      familyContext += ` (ages: ${childAges.join(", ")})`;
+    }
+  }
+
+  // Accessibility needs
+  const accessibilityNeeds = quiz.accessibilityNeeds || [];
+  const accessibilityText = accessibilityNeeds.length > 0 && !accessibilityNeeds.includes("none")
+    ? `Accessibility needs: ${accessibilityNeeds.join(", ")}.`
+    : "";
+
+  const systemPrompt = `You are a local travel expert specializing in staycations, day trips, and weekend getaways. You help families discover amazing destinations within driving distance of their home. You focus on practical, real destinations that exist and can be visited. You consider drive times, family-friendliness, and budget when making recommendations.
+
+CRITICAL RULES:
+- ALL destinations MUST be within ${maxDriveMinutes} minutes driving distance from ${departureLocation || "the user's location"}
+- Destinations must be real, specific places that exist (parks, towns, beaches, museums, etc.)
+- No flights - these are driving trips only
+- Consider the ${tripDuration} duration constraint
+- Focus on ${budgetDescription}`;
+
+  const userPrompt = `Create 3 staycation recommendations for this family:
+
+LOCATION: ${departureLocation || "Please suggest popular destinations from a major US city"}
+MAX DRIVE TIME: ${maxDriveMinutes} minutes (approximately ${Math.round(maxDriveMinutes / 60 * 10) / 10} hours)
+TRIP DURATION: ${durationDescription}
+BUDGET: ${budgetDescription}
+TRAVELERS: ${familyContext}
+GOALS: ${goalsDescription}
+${accessibilityText}
+
+Create exactly 3 staycation recommendations:
+
+RECOMMENDATION REQUIREMENTS:
+- Recommendation 1: Perfect match for their goals and family composition
+- Recommendation 2: Another great option with a different vibe
+- Recommendation 3: "Hidden gem" or unexpected local discovery
+
+For each recommendation, provide:
+1. id: unique identifier (e.g., "staycation-1")
+2. title: Creative, fun name (e.g., "Coastal Escape", "Mountain Day Trip", "Historic Town Wander")
+3. vibeTagline: Short 1-sentence description (max 100 chars)
+4. isCurveball: true only for recommendation 3
+5. tripDuration: one of "afternoon", "full-day", or "weekend"
+6. totalCost: Estimated cost range for ALL ${numberOfTravelers} traveler(s)
+   - min: Budget-conscious estimate
+   - max: More comfortable estimate
+   - currency: "USD"
+7. costBreakdown: Costs for the entire trip (in USD for ALL travelers):
+   - gas: Fuel for round trip
+   - food: Meals and snacks
+   - activities: Entry fees, rentals, tours
+   - parking: Parking fees
+   - misc: Tips, souvenirs
+8. destination: Object with:
+   - name: Specific place name (e.g., "Point Reyes National Seashore")
+   - type: Category (e.g., "nature", "beach", "museum", "town", "park")
+   - distance: Human-readable distance (e.g., "45 minutes from San Francisco")
+   - driveTime: Number of minutes to drive there
+   - address: General location or address if known
+   - description: 2-3 sentence description of why this place is great
+   - activities: Array of 3-5 specific things to do there
+   - bestFor: Array of who this is ideal for (e.g., ["families with kids", "couples", "nature lovers"])
+   - imageQuery: Search query for beautiful images
+9. suggestedItinerary: Array of time-blocked activities:
+   - time: Start time (e.g., "9:00 AM")
+   - activity: What to do
+   - duration: How long (e.g., "2 hours")
+   - tips: Optional helpful tip
+10. packingList: Array of 5-8 items to bring
+11. bestTimeToVisit: Best season/time for this destination
+12. familyFriendlyRating: 1-5 rating for family-friendliness (5 = perfect for kids)
+
+Format response as valid JSON:
+{
+  "recommendations": [
+    {
+      "id": "staycation-1",
+      "title": "Coastal Escape",
+      "vibeTagline": "Stunning cliffs, tide pools, and fresh sea air",
+      "isCurveball": false,
+      "tripDuration": "full-day",
+      "totalCost": {
+        "min": 80,
+        "max": 150,
+        "currency": "USD"
+      },
+      "costBreakdown": {
+        "gas": 25,
+        "food": 60,
+        "activities": 40,
+        "parking": 15,
+        "misc": 10
+      },
+      "destination": {
+        "name": "Point Reyes National Seashore",
+        "type": "nature",
+        "distance": "1 hour from San Francisco",
+        "driveTime": 60,
+        "address": "Point Reyes Station, CA",
+        "description": "Dramatic coastal cliffs, lighthouse, and incredible wildlife viewing.",
+        "activities": ["Visit Point Reyes Lighthouse", "Explore tide pools", "Hike Bear Valley Trail", "Spot elephant seals"],
+        "bestFor": ["nature lovers", "families", "photographers"],
+        "imageQuery": "Point Reyes lighthouse California coast"
+      },
+      "suggestedItinerary": [
+        {
+          "time": "9:00 AM",
+          "activity": "Drive to Point Reyes and stop at Bear Valley Visitor Center",
+          "duration": "1.5 hours",
+          "tips": "Pick up a trail map and check tide schedules"
+        }
+      ],
+      "packingList": ["Sunscreen", "Layers for wind", "Binoculars", "Snacks", "Water"],
+      "bestTimeToVisit": "Spring and Fall for best weather",
+      "familyFriendlyRating": 4
+    }
+  ]
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.9,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    
+    // Validate with Zod schema
+    const validated = staycationRecommendationsResponseSchema.parse(parsed);
+    
+    return validated.recommendations;
+  } catch (error) {
+    console.error("Error getting staycation recommendations:", error);
+    throw new Error("Failed to get AI staycation recommendations");
   }
 }
 
