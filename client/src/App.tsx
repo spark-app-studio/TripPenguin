@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Features from "@/pages/features";
+import About from "@/pages/about";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/features" component={Features} />
+      <Route path="/about" component={About} />
 
       {/* Conditional routes based on authentication */}
       {!isAuthenticated ? (

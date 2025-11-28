@@ -138,7 +138,7 @@ export default function Features() {
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/features" className="text-foreground text-sm font-medium transition-colors">Features</Link>
               <a href="/#how-it-works" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">How It Works</a>
-              <a href="/#about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</a>
+              <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
               <a href="/#faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</a>
               <Link href="/terms-of-service" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Privacy</Link>
             </nav>
