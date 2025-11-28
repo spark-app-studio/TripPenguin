@@ -77,6 +77,92 @@ const mockCreditCardOffers = [
 // Points to dollar conversion rate (1 point = $0.012, typical for travel cards)
 const POINTS_CONVERSION_RATE = 0.012;
 
+// Accommodation option interface
+interface AccommodationOption {
+  id: string;
+  type: "hotel" | "airbnb";
+  name: string;
+  nightlyCost: number;
+  description: string;
+  rating: number;
+  url: string;
+}
+
+// Generate mock accommodation options for a destination
+function generateMockAccommodations(cityName: string, countryName: string): AccommodationOption[] {
+  // Generate consistent but varied options based on city name
+  const cityHash = cityName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const isInternational = !["New York", "Los Angeles", "Chicago", "Miami", "Seattle", "Denver", "Austin", "Boston", "San Francisco", "Las Vegas", "Orlando", "Phoenix", "Atlanta", "Dallas", "Houston"].some(
+    city => cityName.toLowerCase().includes(city.toLowerCase())
+  );
+  
+  // Base prices vary by destination type
+  const hotelBase = isInternational ? 180 : 140;
+  const airbnbBase = isInternational ? 120 : 90;
+  
+  const hotelNames = [
+    `${cityName} Grand Hotel`,
+    `The ${cityName} Palace`,
+    `${cityName} Marriott Downtown`,
+    `Hilton ${cityName} Center`,
+    `${cityName} Plaza Hotel`
+  ];
+  
+  const airbnbNames = [
+    `Charming Studio in ${cityName} Center`,
+    `Modern Apartment Near ${cityName} Attractions`,
+    `Cozy Home in Historic ${cityName}`,
+    `Stylish Loft in ${cityName} Downtown`,
+    `${cityName} Family-Friendly Apartment`
+  ];
+  
+  const hotelDescriptions = [
+    "Luxurious rooms with stunning city views, on-site restaurant, and spa services.",
+    "Elegant accommodations with rooftop pool, gym, and complimentary breakfast.",
+    "Modern hotel with excellent location, business center, and concierge service."
+  ];
+  
+  const airbnbDescriptions = [
+    "Fully equipped kitchen, washer/dryer, fast WiFi. Perfect for families.",
+    "Stylish space with local character, walkable to major attractions.",
+    "Spacious and comfortable, great for groups. Superhost with 100+ reviews."
+  ];
+  
+  return [
+    {
+      id: `${cityName.toLowerCase().replace(/\s/g, '-')}-hotel-1`,
+      type: "hotel",
+      name: hotelNames[cityHash % hotelNames.length],
+      nightlyCost: Math.round((hotelBase + (cityHash % 80)) / 10) * 10,
+      description: hotelDescriptions[cityHash % hotelDescriptions.length],
+      rating: 4 + (cityHash % 10) / 10,
+      url: `https://example.com/book/${cityName.toLowerCase().replace(/\s/g, '-')}-hotel`
+    },
+    {
+      id: `${cityName.toLowerCase().replace(/\s/g, '-')}-airbnb-1`,
+      type: "airbnb",
+      name: airbnbNames[cityHash % airbnbNames.length],
+      nightlyCost: Math.round((airbnbBase + (cityHash % 60)) / 10) * 10,
+      description: airbnbDescriptions[cityHash % airbnbDescriptions.length],
+      rating: 4.5 + (cityHash % 5) / 10,
+      url: `https://example.com/airbnb/${cityName.toLowerCase().replace(/\s/g, '-')}`
+    },
+    {
+      id: `${cityName.toLowerCase().replace(/\s/g, '-')}-${(cityHash % 2 === 0) ? 'hotel' : 'airbnb'}-2`,
+      type: (cityHash % 2 === 0) ? "hotel" : "airbnb",
+      name: (cityHash % 2 === 0) 
+        ? hotelNames[(cityHash + 1) % hotelNames.length]
+        : airbnbNames[(cityHash + 1) % airbnbNames.length],
+      nightlyCost: Math.round(((cityHash % 2 === 0 ? hotelBase : airbnbBase) + ((cityHash + 30) % 70)) / 10) * 10,
+      description: (cityHash % 2 === 0) 
+        ? hotelDescriptions[(cityHash + 1) % hotelDescriptions.length]
+        : airbnbDescriptions[(cityHash + 1) % airbnbDescriptions.length],
+      rating: 4.2 + (cityHash % 8) / 10,
+      url: `https://example.com/book/${cityName.toLowerCase().replace(/\s/g, '-')}-option-2`
+    }
+  ];
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -266,6 +352,24 @@ export default function Step2Plan({
   const [linkedAccountBalance, setLinkedAccountBalance] = useState<number | null>(null);
   const [isLinkingAccount, setIsLinkingAccount] = useState(false);
   const [useManualSavings, setUseManualSavings] = useState(true);
+
+  // Accommodation selection state
+  // Maps cityName -> selected AccommodationOption id (or null if not selected)
+  const [selectedAccommodations, setSelectedAccommodations] = useState<Record<string, string | null>>({});
+  
+  // Generate accommodation options for each destination
+  const accommodationsByCity = useMemo(() => {
+    const result: Record<string, { options: AccommodationOption[]; nights: number }> = {};
+    if (displayedDestinationDetails) {
+      displayedDestinationDetails.forEach((dest) => {
+        result[dest.cityName] = {
+          options: generateMockAccommodations(dest.cityName, dest.countryName),
+          nights: dest.numberOfNights
+        };
+      });
+    }
+    return result;
+  }, [displayedDestinationDetails]);
 
   // Calculate totals
   const totalEstimated =
@@ -480,6 +584,89 @@ export default function Step2Plan({
   const flightSavingsProgress = estimatedFlightCost > 0 
     ? Math.min(100, (savingsAllocatedToFlights / estimatedFlightCost) * 100) 
     : 0;
+
+  // Accommodation cost calculations
+  const estimatedAccommodationCost = useMemo(() => {
+    // If user has manually entered housing cost, use that
+    const housingBudget = parseFloat(budgetData.housing.cost || "0");
+    if (housingBudget > 0) {
+      return housingBudget;
+    }
+    
+    // Otherwise estimate based on typical rates
+    let totalCost = 0;
+    if (displayedDestinationDetails) {
+      displayedDestinationDetails.forEach((dest) => {
+        const isInternational = !["New York", "Los Angeles", "Chicago", "Miami", "Seattle", "Denver", "Austin", "Boston", "San Francisco", "Las Vegas", "Orlando", "Phoenix", "Atlanta", "Dallas", "Houston"].some(
+          city => dest.cityName.toLowerCase().includes(city.toLowerCase())
+        );
+        // Average nightly rate for 4-star accommodations
+        const avgNightlyRate = isInternational ? 175 : 150;
+        totalCost += avgNightlyRate * dest.numberOfNights;
+      });
+    }
+    return totalCost;
+  }, [budgetData.housing.cost, displayedDestinationDetails]);
+
+  // Calculate actual accommodation cost based on selections
+  const selectedAccommodationCost = useMemo(() => {
+    let totalCost = 0;
+    let allSelected = true;
+    
+    if (displayedDestinationDetails) {
+      displayedDestinationDetails.forEach((dest) => {
+        const selectedId = selectedAccommodations[dest.cityName];
+        if (selectedId && accommodationsByCity[dest.cityName]) {
+          const selected = accommodationsByCity[dest.cityName].options.find(opt => opt.id === selectedId);
+          if (selected) {
+            totalCost += selected.nightlyCost * dest.numberOfNights;
+          }
+        } else {
+          allSelected = false;
+        }
+      });
+    }
+    
+    return { cost: totalCost, allSelected };
+  }, [selectedAccommodations, accommodationsByCity, displayedDestinationDetails]);
+
+  // Final accommodation cost - use selected if all are chosen, otherwise AI estimate
+  const finalAccommodationCost = selectedAccommodationCost.allSelected && selectedAccommodationCost.cost > 0
+    ? selectedAccommodationCost.cost
+    : estimatedAccommodationCost;
+
+  // Combined flight + accommodation savings calculations
+  const totalFlightsAndAccommodation = estimatedFlightCost + finalAccommodationCost;
+  const savingsAfterFlights = Math.max(0, currentSavingsNum - estimatedFlightCost);
+  const savingsAllocatedToAccommodation = Math.min(savingsAfterFlights, finalAccommodationCost);
+  const accommodationSavingsGap = Math.max(0, finalAccommodationCost - savingsAllocatedToAccommodation);
+  const combinedSavingsGap = flightSavingsGap + accommodationSavingsGap;
+  
+  // Calculate months needed to save for both flights and accommodation
+  const monthsToCombined = monthlySavingsNum > 0 ? Math.ceil(combinedSavingsGap / monthlySavingsNum) : 0;
+  
+  // Calculate earliest accommodation booking date (after flights + accommodations are covered)
+  const earliestAccommodationBookingDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToCombined);
+    return date;
+  }, [monthsToCombined]);
+  
+  // Check if accommodations can be booked today
+  const canBookAccommodationNow = combinedSavingsGap === 0 || new Date() >= earliestAccommodationBookingDate;
+  
+  // Calculate percentage of accommodation cost saved
+  const accommodationSavingsProgress = finalAccommodationCost > 0 
+    ? Math.min(100, (savingsAllocatedToAccommodation / finalAccommodationCost) * 100) 
+    : 0;
+
+  // Handle accommodation selection
+  const handleSelectAccommodation = (cityName: string, optionId: string) => {
+    setSelectedAccommodations(prev => ({
+      ...prev,
+      [cityName]: prev[cityName] === optionId ? null : optionId
+    }));
+  };
 
   // Get season display name
   const getSeasonDisplay = (season: string) => {
@@ -1227,6 +1414,332 @@ export default function Step2Plan({
                     <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready!</span> You've saved enough to cover your flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (with ${pointsToUse.toLocaleString()} points reducing your cost by $${pointsDollarValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})` : ''}. 
                       Book now to lock in prices 6-12 months before your trip for the best deals.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Accommodation Costs Section */}
+          <Card data-testid="card-accommodation-costs">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Accommodation Costs</CardTitle>
+                    <CardDescription>Select and compare stays for each destination</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={selectedAccommodationCost.allSelected ? "default" : "secondary"}>
+                    {Object.values(selectedAccommodations).filter(Boolean).length} of {displayedDestinationDetails?.length || 0} selected
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Estimated Accommodation Costs Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Estimated Accommodation Costs</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {selectedAccommodationCost.allSelected 
+                            ? "This is the total of your selected accommodations."
+                            : "This is an AI estimate based on typical 4-star rates for your destinations. Select specific stays below for exact pricing."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-accommodation-cost">
+                    ${finalAccommodationCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedAccommodationCost.allSelected ? "from your selections" : "AI estimated"}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Allocated</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${savingsAllocatedToAccommodation >= finalAccommodationCost ? 'text-green-600' : ''}`} data-testid="text-accommodation-savings">
+                    ${savingsAllocatedToAccommodation.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (after covering flights)
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${accommodationSavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-accommodation-gap">
+                    {accommodationSavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${accommodationSavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {accommodationSavingsGap === 0 ? 'Accommodations covered!' : 'to save for stays'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Accommodation Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Accommodation Savings Progress</span>
+                  <span className="font-medium">{accommodationSavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={accommodationSavingsProgress} className="h-3" />
+              </div>
+
+              <Separator />
+
+              {/* Itinerary Destinations with Accommodation Options */}
+              <div className="space-y-6">
+                <h3 className="font-semibold text-lg">Choose Your Stays</h3>
+                
+                {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
+                  displayedDestinationDetails.map((dest, idx) => {
+                    const cityAccommodations = accommodationsByCity[dest.cityName];
+                    const selectedId = selectedAccommodations[dest.cityName];
+                    const selectedOption = selectedId && cityAccommodations
+                      ? cityAccommodations.options.find(opt => opt.id === selectedId)
+                      : null;
+                    
+                    return (
+                      <div 
+                        key={dest.cityName} 
+                        className="p-4 rounded-lg border bg-muted/20"
+                        data-testid={`accommodation-location-${idx}`}
+                      >
+                        {/* Location Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold">{dest.cityName}, {dest.countryName}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedOption && (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Selected
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Accommodation Options */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {cityAccommodations?.options.map((option) => {
+                            const isSelected = selectedId === option.id;
+                            const totalCost = option.nightlyCost * dest.numberOfNights;
+                            
+                            // If an option is selected, only show the selected one
+                            if (selectedId && !isSelected) {
+                              return null;
+                            }
+                            
+                            return (
+                              <div
+                                key={option.id}
+                                className={`p-4 rounded-lg border transition-all ${
+                                  isSelected 
+                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                    : 'bg-background hover-elevate cursor-pointer'
+                                }`}
+                                onClick={() => handleSelectAccommodation(dest.cityName, option.id)}
+                                data-testid={`accommodation-option-${option.id}`}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={option.type === "hotel" ? "secondary" : "outline"} className="text-xs">
+                                      {option.type === "hotel" ? "Hotel" : "Airbnb"}
+                                    </Badge>
+                                    <div className="flex items-center gap-1 text-amber-500">
+                                      <Star className="w-3 h-3 fill-current" />
+                                      <span className="text-xs font-medium">{option.rating.toFixed(1)}</span>
+                                    </div>
+                                  </div>
+                                  {isSelected && (
+                                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                                  )}
+                                </div>
+                                <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                                  {option.description}
+                                </p>
+                                <div className="flex items-end justify-between">
+                                  <div>
+                                    <p className="text-lg font-bold">${option.nightlyCost}</p>
+                                    <p className="text-xs text-muted-foreground">per night</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-primary">${totalCost.toLocaleString()}</p>
+                                    <p className="text-xs text-muted-foreground">total for {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}</p>
+                                  </div>
+                                </div>
+                                {isSelected ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectAccommodation(dest.cityName, option.id);
+                                    }}
+                                    data-testid={`button-change-${option.id}`}
+                                  >
+                                    Change Selection
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectAccommodation(dest.cityName, option.id);
+                                    }}
+                                    data-testid={`button-select-${option.id}`}
+                                  >
+                                    Select This Stay
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-2 gap-1 text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(option.url, '_blank');
+                                  }}
+                                  data-testid={`button-view-details-${option.id}`}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  View Details
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No destinations added yet. Add destinations to see accommodation options.</p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Book */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Book Stays</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalFlightsAndAccommodation.toLocaleString()} total for flights + accommodations, with ${currentSavingsNum.toLocaleString()} saved and ${monthlySavingsNum.toLocaleString()}/month savings.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookAccommodationNow ? 'text-green-600' : ''}`} data-testid="text-earliest-accommodation-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookAccommodationNow 
+                      ? "Ready now!" 
+                      : earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookAccommodationNow && monthsToCombined > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToCombined} month{monthsToCombined > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Stays Button */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          className="w-full gap-2"
+                          size="lg"
+                          disabled={!canBookAccommodationNow}
+                          data-testid="button-book-stays"
+                        >
+                          {canBookAccommodationNow ? (
+                            <>
+                              <MapPin className="w-5 h-5" />
+                              Book Your Stays
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-5 h-5" />
+                              Book Stays
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!canBookAccommodationNow && (
+                      <TooltipContent className="max-w-xs">
+                        <p>You need ${combinedSavingsGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canBookAccommodationNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book stays without going into debt. 
+                      At your current savings rate, you'll have enough for both flights and accommodations by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canBookAccommodationNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover both flights (${estimatedFlightCost.toLocaleString()}) and accommodations (${finalAccommodationCost.toLocaleString()}). 
+                      Book now to secure the best rates and availability.
                     </p>
                   </div>
                 </div>

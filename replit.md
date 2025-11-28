@@ -101,6 +101,20 @@ Preferred communication style: Simple, everyday language.
 - **Advisory Note**: Responsible credit card usage guidance - only open cards if you can handle payments and stay debt-free.
 - **Credit Card Offers Panel**: 3 mock credit card offers (Chase Sapphire Preferred, Amex Gold, Capital One Venture X) with bonuses, requirements, annual fees, and "View Offer" links (placeholder URLs).
 
+**Accommodation Costs Section** (Nov 28, 2025):
+- **Full-Width Card**: Dedicated accommodation tracking section beneath Flight Costs.
+- **Simplified Itinerary List**: Shows each destination with location name and number of nights.
+- **Mock Accommodation Options**: For each destination, 3 options are generated (1 hotel, 1 Airbnb, 1 additional). All modeled as 4-star+ ratings.
+- **Option Details**: Each option shows name, nightly cost, 1-2 line description, type badge (Hotel/Airbnb), rating, and mock URL link.
+- **Selection Mechanism**: User can select one accommodation per location. Once selected, other options hide and "Change Selection" button appears.
+- **Estimated Accommodation Costs**: Shows AI-estimated total (based on $150-175/night typical 4-star rates) before selection; recalculates as sum of selected options after all selections made.
+- **Savings Allocation**: Savings flow to accommodations after flights are fully covered.
+- **Accommodation Savings Gap**: `FinalAccommodationCost - SavingsAllocatedToAccommodation`.
+- **Combined Savings Gap**: `FlightSavingsGap + AccommodationSavingsGap` for booking date calculation.
+- **Earliest Booking Date**: `today + ceil(CombinedSavingsGap / MonthlySavings)`.
+- **Book Stays Button**: Disabled until `CombinedSavingsGap === 0` or date reached. Placeholder for booking flow.
+- **Helper Text**: Explains why booking is disabled or confirms readiness to book.
+
 ## External Dependencies
 
 **AI/ML Services**:
