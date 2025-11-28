@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { TripWithDetails, InsertTrip, Trip, StaycationRecommendation } from "@shared/schema";
+import { useItinerary } from "@/hooks/useItinerary";
 import Step1Dream from "./step1-dream";
 import Step2Plan from "./step2-plan";
 import Step3Book from "./step3-book";
@@ -44,6 +45,8 @@ interface TripPlanData {
   }>;
 }
 
+const TRIP_PLANNER_STATE_KEY = "trippirate_planner_state";
+
 export default function TripPlanner() {
   const [, params] = useRoute("/trip/:id");
   const [, setLocation] = useLocation();
@@ -59,12 +62,42 @@ export default function TripPlanner() {
     return false;
   });
   
+  // Restore saved step state (for returning from itinerary page)
   const [currentStep, setCurrentStep] = useState<Step>(() => {
-    return isQuizFlow ? "plan" : "dream";
+    if (isQuizFlow) return "plan";
+    
+    const savedState = sessionStorage.getItem(TRIP_PLANNER_STATE_KEY);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.currentStep) {
+          return parsed.currentStep as Step;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+    return "dream";
   });
   
   // Track whether Step 2 has been submitted (for quiz flow budget preservation)
   const [step2Submitted, setStep2Submitted] = useState(false);
+  
+  // Access shared itinerary state - changes made on /itinerary page will be reflected here
+  const { itinerary } = useItinerary();
+  
+  // Persist step state when it changes
+  useEffect(() => {
+    const existingState = sessionStorage.getItem(TRIP_PLANNER_STATE_KEY);
+    let state: any = {};
+    if (existingState) {
+      try {
+        state = JSON.parse(existingState);
+      } catch (e) {}
+    }
+    state.currentStep = currentStep;
+    sessionStorage.setItem(TRIP_PLANNER_STATE_KEY, JSON.stringify(state));
+  }, [currentStep]);
   
   // Helper function to normalize season from AI response to radio button values
   const normalizeSeason = (season: string | undefined): string => {
@@ -132,6 +165,19 @@ export default function TripPlanner() {
   const [tripData, setTripData] = useState<TripPlanData>(() => {
     // Only hydrate from sessionStorage for new trips (not editing existing trips)
     if (!tripId) {
+      // First check for saved planner state (e.g., returning from /itinerary page)
+      const savedPlannerState = sessionStorage.getItem(TRIP_PLANNER_STATE_KEY);
+      if (savedPlannerState) {
+        try {
+          const parsed = JSON.parse(savedPlannerState);
+          if (parsed.tripData) {
+            return parsed.tripData;
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      
       // Check for multi-city itinerary first (new format)
       const selectedItineraryJson = sessionStorage.getItem("selectedItinerary");
       if (selectedItineraryJson) {
@@ -326,6 +372,59 @@ export default function TripPlanner() {
     }
     return {};
   });
+  
+  // Persist tripData when it changes
+  useEffect(() => {
+    if (Object.keys(tripData).length > 0) {
+      const existingState = sessionStorage.getItem(TRIP_PLANNER_STATE_KEY);
+      let state: any = {};
+      if (existingState) {
+        try {
+          state = JSON.parse(existingState);
+        } catch (e) {}
+      }
+      state.tripData = tripData;
+      sessionStorage.setItem(TRIP_PLANNER_STATE_KEY, JSON.stringify(state));
+    }
+  }, [tripData]);
+  
+  // Sync itinerary changes back to tripData when returning from /itinerary page
+  useEffect(() => {
+    if (itinerary && itinerary.cities && itinerary.cities.length > 0 && tripData.step1) {
+      const itineraryCities = itinerary.cities;
+      const currentDestinations = tripData.step1.selectedDestinations;
+      
+      // Check if itinerary differs from current tripData
+      const hasChanges = 
+        itinerary.totalNights !== tripData.step1.tripDuration ||
+        itineraryCities.length !== currentDestinations.length ||
+        itineraryCities.some((city, i) => {
+          const existing = currentDestinations[i];
+          return !existing || 
+            city.cityName !== existing.cityName ||
+            city.numberOfNights !== existing.numberOfNights;
+        });
+      
+      if (hasChanges) {
+        setTripData(prev => ({
+          ...prev,
+          step1: {
+            ...prev.step1!,
+            tripDuration: itinerary.totalNights,
+            numberOfTravelers: itinerary.numberOfTravelers || prev.step1!.numberOfTravelers,
+            travelSeason: itinerary.travelSeason || prev.step1!.travelSeason,
+            selectedDestinations: itineraryCities.map(city => ({
+              cityName: city.cityName,
+              countryName: city.countryName,
+              imageUrl: "",
+              numberOfNights: city.numberOfNights,
+            })),
+          },
+        }));
+      }
+    }
+  }, [itinerary]);
+  
   const [currentTripId, setCurrentTripId] = useState<string | null>(tripId);
 
   // Load existing trip if editing

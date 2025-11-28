@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank } from "lucide-react";
+import { useItinerary } from "@/hooks/useItinerary";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean };
@@ -115,7 +117,34 @@ export default function Step2Plan({
   onBack,
   onViewItinerary,
 }: Step2PlanProps) {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  const { 
+    itinerary, 
+    initializeFromTripData,
+    setItinerary 
+  } = useItinerary();
+  
+  useEffect(() => {
+    if (!itinerary && destinationDetails && destinationDetails.length > 0) {
+      initializeFromTripData({
+        tripDuration,
+        numberOfTravelers,
+        travelSeason,
+        selectedDestinations: destinationDetails,
+      });
+    }
+  }, [itinerary, destinationDetails, tripDuration, numberOfTravelers, travelSeason, initializeFromTripData]);
+
+  const displayedDestinations = itinerary?.cities?.map(c => c.cityName) || destinations;
+  const displayedDuration = itinerary?.totalNights || tripDuration;
+  const displayedDestinationDetails = itinerary?.cities?.map(c => ({
+    cityName: c.cityName,
+    countryName: c.countryName,
+    numberOfNights: c.numberOfNights,
+  })) || destinationDetails;
+  
   const [budgetData, setBudgetData] = useState<BudgetData>({
     flights: initialData?.flights || { cost: "0", notes: "", usePoints: false },
     housing: initialData?.housing || { cost: "0", notes: "" },
@@ -247,25 +276,25 @@ export default function Step2Plan({
                 <div className="flex items-center gap-3">
                   <MapPin className="w-6 h-6 text-primary" />
                   <div>
-                    <CardTitle className="text-xl">Your Itinerary</CardTitle>
+                    <CardTitle className="text-xl">
+                      {itinerary?.title || "Your Itinerary"}
+                    </CardTitle>
                     <CardDescription>
-                      {destinations.length > 0 
-                        ? `${destinations.join(" → ")}` 
+                      {displayedDestinations.length > 0 
+                        ? `${displayedDestinations.join(" → ")}` 
                         : "No destinations selected yet"}
                     </CardDescription>
                   </div>
                 </div>
-                {onViewItinerary && (
-                  <Button
-                    variant="outline"
-                    onClick={onViewItinerary}
-                    className="gap-2"
-                    data-testid="button-view-itinerary"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    View Detailed Itinerary
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/itinerary")}
+                  className="gap-2"
+                  data-testid="button-view-itinerary"
+                >
+                  <Edit className="w-4 h-4" />
+                  View / Edit Detailed Itinerary
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -274,37 +303,52 @@ export default function Step2Plan({
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Duration</p>
-                    <p className="font-semibold" data-testid="text-trip-duration">{tripDuration} {tripDuration === 1 ? 'night' : 'nights'}</p>
+                    <p className="font-semibold" data-testid="text-trip-duration">{displayedDuration} {displayedDuration === 1 ? 'night' : 'nights'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Travelers</p>
-                    <p className="font-semibold" data-testid="text-travelers">{numberOfTravelers}</p>
+                    <p className="font-semibold" data-testid="text-travelers">{itinerary?.numberOfTravelers || numberOfTravelers}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Season</p>
-                    <p className="font-semibold" data-testid="text-season">{getSeasonDisplay(travelSeason)}</p>
+                    <p className="font-semibold" data-testid="text-season">{getSeasonDisplay(itinerary?.travelSeason || travelSeason)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Destinations</p>
-                    <p className="font-semibold" data-testid="text-destination-count">{destinations.length}</p>
+                    <p className="font-semibold" data-testid="text-destination-count">{displayedDestinations.length}</p>
                   </div>
                 </div>
               </div>
               
+              {/* Dates if available from itinerary */}
+              {itinerary?.startDate && itinerary?.endDate && (
+                <div className="mt-4 p-3 rounded-lg bg-background/50">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    <span className="font-medium">Trip Dates:</span>
+                    <span>
+                      {new Date(itinerary.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {" — "}
+                      {new Date(itinerary.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               {/* Destination details if available */}
-              {destinationDetails && destinationDetails.length > 0 && (
+              {displayedDestinationDetails && displayedDestinationDetails.length > 0 && (
                 <div className="mt-4 pt-4 border-t">
                   <div className="flex flex-wrap gap-2">
-                    {destinationDetails.map((dest, index) => (
+                    {displayedDestinationDetails.map((dest, index) => (
                       <div 
                         key={index} 
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background border text-sm"

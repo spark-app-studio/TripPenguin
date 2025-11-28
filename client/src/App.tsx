@@ -19,6 +19,7 @@ import VerifyEmail from "@/pages/verify-email";
 import TermsOfService from "@/pages/terms-of-service";
 import TripsList from "@/pages/trips-list";
 import TripPlanner from "@/pages/trip-planner";
+import Itinerary from "@/pages/itinerary";
 import Quiz from "@/pages/quiz";
 import QuizResults from "@/pages/quiz-results";
 import QuizRefine from "@/pages/quiz-refine";
@@ -75,6 +76,7 @@ function Router() {
           <Route path="/planner" component={TripPlanner} />
           <Route path="/trip-planner" component={TripPlanner} />
           <Route path="/trip/:id" component={TripPlanner} />
+          <Route path="/itinerary" component={Itinerary} />
         </>
       )}
 
