@@ -713,9 +713,15 @@ export default function TripPlanner() {
           tripDuration={tripData.step1.tripDuration}
           numberOfTravelers={tripData.step1.numberOfTravelers}
           destinations={tripData.step1.selectedDestinations.map(d => d.cityName)}
+          destinationDetails={tripData.step1.selectedDestinations.map(d => ({
+            cityName: d.cityName,
+            countryName: d.countryName,
+            numberOfNights: d.numberOfNights,
+          }))}
           travelSeason={tripData.step1.travelSeason}
           onComplete={handleStep2Complete}
           onBack={isQuizFlow ? () => setLocation("/trips") : () => setCurrentStep("dream")}
+          onViewItinerary={() => setCurrentStep("dream")}
         />
       )}
 

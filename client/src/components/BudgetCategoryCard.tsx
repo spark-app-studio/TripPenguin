@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Plane, Home, Utensils, Car, PartyPopper, ShoppingBag, Sparkles, Loader2 } from "lucide-react";
+import { Plane, Home, Utensils, Car, PartyPopper, ShoppingBag, Sparkles, Loader2, BookOpen } from "lucide-react";
 
 interface BudgetCategoryCardProps {
   category: string;
@@ -26,15 +26,17 @@ const categoryIcons: Record<string, any> = {
   transportation: Car,
   fun: PartyPopper,
   preparation: ShoppingBag,
+  booksMovies: BookOpen,
 };
 
 const categoryTitles: Record<string, string> = {
   flights: "Flight Costs",
-  housing: "Housing Costs",
+  housing: "Accommodations",
   food: "Food Costs",
-  transportation: "Transportation Costs",
+  transportation: "Transportation",
   fun: "Fun & Activities",
   preparation: "Trip Preparation",
+  booksMovies: "Books & Movies",
 };
 
 const categoryDescriptions: Record<string, string> = {
@@ -44,6 +46,7 @@ const categoryDescriptions: Record<string, string> = {
   transportation: "Local transit, trains, car rentals",
   fun: "Tours, attractions, entertainment",
   preparation: "Luggage, travel gear, supplies",
+  booksMovies: "Travel guides, in-flight entertainment, destination-themed media",
 };
 
 export function BudgetCategoryCard({

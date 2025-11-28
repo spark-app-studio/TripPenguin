@@ -19,7 +19,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2 } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean };
@@ -28,9 +28,16 @@ interface BudgetData {
   transportation: { cost: string; notes: string };
   fun: { cost: string; notes: string };
   preparation: { cost: string; notes: string };
+  booksMovies: { cost: string; notes: string };
   monthlySavings: string;
   currentSavings: string;
   creditCardPoints: string;
+}
+
+interface DestinationDetail {
+  cityName: string;
+  countryName: string;
+  numberOfNights: number;
 }
 
 interface Step2PlanProps {
@@ -38,9 +45,11 @@ interface Step2PlanProps {
   tripDuration: number;
   numberOfTravelers: number;
   destinations: string[];
+  destinationDetails?: DestinationDetail[];
   travelSeason: string;
   onComplete: (data: BudgetData) => void;
   onBack: () => void;
+  onViewItinerary?: () => void;
 }
 
 interface CategoryBudget {
@@ -88,6 +97,11 @@ const budgetTips: Record<string, string[]> = {
     "Check if you need a power adapter",
     "Comfortable walking shoes are essential",
   ],
+  booksMovies: [
+    "Check your local library for free travel guides",
+    "Download movies/shows before the flight",
+    "Get destination-themed books to build excitement",
+  ],
 };
 
 export default function Step2Plan({
@@ -95,9 +109,11 @@ export default function Step2Plan({
   tripDuration,
   numberOfTravelers,
   destinations,
+  destinationDetails,
   travelSeason,
   onComplete,
   onBack,
+  onViewItinerary,
 }: Step2PlanProps) {
   const { toast } = useToast();
   const [budgetData, setBudgetData] = useState<BudgetData>({
@@ -107,6 +123,7 @@ export default function Step2Plan({
     transportation: initialData?.transportation || { cost: "0", notes: "" },
     fun: initialData?.fun || { cost: "0", notes: "" },
     preparation: initialData?.preparation || { cost: "0", notes: "" },
+    booksMovies: initialData?.booksMovies || { cost: "0", notes: "" },
     monthlySavings: initialData?.monthlySavings || "500",
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
@@ -177,7 +194,8 @@ export default function Step2Plan({
     parseFloat(budgetData.food.cost || "0") +
     parseFloat(budgetData.transportation.cost || "0") +
     parseFloat(budgetData.fun.cost || "0") +
-    parseFloat(budgetData.preparation.cost || "0");
+    parseFloat(budgetData.preparation.cost || "0") +
+    parseFloat(budgetData.booksMovies.cost || "0");
 
   const currentSavingsNum = parseFloat(budgetData.currentSavings || "0");
   const monthlySavingsNum = parseFloat(budgetData.monthlySavings || "0");
@@ -194,72 +212,180 @@ export default function Step2Plan({
     onComplete(budgetData);
   };
 
+  // Get season display name
+  const getSeasonDisplay = (season: string) => {
+    const seasonMap: Record<string, string> = {
+      summer: "Summer",
+      winter: "Winter",
+      spring: "Spring",
+      fall: "Fall",
+      off_season: "Off-Season",
+    };
+    return seasonMap[season] || season;
+  };
+
   return (
     <div className="min-h-screen bg-background pb-12">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <ProgressStepper currentStep={2} completedSteps={[1]} />
 
+        {/* Title Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold mb-4 font-serif">
-            Plan Your Budget
+            Plan your Trip and Save
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Estimate costs and set savings goals to make your trip debt-free
+            Build your budget, track your savings, and make your trip debt-free
           </p>
         </div>
 
         <div className="max-w-6xl mx-auto space-y-8">
-          {/* Savings Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription className="text-xs">Total Estimated Cost</CardDescription>
-                <CardTitle className="text-3xl font-bold text-primary" data-testid="text-total-estimated">
-                  ${totalEstimated.toFixed(2)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+          {/* Itinerary Summary */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-6 h-6 text-primary" />
+                  <div>
+                    <CardTitle className="text-xl">Your Itinerary</CardTitle>
+                    <CardDescription>
+                      {destinations.length > 0 
+                        ? `${destinations.join(" → ")}` 
+                        : "No destinations selected yet"}
+                    </CardDescription>
+                  </div>
+                </div>
+                {onViewItinerary && (
+                  <Button
+                    variant="outline"
+                    onClick={onViewItinerary}
+                    className="gap-2"
+                    data-testid="button-view-itinerary"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Detailed Itinerary
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Duration</p>
+                    <p className="font-semibold" data-testid="text-trip-duration">{tripDuration} {tripDuration === 1 ? 'night' : 'nights'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Travelers</p>
+                    <p className="font-semibold" data-testid="text-travelers">{numberOfTravelers}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Season</p>
+                    <p className="font-semibold" data-testid="text-season">{getSeasonDisplay(travelSeason)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Destinations</p>
+                    <p className="font-semibold" data-testid="text-destination-count">{destinations.length}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Destination details if available */}
+              {destinationDetails && destinationDetails.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex flex-wrap gap-2">
+                    {destinationDetails.map((dest, index) => (
+                      <div 
+                        key={index} 
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background border text-sm"
+                        data-testid={`badge-destination-${index}`}
+                      >
+                        <span className="font-medium">{dest.cityName}</span>
+                        <span className="text-muted-foreground">· {dest.numberOfNights} {dest.numberOfNights === 1 ? 'night' : 'nights'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription className="text-xs">Current Savings</CardDescription>
-                <CardTitle className="text-3xl font-bold text-green-600" data-testid="text-current-savings">
-                  ${currentSavingsNum.toFixed(2)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription className="text-xs">Still Need to Save</CardDescription>
-                <CardTitle className="text-3xl font-bold" data-testid="text-remaining-to-save">
-                  ${remainingToSave.toFixed(2)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {/* Budget Alert */}
-          <BudgetAlert
-            totalEstimated={totalEstimated}
-            totalSavings={currentSavingsNum}
-          />
-
-          {/* Savings Tracker */}
+          {/* Overall Trip Financing Summary */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-primary" />
-                <CardTitle>Savings Tracker</CardTitle>
+                <PiggyBank className="w-5 h-5 text-primary" />
+                <CardTitle>Trip Financing Summary</CardTitle>
               </div>
               <CardDescription>
-                Set your monthly savings goal and track progress
+                Your overall savings progress and timeline
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Key Financial Metrics */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground mb-1">Total Trip Cost</p>
+                  <p className="text-2xl font-bold text-primary" data-testid="text-total-estimated">
+                    ${totalEstimated.toFixed(0)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground mb-1">Current Savings</p>
+                  <p className="text-2xl font-bold text-green-600" data-testid="text-current-savings">
+                    ${currentSavingsNum.toFixed(0)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground mb-1">Monthly Savings</p>
+                  <p className="text-2xl font-bold" data-testid="text-monthly-savings">
+                    ${monthlySavingsNum.toFixed(0)}/mo
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground mb-1">Earliest Travel Date</p>
+                  <p className="text-lg font-bold flex items-center gap-1" data-testid="text-earliest-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {monthsToSave > 0 
+                      ? earliestTravelDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                      : "Ready now!"
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {totalEstimated > 0 && (
                 <div className="space-y-2">
-                  <Label htmlFor="current-savings">How much have you saved? (USD)</Label>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Savings Progress</span>
+                    <span className="font-medium">{Math.min(100, savingsProgress).toFixed(0)}% saved</span>
+                  </div>
+                  <Progress value={Math.min(100, savingsProgress)} className="h-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {remainingToSave > 0 
+                      ? `$${remainingToSave.toFixed(0)} left to save${monthsToSave > 0 ? ` · ${monthsToSave} month${monthsToSave > 1 ? 's' : ''} to go` : ''}`
+                      : "You've saved enough for your trip!"
+                    }
+                  </p>
+                </div>
+              )}
+
+              {/* Savings Inputs */}
+              <Separator />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-savings">Current Savings (USD)</Label>
                   <Input
                     id="current-savings"
                     type="number"
@@ -270,9 +396,8 @@ export default function Step2Plan({
                     data-testid="input-current-savings"
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="monthly-savings">Monthly savings amount (USD)</Label>
+                  <Label htmlFor="monthly-savings">Monthly Savings (USD)</Label>
                   <Input
                     id="monthly-savings"
                     type="number"
@@ -283,65 +408,32 @@ export default function Step2Plan({
                     data-testid="input-monthly-savings"
                   />
                 </div>
-              </div>
-
-              {totalEstimated > 0 && (
-                <>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Savings Progress</span>
-                      <span className="font-medium">{Math.min(100, savingsProgress).toFixed(0)}%</span>
-                    </div>
-                    <Progress value={Math.min(100, savingsProgress)} className="h-3" />
-                  </div>
-
-                  {monthsToSave > 0 && (
-                    <div className="p-4 rounded-md bg-muted/50 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-primary" />
-                        <h4 className="font-semibold">Savings Timeline</h4>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Months to save</p>
-                          <p className="text-2xl font-bold text-primary" data-testid="text-months-to-save">
-                            {monthsToSave}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Earliest travel date</p>
-                          <p className="text-lg font-semibold flex items-center gap-1" data-testid="text-earliest-date">
-                            <CalendarIcon className="w-4 h-4" />
-                            {earliestTravelDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="credit-points">Credit card points (optional)</Label>
-                <Input
-                  id="credit-points"
-                  type="number"
-                  min="0"
-                  value={budgetData.creditCardPoints}
-                  onChange={(e) => setBudgetData({ ...budgetData, creditCardPoints: e.target.value })}
-                  placeholder="Enter points balance"
-                  data-testid="input-credit-points"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Track your points to potentially reduce flight costs
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="credit-points">Credit Card Points</Label>
+                  <Input
+                    id="credit-points"
+                    type="number"
+                    min="0"
+                    value={budgetData.creditCardPoints}
+                    onChange={(e) => setBudgetData({ ...budgetData, creditCardPoints: e.target.value })}
+                    placeholder="Optional"
+                    data-testid="input-credit-points"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Budget Categories */}
+          {/* Budget Alert */}
+          <BudgetAlert
+            totalEstimated={totalEstimated}
+            totalSavings={currentSavingsNum}
+          />
+
+          {/* Budget Breakdown */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Budget Breakdown</h2>
+            <p className="text-muted-foreground">Estimate costs for each category to build your complete trip budget</p>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BudgetCategoryCard
@@ -410,6 +502,17 @@ export default function Step2Plan({
                 tips={budgetTips.preparation}
                 onGetAIGuidance={() => handleGetAIGuidance("preparation")}
                 isLoadingAI={loadingCategories["preparation"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="booksMovies"
+                estimatedCost={budgetData.booksMovies.cost}
+                notes={budgetData.booksMovies.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("booksMovies", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("booksMovies", "notes", value)}
+                tips={budgetTips.booksMovies}
+                onGetAIGuidance={() => handleGetAIGuidance("booksMovies")}
+                isLoadingAI={loadingCategories["booksMovies"] || false}
               />
             </div>
           </div>
