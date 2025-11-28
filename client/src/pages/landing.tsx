@@ -137,7 +137,7 @@ export default function Landing() {
               <Button
                 variant="default"
                 className="bg-primary border-2 border-primary-border"
-                onClick={() => setLocation("/register")}
+                onClick={() => setLocation("/getting-started")}
                 data-testid="button-get-started"
               >
                 Get Started
@@ -172,7 +172,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="default"
-              onClick={() => setLocation("/register")}
+              onClick={() => setLocation("/getting-started")}
               className="text-lg px-10 py-7 min-h-0 bg-primary hover:bg-primary border-2 border-primary-border"
               data-testid="button-hero-cta"
             >
@@ -414,7 +414,7 @@ export default function Landing() {
           <Button
             size="lg"
             variant="outline"
-            onClick={() => setLocation("/register")}
+            onClick={() => setLocation("/getting-started")}
             className="text-lg px-10 py-7 min-h-0 bg-white text-primary hover:bg-white/90 border-white"
             data-testid="button-final-cta"
           >
@@ -440,7 +440,7 @@ export default function Landing() {
               <a href="#features" className="hover:text-foreground transition-colors">Features</a>
               <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
               <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
-              <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
               <a href="mailto:contact@trippirate.com" className="hover:text-foreground transition-colors">Contact</a>
             </nav>
           </div>

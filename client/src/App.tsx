@@ -9,6 +9,7 @@ import Features from "@/pages/features";
 import About from "@/pages/about";
 import FAQ from "@/pages/faq";
 import Privacy from "@/pages/privacy";
+import GettingStarted from "@/pages/getting-started";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/faq" component={FAQ} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/getting-started" component={GettingStarted} />
 
       {/* Conditional routes based on authentication */}
       {!isAuthenticated ? (
