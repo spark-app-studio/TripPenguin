@@ -366,6 +366,124 @@ function generateTransportSegments(destinations: { cityName: string; countryName
   return segments;
 }
 
+// Activity option interface
+interface ActivityOption {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  duration: string;
+  type: "main-attraction" | "unique" | "food-experience" | "outdoor" | "cultural" | "relaxation";
+  url: string;
+}
+
+// Day activities interface
+interface DayActivities {
+  dayNumber: number;
+  cityName: string;
+  activities: ActivityOption[];
+}
+
+// Activity pace type (from quiz)
+type ActivityPace = "relaxed" | "balanced" | "packed";
+
+// Generate mock activities for a city
+function generateMockActivities(
+  cityName: string, 
+  countryName: string, 
+  numberOfNights: number,
+  pace: ActivityPace = "balanced"
+): DayActivities[] {
+  const cityHash = cityName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const citySlug = cityName.toLowerCase().replace(/\s/g, '-');
+  const isInternational = !["New York", "Los Angeles", "Chicago", "Miami", "Seattle", "Denver", "Austin", "Boston", "San Francisco", "Las Vegas", "Orlando", "Phoenix", "Atlanta", "Dallas", "Houston"].some(
+    city => cityName.toLowerCase().includes(city.toLowerCase())
+  );
+  
+  // Determine activities per day based on pace
+  const activitiesPerDay = pace === "relaxed" ? 2 : pace === "balanced" ? 3 : 4;
+  
+  // City-specific main attractions
+  const mainAttractions: Record<string, ActivityOption[]> = {
+    default: [
+      { id: `${citySlug}-main-1`, name: `${cityName} City Tour`, description: "Comprehensive guided tour covering major landmarks and hidden gems.", cost: isInternational ? 45 : 35, duration: "3 hours", type: "main-attraction", url: `https://example.com/tours/${citySlug}` },
+      { id: `${citySlug}-main-2`, name: `${cityName} Museum`, description: "World-class museum with extensive collections and interactive exhibits.", cost: isInternational ? 25 : 20, duration: "2-3 hours", type: "main-attraction", url: `https://example.com/museum/${citySlug}` },
+      { id: `${citySlug}-main-3`, name: `${cityName} Observation Deck`, description: "Panoramic views of the city skyline from the highest point.", cost: isInternational ? 35 : 25, duration: "1-2 hours", type: "main-attraction", url: `https://example.com/views/${citySlug}` },
+    ]
+  };
+  
+  // Unique/niche activities
+  const uniqueActivities: ActivityOption[] = [
+    { id: `${citySlug}-unique-1`, name: `Hidden ${cityName} Walking Tour`, description: "Discover secret spots and local favorites off the beaten path.", cost: isInternational ? 30 : 25, duration: "2.5 hours", type: "unique", url: `https://example.com/hidden/${citySlug}` },
+    { id: `${citySlug}-unique-2`, name: "Local Artisan Workshop", description: "Hands-on experience with traditional local crafts and artisans.", cost: isInternational ? 55 : 45, duration: "2 hours", type: "unique", url: `https://example.com/artisan/${citySlug}` },
+    { id: `${citySlug}-unique-3`, name: "Street Art & Graffiti Tour", description: "Explore vibrant urban art scenes with a local guide.", cost: isInternational ? 20 : 15, duration: "2 hours", type: "unique", url: `https://example.com/streetart/${citySlug}` },
+  ];
+  
+  // Food experiences
+  const foodExperiences: ActivityOption[] = [
+    { id: `${citySlug}-food-1`, name: `${cityName} Food Tour`, description: "Sample local delicacies and learn about culinary traditions.", cost: isInternational ? 75 : 60, duration: "3 hours", type: "food-experience", url: `https://example.com/foodtour/${citySlug}` },
+    { id: `${citySlug}-food-2`, name: "Cooking Class", description: "Learn to prepare authentic local dishes with expert chefs.", cost: isInternational ? 85 : 70, duration: "3 hours", type: "food-experience", url: `https://example.com/cooking/${citySlug}` },
+    { id: `${citySlug}-food-3`, name: "Market & Tasting Experience", description: "Explore local markets and taste fresh, regional products.", cost: isInternational ? 40 : 30, duration: "2 hours", type: "food-experience", url: `https://example.com/market/${citySlug}` },
+  ];
+  
+  // Outdoor activities
+  const outdoorActivities: ActivityOption[] = [
+    { id: `${citySlug}-outdoor-1`, name: `${cityName} Park & Gardens`, description: "Relax in beautiful green spaces and botanical gardens.", cost: isInternational ? 10 : 0, duration: "2 hours", type: "outdoor", url: `https://example.com/parks/${citySlug}` },
+    { id: `${citySlug}-outdoor-2`, name: "Bike Tour", description: "Explore the city on two wheels with guided bike tour.", cost: isInternational ? 35 : 30, duration: "3 hours", type: "outdoor", url: `https://example.com/biketour/${citySlug}` },
+    { id: `${citySlug}-outdoor-3`, name: "Waterfront Experience", description: "Enjoy scenic waterfront areas, boat rides, or beach time.", cost: isInternational ? 25 : 20, duration: "2-3 hours", type: "outdoor", url: `https://example.com/waterfront/${citySlug}` },
+  ];
+  
+  // Cultural activities
+  const culturalActivities: ActivityOption[] = [
+    { id: `${citySlug}-cultural-1`, name: "Historical Walking Tour", description: "Deep dive into the city's rich history and heritage.", cost: isInternational ? 25 : 20, duration: "2.5 hours", type: "cultural", url: `https://example.com/history/${citySlug}` },
+    { id: `${citySlug}-cultural-2`, name: "Local Performance Show", description: "Experience traditional music, dance, or theater performance.", cost: isInternational ? 50 : 40, duration: "2 hours", type: "cultural", url: `https://example.com/shows/${citySlug}` },
+    { id: `${citySlug}-cultural-3`, name: "Art Gallery Visit", description: "Explore contemporary and classical art collections.", cost: isInternational ? 18 : 15, duration: "1.5 hours", type: "cultural", url: `https://example.com/gallery/${citySlug}` },
+  ];
+  
+  // Relaxation activities
+  const relaxationActivities: ActivityOption[] = [
+    { id: `${citySlug}-relax-1`, name: "Spa & Wellness Experience", description: "Rejuvenate with local spa treatments and wellness rituals.", cost: isInternational ? 90 : 75, duration: "2-3 hours", type: "relaxation", url: `https://example.com/spa/${citySlug}` },
+    { id: `${citySlug}-relax-2`, name: "Sunset Cruise", description: "Relaxing evening cruise with stunning sunset views.", cost: isInternational ? 55 : 45, duration: "2 hours", type: "relaxation", url: `https://example.com/cruise/${citySlug}` },
+    { id: `${citySlug}-relax-3`, name: "Café & Neighborhood Stroll", description: "Leisurely exploration of charming neighborhoods and cafés.", cost: isInternational ? 15 : 10, duration: "2 hours", type: "relaxation", url: `https://example.com/stroll/${citySlug}` },
+  ];
+  
+  // Combine all activities
+  const allActivities = [
+    ...(mainAttractions[cityName.toLowerCase()] || mainAttractions.default),
+    ...uniqueActivities,
+    ...foodExperiences,
+    ...outdoorActivities,
+    ...culturalActivities,
+    ...relaxationActivities
+  ];
+  
+  // Generate activities for each day
+  const dayActivities: DayActivities[] = [];
+  
+  for (let day = 1; day <= numberOfNights; day++) {
+    // Rotate through activities to give variety each day
+    const startIndex = ((day - 1) * activitiesPerDay + cityHash) % allActivities.length;
+    const dayOptions: ActivityOption[] = [];
+    
+    for (let i = 0; i < Math.min(activitiesPerDay + 2, allActivities.length); i++) {
+      const activity = allActivities[(startIndex + i) % allActivities.length];
+      // Create unique ID for this day's activity
+      dayOptions.push({
+        ...activity,
+        id: `${activity.id}-day${day}`
+      });
+    }
+    
+    dayActivities.push({
+      dayNumber: day,
+      cityName,
+      activities: dayOptions
+    });
+  }
+  
+  return dayActivities;
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -583,6 +701,100 @@ export default function Step2Plan({
     if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return [];
     return generateTransportSegments(displayedDestinationDetails);
   }, [displayedDestinationDetails]);
+
+  // Activity selection state
+  // Maps "cityName-dayNumber-activityId" -> boolean (selected or not)
+  const [selectedActivities, setSelectedActivities] = useState<Record<string, boolean>>({});
+  
+  // Activity pace from quiz (default to balanced)
+  const activityPace: ActivityPace = useMemo(() => {
+    // Try to get pace from sessionStorage quiz results
+    try {
+      const quizData = sessionStorage.getItem("trippirate_quiz_results");
+      if (quizData) {
+        const parsed = JSON.parse(quizData);
+        // Check for pace-related quiz answers
+        if (parsed.tripPace === "relaxed" || parsed.pace === "relaxed") return "relaxed";
+        if (parsed.tripPace === "packed" || parsed.pace === "packed") return "packed";
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+    return "balanced";
+  }, []);
+  
+  // Generate activities for each destination and day
+  const activitiesByCity = useMemo(() => {
+    const result: Record<string, DayActivities[]> = {};
+    if (displayedDestinationDetails) {
+      displayedDestinationDetails.forEach((dest) => {
+        result[dest.cityName] = generateMockActivities(
+          dest.cityName, 
+          dest.countryName, 
+          dest.numberOfNights,
+          activityPace
+        );
+      });
+    }
+    return result;
+  }, [displayedDestinationDetails, activityPace]);
+  
+  // Calculate total selected activities count and cost
+  const selectedActivityStats = useMemo(() => {
+    let totalCost = 0;
+    let totalCount = 0;
+    let totalAvailable = 0;
+    
+    Object.entries(activitiesByCity).forEach(([cityName, days]) => {
+      days.forEach((day) => {
+        totalAvailable += day.activities.length;
+        day.activities.forEach((activity) => {
+          const key = `${cityName}-${day.dayNumber}-${activity.id}`;
+          if (selectedActivities[key]) {
+            totalCost += activity.cost;
+            totalCount += 1;
+          }
+        });
+      });
+    });
+    
+    return { totalCost, totalCount, totalAvailable };
+  }, [activitiesByCity, selectedActivities]);
+  
+  // Handle activity selection toggle
+  const handleToggleActivity = (cityName: string, dayNumber: number, activityId: string) => {
+    const key = `${cityName}-${dayNumber}-${activityId}`;
+    setSelectedActivities(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+  
+  // Get activity type label
+  const getActivityTypeLabel = (type: ActivityOption["type"]): string => {
+    switch (type) {
+      case "main-attraction": return "Must See";
+      case "unique": return "Hidden Gem";
+      case "food-experience": return "Food & Drink";
+      case "outdoor": return "Outdoor";
+      case "cultural": return "Cultural";
+      case "relaxation": return "Relaxation";
+      default: return "Activity";
+    }
+  };
+  
+  // Get activity type color
+  const getActivityTypeColor = (type: ActivityOption["type"]): string => {
+    switch (type) {
+      case "main-attraction": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+      case "unique": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+      case "food-experience": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+      case "outdoor": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "cultural": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "relaxation": return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+    }
+  };
 
   // Calculate totals
   const totalEstimated =
@@ -959,6 +1171,46 @@ export default function Step2Plan({
   const transportSavingsProgress = finalTransportCost > 0 
     ? Math.min(100, (savingsAllocatedToTransport / finalTransportCost) * 100) 
     : 0;
+
+  // Activity cost calculations
+  const finalActivityCost = selectedActivityStats.totalCost > 0 
+    ? selectedActivityStats.totalCost 
+    : (displayedDestinationDetails?.length || 0) * tripDuration * 35; // Estimate $35/day/destination if no selections
+  
+  // Combined flight + accommodation + transport + activities savings calculations  
+  const totalFlightsAccomTransportActivities = totalFlightsAccomTransport + finalActivityCost;
+  const savingsAfterTransport = Math.max(0, savingsAfterAccommodation - finalTransportCost);
+  const savingsAllocatedToActivities = Math.min(savingsAfterTransport, finalActivityCost);
+  const activitySavingsGap = Math.max(0, finalActivityCost - savingsAllocatedToActivities);
+  const combinedWithActivityGap = combinedWithTransportGap + activitySavingsGap;
+  
+  // Calculate months needed for all bookings including activities
+  const monthsToAllIncludingActivities = monthlySavingsNum > 0 ? Math.ceil(combinedWithActivityGap / monthlySavingsNum) : 0;
+  
+  // Calculate earliest activity booking date
+  const earliestActivityBookingDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToAllIncludingActivities);
+    return date;
+  }, [monthsToAllIncludingActivities]);
+  
+  // Check if activities can be booked today
+  const canBookActivitiesNow = combinedWithActivityGap === 0 || new Date() >= earliestActivityBookingDate;
+  
+  // Calculate percentage of activity cost saved
+  const activitySavingsProgress = finalActivityCost > 0 
+    ? Math.min(100, (savingsAllocatedToActivities / finalActivityCost) * 100) 
+    : 0;
+  
+  // Get activity pace description
+  const getActivityPaceDescription = (pace: ActivityPace): string => {
+    switch (pace) {
+      case "relaxed": return "Taking it easy with 1-2 activities per day";
+      case "balanced": return "A nice mix of 2-3 activities per day";
+      case "packed": return "Adventure-packed with 3-5 activities per day";
+      default: return "Balanced itinerary";
+    }
+  };
 
   // Get transport type icon name
   const getTransportTypeName = (type: TransportOption["type"]): string => {
@@ -2383,6 +2635,312 @@ export default function Step2Plan({
                     <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready to book!</span> You have enough saved to cover flights (${estimatedFlightCost.toLocaleString()}), accommodations (${finalAccommodationCost.toLocaleString()}), and transportation (${finalTransportCost.toLocaleString()}). 
                       Book now to secure your travel arrangements.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Fun & Activities Section */}
+          <Card data-testid="card-activities-costs">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Fun & Activities</CardTitle>
+                    <CardDescription>{getActivityPaceDescription(activityPace)}</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={selectedActivityStats.totalCount > 0 ? "default" : "secondary"}>
+                    {selectedActivityStats.totalCount} of {selectedActivityStats.totalAvailable} selected
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Activity Cost Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Total Activities Cost</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {selectedActivityStats.totalCount > 0 
+                            ? "This is the sum of your selected activities."
+                            : "This is an AI estimate. Select activities below for exact pricing."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-activity-cost">
+                    ${finalActivityCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedActivityStats.totalCount > 0 ? "from your selections" : "AI estimated"}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Allocated</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${savingsAllocatedToActivities >= finalActivityCost ? 'text-green-600' : ''}`} data-testid="text-activity-savings">
+                    ${savingsAllocatedToActivities.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (after flights, stays & transport)
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${activitySavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-activity-gap">
+                    {activitySavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${activitySavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {activitySavingsGap === 0 ? 'Activities covered!' : 'to save for activities'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Activity Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Activity Savings Progress</span>
+                  <span className="font-medium">{activitySavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={activitySavingsProgress} className="h-3" />
+              </div>
+
+              <Separator />
+
+              {/* Activities by City and Day */}
+              <div className="space-y-8">
+                <h3 className="font-semibold text-lg">Choose Your Adventures</h3>
+                
+                {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
+                  displayedDestinationDetails.map((dest, destIdx) => {
+                    const cityActivities = activitiesByCity[dest.cityName] || [];
+                    
+                    return (
+                      <div 
+                        key={dest.cityName} 
+                        className="space-y-4"
+                        data-testid={`activity-city-${destIdx}`}
+                      >
+                        {/* City Header */}
+                        <div className="flex items-center gap-3 pb-2 border-b">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground text-lg font-bold">
+                            {destIdx + 1}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-lg">{dest.cityName}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {dest.countryName} • {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Days in this city */}
+                        {cityActivities.map((day) => {
+                          const selectedCount = day.activities.filter(a => 
+                            selectedActivities[`${dest.cityName}-${day.dayNumber}-${a.id}`]
+                          ).length;
+                          
+                          return (
+                            <div 
+                              key={`${dest.cityName}-day-${day.dayNumber}`}
+                              className="p-4 rounded-lg border bg-muted/20"
+                              data-testid={`activity-day-${destIdx}-${day.dayNumber}`}
+                            >
+                              {/* Day Header */}
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                                  <span className="font-medium">Day {day.dayNumber} in {dest.cityName}</span>
+                                </div>
+                                {selectedCount > 0 && (
+                                  <Badge variant="default" className="gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {selectedCount} selected
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Activities for this day */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {day.activities.map((activity) => {
+                                  const activityKey = `${dest.cityName}-${day.dayNumber}-${activity.id}`;
+                                  const isSelected = selectedActivities[activityKey] || false;
+                                  
+                                  return (
+                                    <div
+                                      key={activity.id}
+                                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                        isSelected 
+                                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                          : 'bg-background hover-elevate'
+                                      }`}
+                                      onClick={() => handleToggleActivity(dest.cityName, day.dayNumber, activity.id)}
+                                      data-testid={`activity-option-${activity.id}`}
+                                    >
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${getActivityTypeColor(activity.type)}`}>
+                                          {getActivityTypeLabel(activity.type)}
+                                        </span>
+                                        {isSelected ? (
+                                          <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                        ) : (
+                                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                        )}
+                                      </div>
+                                      <h5 className="font-medium text-sm mb-1">{activity.name}</h5>
+                                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                        {activity.description}
+                                      </p>
+                                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          {activity.duration}
+                                        </div>
+                                        <span className="font-bold text-sm text-foreground">
+                                          {activity.cost === 0 ? 'Free' : `$${activity.cost}`}
+                                        </span>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full mt-1 gap-1 text-muted-foreground text-xs h-7"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(activity.url, '_blank');
+                                        }}
+                                        data-testid={`button-view-activity-${activity.id}`}
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Learn More
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No destinations added yet. Add destinations to see activity options.</p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Book */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Book Activities</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalFlightsAccomTransportActivities.toLocaleString()} total for flights, accommodations, transport, and activities.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookActivitiesNow ? 'text-green-600' : ''}`} data-testid="text-earliest-activity-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookActivitiesNow 
+                      ? "Ready now!" 
+                      : earliestActivityBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookActivitiesNow && monthsToAllIncludingActivities > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToAllIncludingActivities} month{monthsToAllIncludingActivities > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Activities Button */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Button
+                          className="w-full gap-2"
+                          size="lg"
+                          disabled={!canBookActivitiesNow}
+                          data-testid="button-book-activities"
+                        >
+                          {canBookActivitiesNow ? (
+                            <>
+                              <Sparkles className="w-5 h-5" />
+                              Book Activities
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-5 h-5" />
+                              Book Activities
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!canBookActivitiesNow && (
+                      <TooltipContent className="max-w-xs">
+                        <p>You need ${combinedWithActivityGap.toLocaleString()} more before booking. This keeps you debt-free!</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canBookActivitiesNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestActivityBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book activities without going into debt. 
+                      At your current savings rate, you'll have enough for all travel expenses by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canBookActivitiesNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover flights, accommodations, transportation, and ${finalActivityCost.toLocaleString()} in activities. 
+                      Start reserving your adventures now!
                     </p>
                   </div>
                 </div>
