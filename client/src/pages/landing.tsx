@@ -176,7 +176,7 @@ export default function Landing() {
               className="text-lg px-10 py-7 min-h-0 bg-primary hover:bg-primary border-2 border-primary-border"
               data-testid="button-hero-cta"
             >
-              Start Planning Your Trip
+              Start the Trip Planner
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
             <p className="text-sm text-white/60">
