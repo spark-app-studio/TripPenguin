@@ -61,10 +61,49 @@ export default function QuizResults() {
 
   // Mutation for itinerary recommendations (international/domestic)
   const itineraryMutation = useMutation({
-    mutationFn: async (quiz: QuizResponse) => {
-      const res = await apiRequest("POST", "/api/ai/destination-recommendations", quiz);
-      const data = await res.json() as { recommendations: ItineraryRecommendation[] };
-      return data.recommendations;
+    mutationFn: async (data: { quiz?: QuizResponse; gsData?: GettingStartedData }) => {
+      // Build ExtendedQuizResponse format that backend expects
+      let extendedQuiz: ExtendedQuizResponse;
+      
+      if (data.gsData) {
+        // New Getting Started flow - use gsData with tripType
+        extendedQuiz = {
+          tripType: data.gsData.tripType as "international" | "domestic" | "staycation",
+          numberOfTravelers: data.gsData.adults + data.gsData.kids,
+          adults: data.gsData.adults,
+          kids: data.gsData.kids,
+          childAges: data.gsData.childAges || [],
+          usRegion: data.gsData.usRegion,
+          tripLength: data.gsData.tripLength,
+          internationalRegion: data.gsData.internationalRegion,
+          dayFullness: data.gsData.dayFullness,
+          budgetStyle: data.gsData.budgetStyle,
+          postcardImage: data.gsData.postcardImage,
+          favoriteMedia: data.gsData.favoriteMedia,
+          kidActivities: data.gsData.kidActivities || [],
+          accessibilityNeeds: data.gsData.accessibilityNeeds || [],
+        };
+      } else if (data.quiz) {
+        // Legacy quiz flow - convert to ExtendedQuizResponse with default tripType
+        extendedQuiz = {
+          tripType: "international", // Default for legacy quiz
+          numberOfTravelers: data.quiz.numberOfTravelers,
+          adults: data.quiz.numberOfTravelers,
+          kids: 0,
+          childAges: [],
+          tripLength: data.quiz.tripLengthPreference,
+          dayFullness: data.quiz.activityLevel,
+          budgetStyle: data.quiz.budgetStyle,
+          postcardImage: data.quiz.dreamMoment,
+          favoriteMedia: data.quiz.favoriteMovieOrBook,
+        };
+      } else {
+        throw new Error("No quiz data available");
+      }
+      
+      const res = await apiRequest("POST", "/api/ai/destination-recommendations", extendedQuiz);
+      const data2 = await res.json() as { recommendations: ItineraryRecommendation[] };
+      return data2.recommendations;
     },
     onError: (error) => {
       toast({
