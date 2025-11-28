@@ -86,7 +86,7 @@ export default function QuizResults() {
               {recommendationsMutation.data ? "Remixing Your Itineraries..." : "Crafting Your Perfect Itineraries..."}
             </h2>
             <p className="text-muted-foreground font-lora">
-              Our AI is analyzing your preferences to create personalized multi-city adventures
+              Our AI is analyzing your preferences to create personalized adventures
             </p>
           </div>
         </div>
