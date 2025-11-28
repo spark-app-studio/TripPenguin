@@ -45,27 +45,21 @@ export default function Landing() {
   const howItWorks = [
     {
       step: 1,
-      title: "Tell us about your family and trip aspirations",
-      description: "Your preferences, pace, and budget.",
-      icon: Users,
+      title: "Dream",
+      description: "Take a quick quiz about your family's travel style, preferences, and budget.",
+      icon: Sparkles,
     },
     {
       step: 2,
-      title: "Receive three personalized itineraries",
-      description: "Each matched to your style and finances.",
+      title: "Plan",
+      description: "Get 3 personalized itineraries with real cost estimates — pick and customize your favorite.",
       icon: Compass,
     },
     {
       step: 3,
-      title: "Track your savings",
-      description: "Connect your bank or enter savings manually.",
-      icon: TrendingUp,
-    },
-    {
-      step: 4,
-      title: "Book one step at a time",
-      description: "Avoid debt and stay in financial control.",
-      icon: CreditCard,
+      title: "Go",
+      description: "Track your savings and book when you're ready — no debt, no stress.",
+      icon: Plane,
     },
   ];
 
@@ -241,7 +235,7 @@ export default function Landing() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 max-w-4xl mx-auto mb-12">
             {howItWorks.map((item) => {
               const Icon = item.icon;
               return (
