@@ -41,7 +41,16 @@ Preferred communication style: Simple, everyday language.
 
 **Onboarding Quiz & AI Itinerary Generation**:
 - **"Find Your Adventure Type" Quiz**: A 12-question quiz covering personality, cultural interests, dream moments, and trip planning details.
-- **Multi-City Itinerary Recommendations**: Uses GPT-4o-mini to generate 3 complete multi-city itineraries (2-4 cities each) via `POST /api/ai/destination-recommendations`. Itineraries include creative titles, activity suggestions, airport codes, total cost estimates, and a cost breakdown across six categories. Geography-aware for efficient routing and open-jaw tickets.
+- **Three Trip Types**: The quiz supports three distinct trip types with different recommendation logic:
+  * **Staycation**: Local getaways within 2-3 hours driving distance. Uses dedicated `/api/ai/staycation-recommendations` endpoint. AI enforces strict driving distance constraints from user's specified city/state, no flights, single destination focus.
+  * **Domestic (US Trips)**: Multi-city trips within the United States.
+  * **International**: Multi-city international itineraries (2-4 cities each).
+- **Multi-City Itinerary Recommendations**: Uses GPT-4o-mini to generate 3 complete multi-city itineraries via `POST /api/ai/destination-recommendations`. Itineraries include creative titles, activity suggestions, airport codes, total cost estimates, and a cost breakdown across six categories. Geography-aware for efficient routing and open-jaw tickets.
+- **Staycation Recommendations** (Nov 28, 2025): Uses GPT-4o-mini via `POST /api/ai/staycation-recommendations` with quiz-driven personalization:
+  * Strict driving distance enforcement (max 2-3 hours from user's departure location)
+  * Quiz answers drive recommendations: goals (outdoor-adventure, relax-unwind, explore-new, quality-time, learn-discover, food-dining, entertainment, photography), family composition, kid activities, accessibility needs
+  * Single destination per recommendation with detailed itinerary, packing list, and cost breakdown
+  * Destinations must be real, verifiable places (state parks, beaches, museums, towns)
 - **Remix Feature**: Allows regeneration of itineraries from the same quiz responses.
 - **Interactive Refinement Page**: Users can adjust trip duration (1-30 nights) with AI regeneration via `POST /api/ai/adjust-itinerary-duration`. Supports city deletion and AI-generated "Add-On Extensions" via `POST /api/ai/itinerary-addons`. State is managed client-side, with final refined itineraries saved to `sessionStorage` for pre-population in the trip planner.
 - **Streamlined Quiz-to-Plan Flow** (Nov 12, 2025): Users who finalize refined itineraries skip the Dream step entirely and go directly to the Plan step (Step 2) with all itinerary data preserved:
