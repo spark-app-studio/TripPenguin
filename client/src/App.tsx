@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
+import Features from "@/pages/features";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/features" component={Features} />
 
       {/* Conditional routes based on authentication */}
       {!isAuthenticated ? (
