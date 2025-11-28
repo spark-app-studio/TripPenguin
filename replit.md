@@ -82,6 +82,16 @@ Preferred communication style: Simple, everyday language.
 - **AI Monthly Savings Recommendation**: Calculated based on trip cost with 6-15 month payoff window. Displayed with sparkle icon and tooltip explaining it's AI-generated.
 - **Earliest Travel Date**: Calculated as `today + ceil((TripCost - CurrentSavings) / MonthlySavings)`. Includes helper text explaining debt-free travel goal.
 
+**Flight Costs Section** (Nov 28, 2025):
+- **Full-Width Card**: Dedicated flight cost tracking section beneath the Trip Financing Summary.
+- **Estimated Flight Cost**: Placeholder estimation function based on destinations (domestic ~$350/person, international ~$1150/person) with multi-city premium. Uses user-entered budget if available.
+- **Savings Allocation**: Current savings applied to flights first (until flights are covered), then to other categories.
+- **Flight Savings Gap**: `EstimatedFlightCost - SavingsAllocatedToFlights`.
+- **Earliest Flight Booking Date**: `today + ceil(FlightSavingsGap / MonthlySavings)`.
+- **Book Flights Button**: Disabled until `FlightSavingsGap === 0` or today >= earliest booking date. Includes tooltip explaining the debt-free goal.
+- **Progress Bar**: Visual indicator of flight savings progress.
+- **Contextual Helper Text**: Explains why booking is disabled (when applicable) or confirms readiness to book.
+
 ## External Dependencies
 
 **AI/ML Services**:

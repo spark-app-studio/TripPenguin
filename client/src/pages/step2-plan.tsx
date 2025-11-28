@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useItinerary } from "@/hooks/useItinerary";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean };
@@ -306,6 +306,82 @@ export default function Step2Plan({
   const handleContinue = () => {
     onComplete(budgetData);
   };
+
+  // Placeholder function to estimate flight cost based on destinations
+  // This simulates an API call that would normally check flight prices
+  // In production, this would use actual flight price APIs
+  const estimateFlightCost = useMemo(() => {
+    const destinationCities = displayedDestinations;
+    const travelers = itinerary?.numberOfTravelers || numberOfTravelers;
+    
+    if (destinationCities.length === 0) return 0;
+    
+    // Placeholder estimation logic:
+    // Base cost varies by destination type
+    // International destinations cost more than domestic
+    // Multi-city trips add 10% per additional city
+    // Multiply by number of travelers
+    
+    // List of common US cities for domestic detection
+    const usCities = [
+      "new york", "los angeles", "chicago", "miami", "seattle", "denver", 
+      "austin", "boston", "san francisco", "las vegas", "orlando", "phoenix",
+      "atlanta", "dallas", "houston", "philadelphia", "washington", "portland"
+    ];
+    
+    let baseCostPerPerson = 0;
+    
+    destinationCities.forEach((dest, index) => {
+      const destLower = dest.toLowerCase();
+      
+      // Check if destination is domestic (US city)
+      const isDomestic = usCities.some(city => destLower.includes(city));
+      
+      if (isDomestic) {
+        // Domestic: $250-$450 base per person (average for booking 6-12 months ahead)
+        baseCostPerPerson += 350;
+      } else {
+        // International: $900-$1400 base per person
+        baseCostPerPerson += 1150;
+      }
+      
+      // Multi-city premium (10% for each additional city after the first)
+      if (index > 0) {
+        baseCostPerPerson *= 1.1;
+      }
+    });
+    
+    // Round to nearest $50
+    const totalEstimate = Math.round((baseCostPerPerson * travelers) / 50) * 50;
+    
+    return totalEstimate;
+  }, [displayedDestinations, itinerary?.numberOfTravelers, numberOfTravelers]);
+
+  // Flight savings calculations
+  const flightCostFromBudget = parseFloat(budgetData.flights.cost || "0");
+  const estimatedFlightCost = flightCostFromBudget > 0 ? flightCostFromBudget : estimateFlightCost;
+  
+  // Allocate current savings to flights first (until flights are covered)
+  const savingsAllocatedToFlights = Math.min(currentSavingsNum, estimatedFlightCost);
+  const flightSavingsGap = Math.max(0, estimatedFlightCost - savingsAllocatedToFlights);
+  
+  // Calculate months needed to save for flights
+  const monthsToFlights = monthlySavingsNum > 0 ? Math.ceil(flightSavingsGap / monthlySavingsNum) : 0;
+  
+  // Calculate earliest flight booking date
+  const earliestFlightBookingDate = useMemo(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToFlights);
+    return date;
+  }, [monthsToFlights]);
+  
+  // Check if flights can be booked today
+  const canBookFlightsNow = flightSavingsGap === 0 || new Date() >= earliestFlightBookingDate;
+  
+  // Calculate percentage of flight cost saved
+  const flightSavingsProgress = estimatedFlightCost > 0 
+    ? Math.min(100, (savingsAllocatedToFlights / estimatedFlightCost) * 100) 
+    : 0;
 
   // Get season display name
   const getSeasonDisplay = (season: string) => {
@@ -682,6 +758,193 @@ export default function Step2Plan({
             totalEstimated={totalEstimated}
             totalSavings={currentSavingsNum}
           />
+
+          {/* Flight Costs Section - Full Width */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Plane className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Flight Costs</CardTitle>
+                    <CardDescription>
+                      Track your flight savings and book when you're ready
+                    </CardDescription>
+                  </div>
+                </div>
+                
+                {/* Book Flights Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        size="lg"
+                        disabled={!canBookFlightsNow}
+                        onClick={() => {
+                          toast({
+                            title: "Ready to Book!",
+                            description: "Opening flight booking options...",
+                          });
+                        }}
+                        className={`gap-2 ${canBookFlightsNow ? 'bg-primary hover:bg-primary/90' : 'opacity-60'}`}
+                        data-testid="button-book-flights"
+                      >
+                        {canBookFlightsNow ? (
+                          <>
+                            <CheckCircle2 className="w-5 h-5" />
+                            Book the Flights
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-5 h-5" />
+                            Book the Flights
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {canBookFlightsNow ? (
+                      <p>You've saved enough for flights! Click to explore booking options.</p>
+                    ) : (
+                      <p>This button becomes active once you've saved enough for flights. The goal is to help you avoid booking flights before the money is actually available so you don't go into debt.</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {/* Flight Metrics Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Estimated Flight Cost */}
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Estimated Flight Cost</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Estimated cost for flights booked 6-12 months in advance. {flightCostFromBudget > 0 ? "Using your entered budget." : "Based on your destinations and number of travelers."}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold text-primary" data-testid="text-estimated-flight-cost">
+                    ${estimatedFlightCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    for {itinerary?.numberOfTravelers || numberOfTravelers} traveler{(itinerary?.numberOfTravelers || numberOfTravelers) > 1 ? 's' : ''}
+                  </p>
+                </div>
+                
+                {/* Savings Applied to Flights */}
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Applied to Flights</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Your current savings are applied to flights first, then to other categories.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600" data-testid="text-savings-for-flights">
+                    ${savingsAllocatedToFlights.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    of ${currentSavingsNum.toLocaleString()} total savings
+                  </p>
+                </div>
+                
+                {/* Amount Still Needed */}
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${flightSavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-flight-savings-gap">
+                    {flightSavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${flightSavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {flightSavingsGap === 0 ? 'Flights are covered!' : 'to save for flights'}
+                  </p>
+                </div>
+                
+                {/* Earliest Booking Date */}
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Booking Date</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on your flight savings gap (${flightSavingsGap.toLocaleString()}) and monthly savings (${monthlySavingsNum.toLocaleString()}/mo), this is when you'll have enough saved for flights.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookFlightsNow ? 'text-green-600' : ''}`} data-testid="text-earliest-flight-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookFlightsNow 
+                      ? "Ready now!" 
+                      : earliestFlightBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookFlightsNow && monthsToFlights > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToFlights} month{monthsToFlights > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Flight Savings Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Flight Savings Progress</span>
+                  <span className="font-medium">{flightSavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={flightSavingsProgress} className="h-3" />
+              </div>
+              
+              {/* Helper Text */}
+              {!canBookFlightsNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">Why is booking disabled?</span> You still need ${flightSavingsGap.toLocaleString()} more for flights. 
+                      At ${monthlySavingsNum.toLocaleString()}/month, you'll be ready to book in {monthsToFlights} month{monthsToFlights > 1 ? 's' : ''}. 
+                      This helps you avoid going into debt for your trip.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {canBookFlightsNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready!</span> You've saved enough to cover your flights. 
+                      Book now to lock in prices 6-12 months before your trip for the best deals.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Budget Breakdown */}
           <div className="space-y-6">
