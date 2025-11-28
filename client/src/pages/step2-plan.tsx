@@ -29,7 +29,7 @@ import { useItinerary } from "@/hooks/useItinerary";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X, BookOpen, Film, Tv, Map, Play } from "lucide-react";
 
 interface BudgetData {
   flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
@@ -1039,6 +1039,425 @@ function getPriorityBadge(priority: PrepItem["priority"]): { label: string; clas
   }
 }
 
+// Books & Movies Recommendation Interface
+interface MediaRecommendation {
+  id: string;
+  type: "book" | "movie" | "documentary" | "tv-series" | "travel-guide";
+  title: string;
+  creator: string; // Author or Director
+  description: string;
+  ageGroup: "kids" | "teens" | "adults" | "all-ages";
+  relevance: string; // Why it's relevant to the trip
+  url: string;
+  year?: number;
+}
+
+// Generate book and movie recommendations based on destinations
+function generateMediaRecommendations(destinations: DestinationDetail[]): MediaRecommendation[] {
+  const recommendations: MediaRecommendation[] = [];
+  
+  // Determine regions for recommendations
+  const regions = new Set<string>();
+  const countries = new Set<string>();
+  
+  destinations.forEach(d => {
+    countries.add(d.countryName);
+    
+    // Map countries to regions for recommendations
+    if (["France", "Italy", "Spain", "Germany", "UK", "England", "Greece", "Portugal", "Netherlands", "Belgium", "Austria", "Switzerland"].some(c => d.countryName.includes(c))) {
+      regions.add("europe");
+    }
+    if (["Japan", "China", "Thailand", "Vietnam", "South Korea", "India", "Indonesia", "Singapore", "Malaysia"].some(c => d.countryName.includes(c))) {
+      regions.add("asia");
+    }
+    if (["Mexico", "Brazil", "Argentina", "Peru", "Chile", "Colombia", "Costa Rica"].some(c => d.countryName.includes(c))) {
+      regions.add("latin-america");
+    }
+    if (["USA", "United States", "Canada"].some(c => d.countryName.includes(c))) {
+      regions.add("north-america");
+    }
+    if (["Morocco", "Egypt", "South Africa", "Kenya", "Tanzania"].some(c => d.countryName.includes(c))) {
+      regions.add("africa");
+    }
+    if (["Australia", "New Zealand", "Fiji"].some(c => d.countryName.includes(c))) {
+      regions.add("oceania");
+    }
+  });
+  
+  // Default to general travel if no specific region detected
+  if (regions.size === 0) {
+    regions.add("general");
+  }
+  
+  // FOR KIDS
+  recommendations.push({
+    id: "kids-book-1",
+    type: "book",
+    title: "This Is... Series (by Miroslav Sasek)",
+    creator: "Miroslav Sasek",
+    description: "Classic illustrated travel books that introduce children to famous cities and countries through charming artwork and fun facts.",
+    ageGroup: "kids",
+    relevance: "Perfect introduction to world travel for young explorers",
+    url: "https://example.com/books/this-is-series",
+    year: 1959
+  });
+  
+  recommendations.push({
+    id: "kids-movie-1",
+    type: "movie",
+    title: "Up",
+    creator: "Pete Docter (Pixar)",
+    description: "An elderly man and a young boy embark on an adventure to South America, discovering that the journey itself is the greatest adventure.",
+    ageGroup: "kids",
+    relevance: "Inspiring story about adventure, dreams, and the joy of travel",
+    url: "https://example.com/movies/up",
+    year: 2009
+  });
+  
+  if (regions.has("europe")) {
+    recommendations.push({
+      id: "kids-movie-europe",
+      type: "movie",
+      title: "Ratatouille",
+      creator: "Brad Bird (Pixar)",
+      description: "A rat with culinary dreams becomes a chef in a Parisian restaurant. Beautiful depiction of Paris and French cuisine.",
+      ageGroup: "kids",
+      relevance: "Fun introduction to French culture and cuisine",
+      url: "https://example.com/movies/ratatouille",
+      year: 2007
+    });
+  }
+  
+  if (regions.has("asia")) {
+    recommendations.push({
+      id: "kids-movie-asia",
+      type: "movie",
+      title: "My Neighbor Totoro",
+      creator: "Hayao Miyazaki (Studio Ghibli)",
+      description: "Two sisters discover magical creatures in the Japanese countryside. A gentle, enchanting film about nature and imagination.",
+      ageGroup: "kids",
+      relevance: "Beautiful introduction to Japanese culture and countryside",
+      url: "https://example.com/movies/totoro",
+      year: 1988
+    });
+  }
+  
+  // FOR TEENS
+  recommendations.push({
+    id: "teens-book-1",
+    type: "book",
+    title: "The Alchemist",
+    creator: "Paulo Coelho",
+    description: "A young shepherd travels from Spain to Egypt pursuing his dreams. A tale about following your destiny and the journey of self-discovery.",
+    ageGroup: "teens",
+    relevance: "Inspiring story about pursuing dreams through travel",
+    url: "https://example.com/books/alchemist",
+    year: 1988
+  });
+  
+  if (regions.has("europe")) {
+    recommendations.push({
+      id: "teens-movie-europe",
+      type: "movie",
+      title: "The Grand Budapest Hotel",
+      creator: "Wes Anderson",
+      description: "A quirky adventure set in a fictional European hotel. Visually stunning with themes of friendship and adventure.",
+      ageGroup: "teens",
+      relevance: "Whimsical look at European elegance and adventure",
+      url: "https://example.com/movies/grand-budapest",
+      year: 2014
+    });
+    
+    recommendations.push({
+      id: "teens-book-europe",
+      type: "book",
+      title: "The Book Thief",
+      creator: "Markus Zusak",
+      description: "A young girl's life in Nazi Germany, narrated by Death. A powerful story about words, humanity, and resilience.",
+      ageGroup: "teens",
+      relevance: "Understanding European history through compelling narrative",
+      url: "https://example.com/books/book-thief",
+      year: 2005
+    });
+  }
+  
+  if (regions.has("asia")) {
+    recommendations.push({
+      id: "teens-movie-asia",
+      type: "movie",
+      title: "Spirited Away",
+      creator: "Hayao Miyazaki (Studio Ghibli)",
+      description: "A girl enters a spirit world and must work in a bathhouse for gods. Stunning animation and deep cultural themes.",
+      ageGroup: "teens",
+      relevance: "Immersive journey into Japanese mythology and culture",
+      url: "https://example.com/movies/spirited-away",
+      year: 2001
+    });
+  }
+  
+  if (regions.has("latin-america")) {
+    recommendations.push({
+      id: "teens-movie-latin",
+      type: "movie",
+      title: "Coco",
+      creator: "Lee Unkrich (Pixar)",
+      description: "A boy journeys to the Land of the Dead during Día de los Muertos. Celebrates Mexican culture, family, and music.",
+      ageGroup: "teens",
+      relevance: "Beautiful exploration of Mexican traditions and family",
+      url: "https://example.com/movies/coco",
+      year: 2017
+    });
+  }
+  
+  // FOR ADULTS
+  recommendations.push({
+    id: "adults-guide-1",
+    type: "travel-guide",
+    title: "Lonely Planet Destination Guide",
+    creator: "Lonely Planet",
+    description: "Comprehensive travel guide with detailed maps, local insights, and practical tips for independent travelers.",
+    ageGroup: "adults",
+    relevance: "Essential practical information for your destinations",
+    url: "https://example.com/guides/lonely-planet"
+  });
+  
+  recommendations.push({
+    id: "adults-book-1",
+    type: "book",
+    title: "A Year in Provence",
+    creator: "Peter Mayle",
+    description: "Charming account of an English couple's first year living in the south of France, full of humor and cultural observations.",
+    ageGroup: "adults",
+    relevance: "Delightful preparation for European travel and culture",
+    url: "https://example.com/books/year-in-provence",
+    year: 1989
+  });
+  
+  if (regions.has("europe")) {
+    recommendations.push({
+      id: "adults-movie-europe",
+      type: "movie",
+      title: "Before Sunrise",
+      creator: "Richard Linklater",
+      description: "Two strangers meet on a train and spend one night walking through Vienna. A beautiful meditation on connection and travel.",
+      ageGroup: "adults",
+      relevance: "Romantic exploration of European wandering",
+      url: "https://example.com/movies/before-sunrise",
+      year: 1995
+    });
+    
+    recommendations.push({
+      id: "adults-doc-europe",
+      type: "documentary",
+      title: "Rick Steves' Europe",
+      creator: "Rick Steves",
+      description: "Travel documentary series exploring European destinations with practical tips and cultural insights.",
+      ageGroup: "adults",
+      relevance: "Practical and inspiring guide to European travel",
+      url: "https://example.com/docs/rick-steves"
+    });
+    
+    recommendations.push({
+      id: "adults-book-europe-history",
+      type: "book",
+      title: "The Pillars of the Earth",
+      creator: "Ken Follett",
+      description: "Epic historical novel set in 12th-century England, following the building of a cathedral. Rich in medieval history.",
+      ageGroup: "adults",
+      relevance: "Immersive European medieval history through fiction",
+      url: "https://example.com/books/pillars-earth",
+      year: 1989
+    });
+  }
+  
+  if (regions.has("asia")) {
+    recommendations.push({
+      id: "adults-book-asia",
+      type: "book",
+      title: "Shogun",
+      creator: "James Clavell",
+      description: "Epic novel of an English navigator shipwrecked in feudal Japan. Rich in Japanese culture, history, and samurai traditions.",
+      ageGroup: "adults",
+      relevance: "Deep dive into Japanese history and culture",
+      url: "https://example.com/books/shogun",
+      year: 1975
+    });
+    
+    recommendations.push({
+      id: "adults-movie-asia",
+      type: "movie",
+      title: "Lost in Translation",
+      creator: "Sofia Coppola",
+      description: "Two Americans form an unlikely bond while staying at a Tokyo hotel. Captures the beautiful disorientation of travel.",
+      ageGroup: "adults",
+      relevance: "Thoughtful exploration of being a stranger in Japan",
+      url: "https://example.com/movies/lost-translation",
+      year: 2003
+    });
+    
+    recommendations.push({
+      id: "adults-doc-asia",
+      type: "documentary",
+      title: "Jiro Dreams of Sushi",
+      creator: "David Gelb",
+      description: "Documentary about 85-year-old sushi master Jiro Ono and his legendary Tokyo restaurant.",
+      ageGroup: "adults",
+      relevance: "Fascinating look at Japanese craftsmanship and cuisine",
+      url: "https://example.com/docs/jiro-sushi",
+      year: 2011
+    });
+  }
+  
+  if (regions.has("latin-america")) {
+    recommendations.push({
+      id: "adults-book-latin",
+      type: "book",
+      title: "One Hundred Years of Solitude",
+      creator: "Gabriel García Márquez",
+      description: "Magical realist masterpiece following seven generations of the Buendía family in fictional Macondo, Colombia.",
+      ageGroup: "adults",
+      relevance: "Essential Latin American literature and culture",
+      url: "https://example.com/books/100-years-solitude",
+      year: 1967
+    });
+    
+    recommendations.push({
+      id: "adults-movie-latin",
+      type: "movie",
+      title: "The Motorcycle Diaries",
+      creator: "Walter Salles",
+      description: "Young Che Guevara's transformative motorcycle journey across South America. Beautiful landscapes and coming-of-age story.",
+      ageGroup: "adults",
+      relevance: "Epic South American road trip inspiration",
+      url: "https://example.com/movies/motorcycle-diaries",
+      year: 2004
+    });
+  }
+  
+  if (regions.has("africa")) {
+    recommendations.push({
+      id: "adults-book-africa",
+      type: "book",
+      title: "Out of Africa",
+      creator: "Isak Dinesen",
+      description: "Memoir of the author's years running a coffee plantation in Kenya. Lyrical prose about African landscapes and people.",
+      ageGroup: "adults",
+      relevance: "Classic African travel literature",
+      url: "https://example.com/books/out-of-africa",
+      year: 1937
+    });
+    
+    recommendations.push({
+      id: "adults-doc-africa",
+      type: "documentary",
+      title: "Planet Earth: Africa",
+      creator: "David Attenborough",
+      description: "Stunning documentary showcasing Africa's diverse landscapes and wildlife, from deserts to rainforests.",
+      ageGroup: "adults",
+      relevance: "Breathtaking preview of African wildlife and nature",
+      url: "https://example.com/docs/planet-earth-africa"
+    });
+  }
+  
+  if (regions.has("oceania")) {
+    recommendations.push({
+      id: "adults-book-oceania",
+      type: "book",
+      title: "In a Sunburned Country",
+      creator: "Bill Bryson",
+      description: "Hilarious and informative account of Bryson's travels through Australia, full of history and quirky observations.",
+      ageGroup: "adults",
+      relevance: "Entertaining guide to Australian culture and nature",
+      url: "https://example.com/books/sunburned-country",
+      year: 2000
+    });
+    
+    recommendations.push({
+      id: "adults-movie-oceania",
+      type: "movie",
+      title: "The Lord of the Rings Trilogy",
+      creator: "Peter Jackson",
+      description: "Epic fantasy filmed entirely in New Zealand. Showcases the country's stunning landscapes from mountains to forests.",
+      ageGroup: "adults",
+      relevance: "New Zealand's landscapes as Middle-earth",
+      url: "https://example.com/movies/lotr",
+      year: 2001
+    });
+  }
+  
+  // ALL AGES
+  recommendations.push({
+    id: "all-doc-1",
+    type: "documentary",
+    title: "Our Planet",
+    creator: "Netflix / David Attenborough",
+    description: "Stunning nature documentary series exploring the world's most precious habitats and the animals that call them home.",
+    ageGroup: "all-ages",
+    relevance: "Beautiful exploration of our world's natural wonders",
+    url: "https://example.com/docs/our-planet"
+  });
+  
+  recommendations.push({
+    id: "all-book-1",
+    type: "book",
+    title: "Atlas Obscura",
+    creator: "Joshua Foer, Dylan Thuras, Ella Morton",
+    description: "Guide to the world's hidden wonders - strange places, unusual sites, and little-known marvels around the globe.",
+    ageGroup: "all-ages",
+    relevance: "Discover unique destinations off the beaten path",
+    url: "https://example.com/books/atlas-obscura",
+    year: 2016
+  });
+  
+  return recommendations;
+}
+
+// Get media type label
+function getMediaTypeLabel(type: MediaRecommendation["type"]): string {
+  switch (type) {
+    case "book": return "Book";
+    case "movie": return "Movie";
+    case "documentary": return "Documentary";
+    case "tv-series": return "TV Series";
+    case "travel-guide": return "Travel Guide";
+    default: return "Media";
+  }
+}
+
+// Get media type color
+function getMediaTypeColor(type: MediaRecommendation["type"]): string {
+  switch (type) {
+    case "book": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+    case "movie": return "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400";
+    case "documentary": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+    case "tv-series": return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400";
+    case "travel-guide": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+  }
+}
+
+// Get age group label
+function getAgeGroupLabel(ageGroup: MediaRecommendation["ageGroup"]): string {
+  switch (ageGroup) {
+    case "kids": return "For Kids";
+    case "teens": return "For Teens";
+    case "adults": return "For Adults";
+    case "all-ages": return "All Ages";
+    default: return "";
+  }
+}
+
+// Get age group color
+function getAgeGroupColor(ageGroup: MediaRecommendation["ageGroup"]): string {
+  switch (ageGroup) {
+    case "kids": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+    case "teens": return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400";
+    case "adults": return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400";
+    case "all-ages": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+  }
+}
+
 interface DestinationDetail {
   cityName: string;
   countryName: string;
@@ -1484,6 +1903,28 @@ export default function Step2Plan({
     });
     return grouped;
   }, [prepItems]);
+
+  // Generate media recommendations based on destinations
+  const mediaRecommendations = useMemo(() => {
+    if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) {
+      return [];
+    }
+    return generateMediaRecommendations(displayedDestinationDetails);
+  }, [displayedDestinationDetails]);
+
+  // Group media recommendations by age group
+  const mediaByAgeGroup = useMemo(() => {
+    const grouped: Record<string, MediaRecommendation[]> = {
+      "kids": [],
+      "teens": [],
+      "adults": [],
+      "all-ages": []
+    };
+    mediaRecommendations.forEach((item) => {
+      grouped[item.ageGroup].push(item);
+    });
+    return grouped;
+  }, [mediaRecommendations]);
 
   // Calculate totals
   const totalEstimated =
@@ -4425,6 +4866,139 @@ export default function Step2Plan({
                     </p>
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Books & Movies Section */}
+          <Card data-testid="card-books-movies">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                    <BookOpen className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Books & Movies to Get Ready</CardTitle>
+                    <CardDescription>Discover stories, history, and culture from your destinations</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary" className="gap-1">
+                    <BookOpen className="w-3 h-3" />
+                    {mediaRecommendations.filter(m => m.type === "book" || m.type === "travel-guide").length} books
+                  </Badge>
+                  <Badge variant="secondary" className="gap-1">
+                    <Film className="w-3 h-3" />
+                    {mediaRecommendations.filter(m => m.type === "movie" || m.type === "documentary" || m.type === "tv-series").length} films
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Intro Text */}
+              <div className="p-4 rounded-lg bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900/30">
+                <p className="text-sm text-violet-700 dark:text-violet-300">
+                  Get excited for your trip with books and movies that bring your destinations to life. 
+                  Learn about the history, culture, and stories of the places you'll visit—perfect for the whole family!
+                </p>
+              </div>
+
+              {/* Age Groups */}
+              {["kids", "teens", "adults", "all-ages"].map((ageGroup) => {
+                const items = mediaByAgeGroup[ageGroup as keyof typeof mediaByAgeGroup];
+                if (items.length === 0) return null;
+                
+                return (
+                  <div key={ageGroup} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Badge className={getAgeGroupColor(ageGroup as MediaRecommendation["ageGroup"])}>
+                        {getAgeGroupLabel(ageGroup as MediaRecommendation["ageGroup"])}
+                      </Badge>
+                      <Separator className="flex-1" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {items.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="p-4 rounded-lg border hover-elevate transition-all"
+                          data-testid={`media-item-${item.id}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${getMediaTypeColor(item.type)}`}>
+                              {item.type === "book" && <BookOpen className="w-4 h-4" />}
+                              {item.type === "movie" && <Film className="w-4 h-4" />}
+                              {item.type === "documentary" && <Play className="w-4 h-4" />}
+                              {item.type === "tv-series" && <Tv className="w-4 h-4" />}
+                              {item.type === "travel-guide" && <Map className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="font-medium text-sm leading-tight">
+                                    {item.title}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {item.creator} {item.year && `(${item.year})`}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="text-xs flex-shrink-0">
+                                  {getMediaTypeLabel(item.type)}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                {item.description}
+                              </p>
+                              <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
+                                <span className="text-xs text-muted-foreground italic">
+                                  {item.relevance}
+                                </span>
+                                <a 
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                  data-testid={`link-media-${item.id}`}
+                                >
+                                  {item.type === "book" || item.type === "travel-guide" ? "Buy" : "Watch"}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {mediaRecommendations.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No destinations added yet. Add destinations to see book and movie recommendations.</p>
+                </div>
+              )}
+
+              {/* Summary Box */}
+              {mediaRecommendations.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="p-4 rounded-lg bg-muted/50 border">
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-violet-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Get Inspired Before You Go</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          These {mediaRecommendations.length} recommendations include history, travel guides, and cultural stories 
+                          to help your whole family connect with your destinations before you arrive. 
+                          Consider borrowing from your local library or streaming services you already have!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
