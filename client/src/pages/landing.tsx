@@ -121,7 +121,7 @@ export default function Landing() {
               <Link href="/features" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Features</Link>
               <a href="#how-it-works" className="text-white/80 hover:text-white text-sm font-medium transition-colors">How It Works</a>
               <Link href="/about" className="text-white/80 hover:text-white text-sm font-medium transition-colors">About</Link>
-              <a href="#faq" className="text-white/80 hover:text-white text-sm font-medium transition-colors">FAQ</a>
+              <Link href="/faq" className="text-white/80 hover:text-white text-sm font-medium transition-colors">FAQ</Link>
               <Link href="/terms-of-service" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Privacy</Link>
             </nav>
 
