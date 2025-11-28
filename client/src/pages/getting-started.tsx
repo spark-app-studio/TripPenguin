@@ -120,33 +120,140 @@ export default function GettingStarted() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
-    // Convert getting-started data to quiz format for compatibility
+    // Map getting-started data to the legacy quizResponseSchema format
+    // Required by /api/ai/destination-recommendations endpoint
+    
+    // Map tripDesire/staycationGoal to tripGoal enum
+    const mapToTripGoal = (): "rest" | "culture" | "thrill" | "magic" => {
+      const desire = quizData.tripDesire || quizData.staycationGoal?.[0];
+      switch (desire) {
+        case "rest": return "rest";
+        case "relax": return "rest";
+        case "culture": return "culture";
+        case "thrill": return "thrill";
+        case "magic": return "magic";
+        case "connection": return "rest";
+        case "family-time": return "rest";
+        case "explore": return "culture";
+        case "outdoor": return "thrill";
+        case "cultural": return "culture";
+        case "food": return "culture";
+        case "romantic": return "rest";
+        default: return "rest";
+      }
+    };
+    
+    // Map postcard/destination preference to placeType
+    const mapToPlaceType = (): "ocean" | "mountains" | "ancientCities" | "modernSkyline" => {
+      const postcard = quizData.postcardImage || quizData.internationalPostcard;
+      switch (postcard) {
+        case "beach": return "ocean";
+        case "mountains": return "mountains";
+        case "ancient-ruins": return "ancientCities";
+        case "skyline": return "modernSkyline";
+        case "redwoods": return "mountains";
+        case "canyon": return "mountains";
+        case "small-town": return "ancientCities";
+        case "tropical-beach": return "ocean";
+        case "historic-city": return "ancientCities";
+        case "modern-city": return "modernSkyline";
+        case "nature-landscape": return "mountains";
+        case "cultural-site": return "ancientCities";
+        default: return "ocean";
+      }
+    };
+    
+    // Map dayFullness to dayPace
+    const mapToDayPace = (): "relaxed" | "balanced" | "packed" => {
+      switch (quizData.dayFullness) {
+        case "70-chill": return "relaxed";
+        case "50-50": return "balanced";
+        case "30-chill": return "packed";
+        default: return "balanced";
+      }
+    };
+    
+    // Map budgetStyle to spendingPriority
+    const mapToSpendingPriority = (): "food" | "experiences" | "comfort" | "souvenirs" => {
+      switch (quizData.budgetStyle) {
+        case "budget-saver": return "food";
+        case "smart-comfortable": return "experiences";
+        case "treat-yourself": return "comfort";
+        case "bucket-list": return "experiences";
+        default: return "experiences";
+      }
+    };
+    
+    // Map tripDesire to desiredEmotion
+    const mapToDesiredEmotion = (): "wonder" | "freedom" | "connection" | "awe" => {
+      const desire = quizData.tripDesire || quizData.staycationGoal?.[0];
+      switch (desire) {
+        case "magic": return "wonder";
+        case "thrill": return "freedom";
+        case "connection": return "connection";
+        case "rest": return "awe";
+        case "culture": return "wonder";
+        case "relax": return "awe";
+        case "family-time": return "connection";
+        case "explore": return "wonder";
+        case "outdoor": return "freedom";
+        case "romantic": return "connection";
+        default: return "wonder";
+      }
+    };
+    
+    // Map region
+    const mapToRegion = (): "europe" | "asia" | "southAmerica" | "tropicalIslands" | "surprise" => {
+      const region = quizData.internationalRegion || quizData.usRegion;
+      switch (region) {
+        case "europe": return "europe";
+        case "asia": return "asia";
+        case "south-america": return "southAmerica";
+        case "australia-nz": return "tropicalIslands";
+        case "africa": return "surprise";
+        case "tropical-islands": return "tropicalIslands";
+        case "surprise": return "surprise";
+        // US regions - map to "surprise" for domestic trips
+        case "new-england": return "europe"; // Similar vibe
+        case "mid-atlantic": return "europe";
+        case "southeast": return "tropicalIslands";
+        case "midwest": return "surprise";
+        case "mountains-west": return "surprise";
+        case "southwest": return "surprise";
+        case "pacific-coast": return "tropicalIslands";
+        default: return "surprise";
+      }
+    };
+    
+    // Map trip length
+    const mapToTripLength = (): "1-3 days" | "4-7 days" | "1-2 weeks" | "2-3 weeks" | "3+ weeks" | "flexible" => {
+      const length = quizData.tripLength || quizData.timeAvailable;
+      switch (length) {
+        case "afternoon": return "1-3 days";
+        case "full-day": return "1-3 days";
+        case "weekend": return "1-3 days";
+        case "extended": return "4-7 days";
+        case "short": return "4-7 days";
+        case "week": return "1-2 weeks";
+        case "longer": return "2-3 weeks";
+        default: return "flexible";
+      }
+    };
+    
+    // Build compatible quiz data for the AI endpoint
     const quizCompatibleData = {
+      tripGoal: mapToTripGoal(),
+      placeType: mapToPlaceType(),
+      temperature: "flexible" as const,
+      dayPace: mapToDayPace(),
+      spendingPriority: mapToSpendingPriority(),
+      desiredEmotion: mapToDesiredEmotion(),
+      region: mapToRegion(),
+      favoriteMovie: quizData.favoriteMedia || "Adventure film",
+      favoriteBook: quizData.favoriteMedia || "Travel memoir",
+      dreamMoment: `A perfect ${quizData.tripType} trip with ${quizData.adults} adults${quizData.kids > 0 ? ` and ${quizData.kids} kids` : ""} from ${quizData.departureLocation || "home"}`,
       numberOfTravelers: quizData.adults + quizData.kids,
-      childAges: quizData.childAges,
-      tripType: quizData.tripType,
-      tripLengthPreference: quizData.tripType === "staycation" 
-        ? quizData.timeAvailable 
-        : quizData.tripLength,
-      travelDates: quizData.travelDates,
-      exactDates: quizData.exactDates,
-      flexibleDates: quizData.flexibleDates,
-      destinationPreference: quizData.tripType === "international" 
-        ? quizData.internationalRegion 
-        : quizData.tripType === "domestic" 
-          ? quizData.usRegion 
-          : "local",
-      travelDistance: quizData.travelDistance,
-      tripDesire: quizData.tripDesire || quizData.staycationGoal?.[0],
-      postcardImage: quizData.postcardImage || quizData.internationalPostcard,
-      favoriteMedia: quizData.favoriteMedia,
-      kidActivities: quizData.kidActivities,
-      accessibilityNeeds: quizData.accessibilityNeeds,
-      absoluteNos: quizData.absoluteNos,
-      dayFullness: quizData.dayFullness,
-      budgetStyle: quizData.budgetStyle,
-      staycationBudget: quizData.staycationBudget,
-      departureLocation: quizData.departureLocation,
+      tripLengthPreference: mapToTripLength(),
     };
     
     // Store quiz data in sessionStorage for after authentication
