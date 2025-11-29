@@ -384,11 +384,16 @@ export default function TripsList() {
                     const dateRange = formatDateRange(trip.startDate, trip.endDate);
                     const sortedDestinations = trip.destinations?.sort((a, b) => a.order - b.order) || [];
                     
+                    const navigateToPlanner = () => {
+                      sessionStorage.setItem("trippenguin_planner_state", JSON.stringify({ currentStep: "plan" }));
+                      setLocation(`/trip/${trip.id}`);
+                    };
+                    
                     return (
                       <Card
                         key={trip.id}
                         className="hover-elevate cursor-pointer transition-all"
-                        onClick={() => setLocation(`/trip/${trip.id}`)}
+                        onClick={navigateToPlanner}
                         data-testid={`card-trip-${trip.id}`}
                       >
                         <CardHeader className="pb-3">
@@ -421,7 +426,7 @@ export default function TripsList() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => setLocation(`/trip/${trip.id}`)}
+                                onClick={navigateToPlanner}
                                 data-testid={`button-edit-${trip.id}`}
                               >
                                 <Edit className="w-4 h-4" />

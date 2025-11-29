@@ -176,9 +176,9 @@ export const passwordSchema = z.string()
 export const registerUserSchema = insertUserSchema.extend({
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().length(2, "State must be 2 characters (e.g., CA)"),
-  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
+  city: z.string().optional().default(""),
+  state: z.string().optional().default(""),
+  zipCode: z.string().optional().default(""),
   acceptedTerms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms of service",
   }),
