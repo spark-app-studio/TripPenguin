@@ -488,15 +488,24 @@ export default function ItineraryPage() {
           )}
         </div>
 
-        {/* Back to Plan Button */}
-        <div className="mt-8 flex justify-center">
+        {/* Navigation Buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
           <Button
             size="lg"
-            onClick={() => setLocation("/trip/new")}
-            data-testid="button-back-to-plan-bottom"
+            variant="outline"
+            onClick={() => setLocation("/recommendations")}
+            data-testid="button-back-to-recommendations"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Back to Plan your Trip and Save
+            Choose Different Itinerary
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => setLocation("/planner")}
+            data-testid="button-continue-to-planning"
+          >
+            Continue to Planning
+            <ChevronLeft className="w-4 h-4 ml-2 rotate-180" />
           </Button>
         </div>
       </div>

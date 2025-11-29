@@ -196,15 +196,42 @@ export default function Recommendations() {
       const staycation = recommendation as StaycationRecommendation;
       sessionStorage.setItem("selectedStaycation", JSON.stringify(staycation));
       sessionStorage.setItem("tripType", "staycation");
+      
+      // For staycations, go directly to planner (no multi-city editing needed)
+      setTimeout(() => {
+        setLocation("/planner");
+      }, 300);
     } else {
-      // Store the selected itinerary
+      // Convert AI recommendation to ItineraryData format for the review page
+      const itineraryRec = recommendation as ItineraryRecommendation;
+      const itineraryData = {
+        id: itineraryRec.id,
+        title: itineraryRec.title,
+        cities: itineraryRec.cities.map((city, index) => ({
+          id: `city-${index}-${Date.now()}`,
+          cityName: city.cityName,
+          countryName: city.countryName,
+          numberOfNights: city.stayLengthNights,
+          arrivalAirport: city.arrivalAirport,
+          departureAirport: city.departureAirport,
+          activities: city.activities || [],
+        })),
+        totalNights: itineraryRec.cities.reduce((sum, city) => sum + city.stayLengthNights, 0),
+        numberOfTravelers,
+        travelSeason: gettingStartedData?.travelSeason || "summer",
+        departureCity: gettingStartedData?.departureLocation || "",
+        departureCountry: "USA",
+      };
+      
+      // Store itinerary data for the review page
+      sessionStorage.setItem("trippenguin_itinerary", JSON.stringify(itineraryData));
       sessionStorage.setItem("selectedItinerary", JSON.stringify(recommendation));
+      
+      // Navigate to itinerary review page (NOT planner)
+      setTimeout(() => {
+        setLocation("/itinerary");
+      }, 300);
     }
-    
-    // Navigate to planner
-    setTimeout(() => {
-      setLocation("/planner");
-    }, 300);
   };
 
   const handleRetry = () => {
