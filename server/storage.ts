@@ -128,6 +128,12 @@ export class DatabaseStorage implements IStorage {
             countryName: destinations.countryName,
             numberOfNights: destinations.numberOfNights,
             order: destinations.order,
+            arrivalDate: destinations.arrivalDate,
+            departureDate: destinations.departureDate,
+            arrivalAirport: destinations.arrivalAirport,
+            departureAirport: destinations.departureAirport,
+            activities: destinations.activities,
+            transportToNext: destinations.transportToNext,
           })
           .from(destinations)
           .where(eq(destinations.tripId, trip.id));
