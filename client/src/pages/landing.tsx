@@ -122,8 +122,8 @@ export default function Landing() {
               <Link href="/features" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Features</Link>
               <a href="#how-it-works" className="text-white/80 hover:text-white text-sm font-medium transition-colors">How It Works</a>
               <Link href="/about" className="text-white/80 hover:text-white text-sm font-medium transition-colors">About</Link>
+              <Link href="/meet-pebbles" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Meet Pebbles</Link>
               <Link href="/faq" className="text-white/80 hover:text-white text-sm font-medium transition-colors">FAQ</Link>
-              <Link href="/privacy" className="text-white/80 hover:text-white text-sm font-medium transition-colors">Privacy</Link>
             </nav>
 
             <div className="flex items-center gap-3">
@@ -437,9 +437,10 @@ export default function Landing() {
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-              <a href="#about" className="hover:text-foreground transition-colors">About</a>
-              <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-              <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
+              <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+              <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+              <Link href="/meet-pebbles" className="hover:text-foreground transition-colors">Meet Pebbles</Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
               <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
               <a href="mailto:contact@trippenguin.com" className="hover:text-foreground transition-colors">Contact</a>

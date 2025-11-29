@@ -23,6 +23,7 @@ import Itinerary from "@/pages/itinerary";
 import Quiz from "@/pages/quiz";
 import QuizResults from "@/pages/quiz-results";
 import QuizRefine from "@/pages/quiz-refine";
+import MeetPebbles from "@/pages/meet-pebbles";
 import NotFound from "@/pages/not-found";
 import { PenguinLogo } from "@/components/PenguinLogo";
 
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/faq" component={FAQ} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/meet-pebbles" component={MeetPebbles} />
       <Route path="/getting-started" component={GettingStarted} />
 
       {/* Conditional routes based on authentication */}

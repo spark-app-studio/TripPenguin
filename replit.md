@@ -8,6 +8,14 @@ TripPenguin is a trip planning application designed to help users plan overseas 
 
 Preferred communication style: Simple, everyday language.
 
+## Branding
+
+**Mascot**: Pebbles the Penguin - a cute, adventurous penguin mascot who helps families plan debt-free adventures.
+- Custom penguin logo component: `client/src/components/PenguinLogo.tsx`
+- Logo image: `@assets/generated_images/cute_penguin_travel_mascot_logo.png`
+- Backstory page: `/meet-pebbles` - charming origin story page featuring Pebbles' Antarctic origins, family values, and promise to help families travel debt-free
+- Design choice: Use PenguinLogo for all branding (headers, footers, loading states); keep Plane icon only for flight-specific features
+
 ## System Architecture
 
 ### Frontend Architecture

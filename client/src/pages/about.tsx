@@ -24,10 +24,9 @@ export default function About() {
             
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
-              <a href="/#how-it-works" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">How It Works</a>
               <Link href="/about" className="text-foreground text-sm font-medium transition-colors">About</Link>
+              <Link href="/meet-pebbles" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Meet Pebbles</Link>
               <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
-              <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Privacy</Link>
             </nav>
 
             <div className="flex items-center gap-3">
@@ -142,8 +141,9 @@ export default function About() {
               <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
               <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
               <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+              <Link href="/meet-pebbles" className="hover:text-foreground transition-colors">Meet Pebbles</Link>
               <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
-              <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
