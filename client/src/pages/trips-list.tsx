@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, MapPin, Calendar, Users, Trash2, Edit, Plane, LogOut, User, Clock, Star, ChevronRight, History } from "lucide-react";
+import { Plus, MapPin, Calendar, Users, Trash2, Edit, LogOut, User, Clock, Star, ChevronRight, History, Luggage } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -235,7 +236,7 @@ export default function TripsList() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
-              <Plane className="h-6 w-6 text-primary" />
+              <PenguinLogo size="md" />
               <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
@@ -321,7 +322,7 @@ export default function TripsList() {
             {currentTrips.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-6">
-                  <Plane className="w-5 h-5 text-primary" />
+                  <Luggage className="w-5 h-5 text-primary" />
                   <h2 className="text-2xl font-bold">Current & Upcoming Trips</h2>
                   <Badge variant="secondary" className="ml-2">
                     {currentTrips.length}
@@ -409,7 +410,7 @@ export default function TripsList() {
                             {/* Departure Info */}
                             {trip.departureCity && (
                               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded px-2 py-1">
-                                <Plane className="w-3 h-3" />
+                                <MapPin className="w-3 h-3" />
                                 <span>From {trip.departureCity}</span>
                               </div>
                             )}
@@ -535,7 +536,7 @@ export default function TripsList() {
             {currentTrips.length === 0 && pastTrips.length > 0 && (
               <Card className="text-center py-8 mb-8">
                 <CardContent>
-                  <Plane className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <PenguinLogo size="xl" className="mx-auto mb-4" />
                   <h3 className="text-xl font-semibold mb-2">Ready for your next adventure?</h3>
                   <p className="text-muted-foreground mb-4">
                     You have {pastTrips.length} completed {pastTrips.length === 1 ? "trip" : "trips"}. Start planning your next one!
@@ -560,7 +561,7 @@ export default function TripsList() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-primary" />
+              <PenguinLogo size="sm" />
               <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>

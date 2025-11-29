@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plane, Map, Calendar, LogOut, Plus } from "lucide-react";
+import { Map, Calendar, LogOut, Plus } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -44,7 +45,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Plane className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <PenguinLogo size="xl" className="mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -61,7 +62,7 @@ export default function Home() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Plane className="h-6 w-6 text-primary" />
+            <PenguinLogo size="md" />
             <span className="text-xl font-bold">TripPenguin</span>
           </Link>
           <div className="flex items-center gap-4">
@@ -151,7 +152,7 @@ export default function Home() {
           <h2 className="text-2xl font-bold mb-4">Recent Trips</h2>
           {isLoadingTrips ? (
             <div className="text-center py-12">
-              <Plane className="h-8 w-8 text-primary mx-auto mb-3 animate-pulse" />
+              <PenguinLogo size="lg" className="mx-auto mb-3 animate-pulse" />
               <p className="text-muted-foreground">Loading trips...</p>
             </div>
           ) : trips && trips.length > 0 ? (
@@ -182,7 +183,7 @@ export default function Home() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <Plane className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <PenguinLogo size="xl" className="mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium mb-2">No trips yet</p>
                 <p className="text-muted-foreground mb-6">
                   Start planning your first adventure today!

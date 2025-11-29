@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Plane,
   MapPin,
   Home,
   Globe,
@@ -38,6 +37,7 @@ import {
   Camera,
   BookOpen
 } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -310,7 +310,7 @@ export default function GettingStarted() {
       className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4"
     >
       <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-8">
-        <Plane className="w-10 h-10 text-primary" />
+        <PenguinLogo size="xl" />
       </div>
       <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 font-serif">
         Welcome aboard!
@@ -1596,7 +1596,7 @@ export default function GettingStarted() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
-              <Plane className="h-6 w-6 text-primary" />
+              <PenguinLogo size="md" />
               <span className="text-xl font-bold">TripPenguin</span>
             </Link>
 
@@ -1644,7 +1644,7 @@ export default function GettingStarted() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-primary" />
+              <PenguinLogo size="sm" />
               <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground text-sm">— Family adventures, finally within reach.</span>
             </div>

@@ -24,7 +24,7 @@ import Quiz from "@/pages/quiz";
 import QuizResults from "@/pages/quiz-results";
 import QuizRefine from "@/pages/quiz-refine";
 import NotFound from "@/pages/not-found";
-import { Plane } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,7 +33,7 @@ function Router() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Plane className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <PenguinLogo size="xl" className="mx-auto mb-4 animate-pulse" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>

@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Plane } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 import { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginUserSchema>;
@@ -82,7 +82,7 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Plane className="h-8 w-8 text-primary" />
+              <PenguinLogo size="lg" />
               <span className="text-2xl font-bold">TripPenguin</span>
             </div>
           </div>

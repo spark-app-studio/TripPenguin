@@ -5,7 +5,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 
 export default function VerifyEmail() {
   const [, setLocation] = useLocation();
@@ -56,7 +57,7 @@ export default function VerifyEmail() {
           <CardHeader className="space-y-1">
             <div className="flex items-center justify-center mb-4">
               <div className="flex items-center gap-2">
-                <Plane className="h-8 w-8 text-primary" />
+                <PenguinLogo size="lg" />
                 <span className="text-2xl font-bold">TripPenguin</span>
               </div>
             </div>
@@ -81,7 +82,7 @@ export default function VerifyEmail() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Plane className="h-8 w-8 text-primary" />
+              <PenguinLogo size="lg" />
               <span className="text-2xl font-bold">TripPenguin</span>
             </div>
           </div>

@@ -5,10 +5,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { 
-  Plane, 
-  ChevronRight
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation, Link } from "wouter";
 
 export default function FAQ() {
@@ -118,7 +116,7 @@ export default function FAQ() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
-              <Plane className="h-6 w-6 text-primary" />
+              <PenguinLogo size="md" />
               <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
@@ -218,7 +216,7 @@ export default function FAQ() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-primary" />
+              <PenguinLogo size="sm" />
               <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
