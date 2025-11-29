@@ -2218,6 +2218,14 @@ export default function Step2Plan({
     );
   }, [displayedDestinationDetails, budgetData.accommodationsBooked]);
 
+  // Check if all transport segments are booked
+  const allTransportBooked = useMemo(() => {
+    if (transportSegments.length === 0) return false;
+    return transportSegments.every(segment => 
+      budgetData.transportBooked[segment.id]?.booked
+    );
+  }, [transportSegments, budgetData.transportBooked]);
+
   // Placeholder function to estimate flight cost based on destinations
   // This simulates an API call that would normally check flight prices
   // In production, this would use actual flight price APIs
@@ -3911,13 +3919,34 @@ export default function Step2Plan({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
-                    {Object.values(selectedTransport).filter(Boolean).length} of {transportSegments.filter(s => !['taxi', 'rideshare', 'uber', 'lyft'].includes(s.type.toLowerCase())).length} selected
-                  </Badge>
+                  {allTransportBooked ? (
+                    <Badge variant="default" className="bg-green-600 gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      All Booked
+                    </Badge>
+                  ) : (
+                    <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
+                      {Object.keys(budgetData.transportBooked).filter(k => budgetData.transportBooked[k]?.booked).length} of {transportSegments.length} booked
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Savings Reminder */}
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-transport-reminder">
+                <div className="flex items-start gap-3">
+                  <PiggyBank className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Book Only When You Have the Savings</p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      Each transportation segment should only be booked when you have enough saved to cover it. 
+                      This keeps you on track for a debt-free trip!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Transportation Cost Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50 border">
@@ -3985,6 +4014,32 @@ export default function Step2Plan({
                 <Progress value={transportSavingsProgress} className="h-3" />
               </div>
 
+              {/* Booking Tips */}
+              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-transport-tips">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <h4 className="font-semibold text-sm">Booking Tips</h4>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2" data-testid="tip-transport-flexibility">
+                    <span className="text-blue-600 font-bold">1.</span>
+                    <span>Look for flexible booking options that allow changes or refunds in case plans shift</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-transport-advance">
+                    <span className="text-blue-600 font-bold">2.</span>
+                    <span>Book trains and buses in advance for better prices and seat selection</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-transport-rental">
+                    <span className="text-blue-600 font-bold">3.</span>
+                    <span>For car rentals, compare total costs including insurance, fuel policy, and drop-off fees</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-transport-passes">
+                    <span className="text-blue-600 font-bold">4.</span>
+                    <span>Consider regional rail passes if taking multiple train journeys in Europe or Japan</span>
+                  </li>
+                </ul>
+              </div>
+
               <Separator />
 
               {/* Transport Segments */}
@@ -3997,24 +4052,31 @@ export default function Step2Plan({
                     const selectedOption = selectedId
                       ? segment.options.find(opt => opt.id === selectedId)
                       : null;
+                    const bookingStatus = budgetData.transportBooked[segment.id];
+                    const isBooked = bookingStatus?.booked || false;
+                    const segmentCost = selectedOption?.cost || 0;
+                    const canAffordThisSegment = savingsAllocatedToTransport >= segmentCost;
+                    const amountNeededForSegment = Math.max(0, segmentCost - savingsAllocatedToTransport);
                     
                     return (
                       <div 
                         key={segment.id} 
-                        className="p-4 rounded-lg border bg-muted/20"
+                        className={`p-4 rounded-lg border ${isBooked ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900' : 'bg-muted/20'}`}
                         data-testid={`transport-segment-${idx}`}
                       >
                         {/* Segment Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                              segment.segmentType === "airport-arrival" || segment.segmentType === "airport-departure"
+                              isBooked
+                                ? "bg-green-500 text-white"
+                                : segment.segmentType === "airport-arrival" || segment.segmentType === "airport-departure"
                                 ? "bg-blue-500 text-white"
                                 : segment.segmentType === "city-to-city"
                                 ? "bg-purple-500 text-white"
                                 : "bg-green-500 text-white"
                             }`}>
-                              {idx + 1}
+                              {isBooked ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
@@ -4027,101 +4089,146 @@ export default function Step2Plan({
                               </p>
                             </div>
                           </div>
-                          {selectedOption && (
-                            <Badge variant="default" className="gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              ${selectedOption.cost}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {isBooked ? (
+                              <Badge variant="default" className="bg-green-600 gap-1" data-testid={`badge-transport-booked-${idx}`}>
+                                <CheckCircle2 className="w-3 h-3" />
+                                Booked {bookingStatus?.bookedDate ? `on ${new Date(bookingStatus.bookedDate).toLocaleDateString()}` : ''}
+                              </Badge>
+                            ) : selectedOption ? (
+                              <Badge variant="default" className="gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                ${selectedOption.cost}
+                              </Badge>
+                            ) : null}
+                          </div>
                         </div>
 
                         {/* Transport Options - Only major transport types */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {segment.options
-                            .filter(option => !isMinorTransport(option.type))
-                            .map((option) => {
-                            const isSelected = selectedId === option.id;
-                            
-                            // If an option is selected, only show the selected one
-                            if (selectedId && !isSelected) {
-                              return null;
-                            }
-                            
-                            return (
-                              <div
-                                key={option.id}
-                                className={`p-4 rounded-lg border transition-all ${
-                                  isSelected 
-                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                    : 'bg-background hover-elevate cursor-pointer'
-                                }`}
-                                onClick={() => handleSelectTransport(segment.id, option.id)}
-                                data-testid={`transport-option-${option.id}`}
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {getTransportTypeName(option.type)}
-                                  </Badge>
-                                  {isSelected && (
-                                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                                  )}
+                          {/* If segment is booked, show booking confirmation only */}
+                          {isBooked ? (
+                            <div className="md:col-span-3 p-4 rounded-lg border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/30">
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-8 h-8 text-green-600" />
+                                <div>
+                                  <h5 className="font-semibold text-green-700 dark:text-green-400">
+                                    {selectedOption?.name || 'Transport'} Booked!
+                                  </h5>
+                                  <p className="text-sm text-green-600 dark:text-green-500">
+                                    ${selectedOption?.cost || 0} - {getTransportTypeName(selectedOption?.type || 'bus')}
+                                  </p>
                                 </div>
-                                <h5 className="font-medium text-sm mb-1">{option.name}</h5>
-                                <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                  {option.description}
-                                </p>
-                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {option.duration}
-                                  </div>
-                                </div>
-                                <div className="flex items-end justify-between">
-                                  <p className="text-lg font-bold">${option.cost}</p>
-                                </div>
-                                {isSelected ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full mt-3 gap-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSelectTransport(segment.id, option.id);
-                                    }}
-                                    data-testid={`button-change-transport-${option.id}`}
-                                  >
-                                    Change Selection
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="w-full mt-3 gap-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSelectTransport(segment.id, option.id);
-                                    }}
-                                    data-testid={`button-select-transport-${option.id}`}
-                                  >
-                                    Select This Option
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full mt-2 gap-1 text-muted-foreground"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(option.url, '_blank');
-                                  }}
-                                  data-testid={`button-view-transport-${option.id}`}
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  View Details
-                                </Button>
                               </div>
-                            );
-                          })}
+                            </div>
+                          ) : (
+                            segment.options
+                              .filter(option => !isMinorTransport(option.type))
+                              .map((option) => {
+                              const isSelected = selectedId === option.id;
+                              
+                              // If an option is selected, only show the selected one
+                              if (selectedId && !isSelected) {
+                                return null;
+                              }
+                              
+                              return (
+                                <div
+                                  key={option.id}
+                                  className={`p-4 rounded-lg border transition-all ${
+                                    isSelected 
+                                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                      : 'bg-background hover-elevate cursor-pointer'
+                                  }`}
+                                  onClick={() => !isSelected && handleSelectTransport(segment.id, option.id)}
+                                  data-testid={`transport-option-${option.id}`}
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <Badge variant="secondary" className="text-xs">
+                                      {getTransportTypeName(option.type)}
+                                    </Badge>
+                                    {isSelected && (
+                                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                                    )}
+                                  </div>
+                                  <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                    {option.description}
+                                  </p>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {option.duration}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-end justify-between">
+                                    <p className="text-lg font-bold">${option.cost}</p>
+                                  </div>
+                                  {isSelected ? (
+                                    <div className="mt-3 space-y-2">
+                                      {/* Book This Transport Button */}
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className={`w-full gap-1 ${canAffordThisSegment ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                        disabled={!canAffordThisSegment}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleBookTransport(segment.id, option.id);
+                                        }}
+                                        data-testid={`button-book-transport-${option.id}`}
+                                      >
+                                        <Train className="w-4 h-4" />
+                                        {canAffordThisSegment 
+                                          ? "Book This Transport" 
+                                          : `Need $${amountNeededForSegment.toLocaleString()} more`}
+                                        {!canAffordThisSegment && <Lock className="w-3 h-3 ml-1" />}
+                                      </Button>
+                                      {/* Change Selection Button */}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full gap-1"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectTransport(segment.id, option.id);
+                                        }}
+                                        data-testid={`button-change-transport-${option.id}`}
+                                      >
+                                        Change Selection
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="w-full mt-3 gap-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSelectTransport(segment.id, option.id);
+                                      }}
+                                      data-testid={`button-select-transport-${option.id}`}
+                                    >
+                                      Select This Option
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full mt-2 gap-1 text-muted-foreground"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(option.url, '_blank');
+                                    }}
+                                    data-testid={`button-view-transport-${option.id}`}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View Details
+                                  </Button>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                     );
@@ -4206,8 +4313,25 @@ export default function Step2Plan({
             </CardContent>
           </Card>
 
+          {/* Navigation to Activities (after all transport booked) */}
+          {allTransportBooked && (
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                className="gap-2"
+                onClick={() => {
+                  document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                data-testid="button-continue-to-activities"
+              >
+                Continue to Plan Fun & Activities
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
           {/* Fun & Activities Section */}
-          <Card data-testid="card-activities-costs">
+          <Card id="activities-section" data-testid="card-activities-costs">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
