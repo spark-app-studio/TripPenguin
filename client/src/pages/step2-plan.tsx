@@ -2554,13 +2554,16 @@ export default function Step2Plan({
           <ProgressStepper currentStep={2} completedSteps={[1]} />
           <SaveBookOverview
             tripTitle={itinerary?.title}
-            destinations={displayedDestinationDetails || []}
-            tripDuration={displayedDuration}
-            numberOfTravelers={itinerary?.numberOfTravelers || numberOfTravelers}
-            travelSeason={itinerary?.travelSeason || travelSeason}
-            currentSavings={budgetData.currentSavings}
+            totalEstimatedCost={totalEstimated}
+            currentSavings={currentSavingsNum}
+            aiMonthlySavings={aiRecommendedMonthlySavings}
+            earliestTravelDate={earliestTravelDate}
+            flightCost={estimatedFlightCost}
+            flightSavingsProgress={flightSavingsProgress}
             savingsAccountLinked={savingsAccountLinked}
-            onViewItinerary={() => setLocation("/itinerary")}
+            accommodationsFunded={tripBudget.categories.accommodations?.isFunded || false}
+            transportFunded={tripBudget.categories.transportation?.isFunded || false}
+            flightsFunded={tripBudget.categories.flights?.isFunded || false}
             onContinue={handleOverviewContinue}
             onBack={handleBackToSavings}
           />
@@ -2934,41 +2937,74 @@ export default function Step2Plan({
             totalSavings={currentSavingsNum}
           />
 
-          {/* Flight Costs Section - Full Width */}
+          {/* Save and Book Flights Section */}
           <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
             <CardHeader className="pb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Plane className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Flight Costs</CardTitle>
-                    <CardDescription>
-                      Track your flight savings and book when you're ready
-                    </CardDescription>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Plane className="w-6 h-6 text-primary" />
                 </div>
-                
-                {/* Book Flights Button - Uses centralized budget calculations */}
-                <BookingButton
-                  category="flights"
-                  isFunded={tripBudget.categories.flights.isFunded}
-                  monthsToFund={tripBudget.categories.flights.monthsToFund}
-                  earliestDate={tripBudget.categories.flights.earliestBookingDate}
-                  label="Book the Flights"
-                  onClick={() => {
-                    toast({
-                      title: "Ready to Book!",
-                      description: "Opening flight booking options...",
-                    });
-                  }}
-                  testId="button-book-flights"
-                />
+                <div>
+                  <CardTitle className="text-xl">Save and Book Flights</CardTitle>
+                  <CardDescription>
+                    Step 1: Decide on points. Step 2: Save enough. Step 3: Book!
+                  </CardDescription>
+                </div>
               </div>
             </CardHeader>
             
             <CardContent className="space-y-6">
+              {/* Your Flight Routes */}
+              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-flight-routes">
+                <div className="flex items-center gap-2 mb-3">
+                  <Plane className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm">Your Flight Routes</h4>
+                </div>
+                <div className="space-y-2">
+                  {/* Outbound: Home to First City */}
+                  <div className="flex items-center gap-3 text-sm" data-testid="route-outbound">
+                    <Badge variant="outline" className="font-mono">Outbound</Badge>
+                    <span className="font-medium" data-testid="text-departure-city">{itinerary?.departureCity || "Your City"}</span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium" data-testid="text-first-destination">
+                      {displayedDestinationDetails?.[0]?.cityName || displayedDestinations?.[0] || "First Destination"}
+                    </span>
+                  </div>
+                  {/* Return: Last City to Home */}
+                  <div className="flex items-center gap-3 text-sm" data-testid="route-return">
+                    <Badge variant="outline" className="font-mono">Return</Badge>
+                    <span className="font-medium" data-testid="text-last-destination">
+                      {displayedDestinationDetails?.[displayedDestinationDetails.length - 1]?.cityName || 
+                       displayedDestinations?.[displayedDestinations.length - 1] || "Last Destination"}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium" data-testid="text-return-city">{itinerary?.departureCity || "Your City"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 1: Points Decision - Moved to Top */}
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground">Step 1</Badge>
+                    <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-semibold text-sm">Will you use credit card points for flights?</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="use-points-toggle" className="text-sm text-muted-foreground">
+                      {budgetData.flights.usePoints ? "Yes, use points" : "No, pay cash"}
+                    </Label>
+                    <Switch
+                      id="use-points-toggle"
+                      checked={budgetData.flights.usePoints}
+                      onCheckedChange={handleToggleUsePoints}
+                      data-testid="switch-use-points"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Flight Metrics Grid */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Estimated Flight Cost */}
@@ -3070,27 +3106,15 @@ export default function Step2Plan({
                 <Progress value={flightSavingsProgress} className="h-3" />
               </div>
 
-              <Separator />
-
-              {/* Flight Points Subsection */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+              {/* Points Details Panel - Only shown when points are enabled */}
+              {budgetData.flights.usePoints && (
+                <div className="space-y-4">
+                  <Separator />
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">Flight Points</h3>
+                    <h3 className="font-semibold">Points Details</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="use-points" className="text-sm">Use points for flights?</Label>
-                    <Switch
-                      id="use-points"
-                      checked={budgetData.flights.usePoints}
-                      onCheckedChange={handleToggleUsePoints}
-                      data-testid="switch-use-points"
-                    />
-                  </div>
-                </div>
-
-                {budgetData.flights.usePoints && (
+                  
                   <div className="space-y-4 p-4 rounded-lg bg-muted/30 border">
                     {/* Points Balance & Input */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3211,10 +3235,8 @@ export default function Step2Plan({
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* Credit Card Offers Panel */}
-                {budgetData.flights.usePoints && (
+                  {/* Credit Card Offers Panel */}
                   <div className="p-4 rounded-lg border bg-gradient-to-br from-background to-muted/20">
                     <div className="flex items-center gap-2 mb-4">
                       <Star className="w-5 h-5 text-amber-500" />
@@ -3255,17 +3277,43 @@ export default function Step2Plan({
                       These are example offers for illustration purposes. Always research current offers before applying.
                     </p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <Separator />
+
+              {/* Booking Tips */}
+              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-booking-tips">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <h4 className="font-semibold text-sm">Booking Tips</h4>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2" data-testid="tip-booking-advance">
+                    <span className="text-primary font-bold">1.</span>
+                    <span>Book 6-12 months in advance for the best international flight prices</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-compare-prices">
+                    <span className="text-primary font-bold">2.</span>
+                    <span>Compare prices on Google Flights, Skyscanner, and airline websites</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-midweek">
+                    <span className="text-primary font-bold">3.</span>
+                    <span>Consider flying mid-week (Tues-Thurs) for lower fares</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-price-alerts">
+                    <span className="text-primary font-bold">4.</span>
+                    <span>Set price alerts to catch drops before booking</span>
+                  </li>
+                </ul>
+              </div>
               
               {/* Helper Text */}
               {!canBookFlightsNow && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-flight-not-funded">
                   <div className="flex items-start gap-2">
                     <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                    <p className="text-sm text-amber-700 dark:text-amber-400" data-testid="text-flight-warning">
                       <span className="font-medium">Why is booking disabled?</span> You still need ${flightSavingsGap.toLocaleString()} more for flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (after ${pointsToUse.toLocaleString()} points applied)` : ''}. 
                       At ${monthlySavingsNum.toLocaleString()}/month, you'll be ready to book in {monthsToFlights} month{monthsToFlights > 1 ? 's' : ''}. 
                       This helps you avoid going into debt for your trip.
@@ -3275,16 +3323,43 @@ export default function Step2Plan({
               )}
               
               {canBookFlightsNow && (
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900" data-testid="alert-flight-funded">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-green-700 dark:text-green-400">
+                    <p className="text-sm text-green-700 dark:text-green-400" data-testid="text-flight-ready">
                       <span className="font-medium">You're ready!</span> You've saved enough to cover your flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (with ${pointsToUse.toLocaleString()} points reducing your cost by $${pointsDollarValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})` : ''}. 
                       Book now to lock in prices 6-12 months before your trip for the best deals.
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* Book Flights Button - Prominent CTA at bottom */}
+              <div className="pt-4 border-t" data-testid="container-flight-cta">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground" data-testid="text-flight-status">
+                      {canBookFlightsNow 
+                        ? "You've saved enough! Time to book your flights." 
+                        : `Save $${flightSavingsGap.toLocaleString()} more to unlock booking.`}
+                    </p>
+                  </div>
+                  <BookingButton
+                    category="flights"
+                    isFunded={tripBudget.categories.flights.isFunded}
+                    monthsToFund={tripBudget.categories.flights.monthsToFund}
+                    earliestDate={tripBudget.categories.flights.earliestBookingDate}
+                    label="Book the Flights"
+                    onClick={() => {
+                      toast({
+                        title: "Ready to Book!",
+                        description: "Opening flight booking options...",
+                      });
+                    }}
+                    testId="button-book-flights"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
