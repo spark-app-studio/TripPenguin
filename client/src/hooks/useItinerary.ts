@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 
+// Transport segment between destinations
+export interface TransportSegment {
+  mode: string; // "flight", "train", "bus", "car", "ferry"
+  durationMinutes?: number;
+  estimatedCost?: number;
+  notes?: string;
+}
+
 export interface ItineraryCity {
   id: string;
   cityName: string;
@@ -7,7 +15,10 @@ export interface ItineraryCity {
   numberOfNights: number;
   arrivalDate?: string;
   departureDate?: string;
+  arrivalAirport?: string; // IATA code like "CDG"
+  departureAirport?: string; // IATA code - may differ for open-jaw tickets
   activities?: string[];
+  transportToNext?: TransportSegment; // Transport to next destination (null for last city)
 }
 
 export interface ItineraryData {
@@ -19,6 +30,10 @@ export interface ItineraryData {
   totalNights: number;
   numberOfTravelers: number;
   travelSeason: string;
+  // Departure information
+  departureCity?: string;
+  departureCountry?: string;
+  departureAirport?: string; // IATA code like "SFO"
 }
 
 const ITINERARY_STORAGE_KEY = "trippirate_itinerary";
@@ -146,14 +161,83 @@ export function useItinerary() {
     });
   }, []);
 
+  // Helper function to determine season from a date
+  const getSeasonFromDate = useCallback((dateStr: string): string => {
+    const date = new Date(dateStr);
+    const month = date.getMonth(); // 0-11
+    
+    // Northern hemisphere seasons
+    if (month >= 2 && month <= 4) return "spring"; // Mar-May
+    if (month >= 5 && month <= 7) return "summer"; // Jun-Aug
+    if (month >= 8 && month <= 10) return "fall"; // Sep-Nov
+    return "winter"; // Dec-Feb
+  }, []);
+
+  // Update season when start date changes
+  const updateDatesAndSeason = useCallback((startDate: string) => {
+    setItineraryState(prev => {
+      if (!prev) return prev;
+      
+      let currentDate = new Date(startDate);
+      const updatedCities = prev.cities.map(city => {
+        const arrivalDate = currentDate.toISOString().split('T')[0];
+        currentDate.setDate(currentDate.getDate() + city.numberOfNights);
+        const departureDate = currentDate.toISOString().split('T')[0];
+        
+        return {
+          ...city,
+          arrivalDate,
+          departureDate,
+        };
+      });
+      
+      const endDate = currentDate.toISOString().split('T')[0];
+      const newSeason = getSeasonFromDate(startDate);
+      
+      return {
+        ...prev,
+        startDate,
+        endDate,
+        travelSeason: newSeason,
+        cities: updatedCities,
+      };
+    });
+  }, [getSeasonFromDate]);
+
+  // Update departure information
+  const updateDeparture = useCallback((departure: {
+    city?: string;
+    country?: string;
+    airport?: string;
+  }) => {
+    setItineraryState(prev => {
+      if (!prev) return prev;
+      
+      return {
+        ...prev,
+        departureCity: departure.city ?? prev.departureCity,
+        departureCountry: departure.country ?? prev.departureCountry,
+        departureAirport: departure.airport ?? prev.departureAirport,
+      };
+    });
+  }, []);
+
   const initializeFromTripData = useCallback((tripData: {
     tripDuration: number;
     numberOfTravelers: number;
     travelSeason: string;
+    title?: string;
+    departureCity?: string;
+    departureCountry?: string;
+    departureAirport?: string;
     selectedDestinations: Array<{
       cityName: string;
       countryName: string;
       numberOfNights: number;
+      arrivalAirport?: string;
+      departureAirport?: string;
+      activities?: string[];
+      transportToNext?: TransportSegment;
     }>;
   }) => {
     const cities: ItineraryCity[] = tripData.selectedDestinations.map((dest, index) => ({
@@ -161,16 +245,22 @@ export function useItinerary() {
       cityName: dest.cityName,
       countryName: dest.countryName,
       numberOfNights: dest.numberOfNights,
-      activities: [],
+      arrivalAirport: dest.arrivalAirport,
+      departureAirport: dest.departureAirport,
+      activities: dest.activities || [],
+      transportToNext: dest.transportToNext,
     }));
 
     const newItinerary: ItineraryData = {
       id: `itinerary-${Date.now()}`,
-      title: cities.length > 0 ? `Trip to ${cities.map(c => c.cityName).join(", ")}` : "My Trip",
+      title: tripData.title || (cities.length > 0 ? `Trip to ${cities.map(c => c.cityName).join(", ")}` : "My Trip"),
       cities,
       totalNights: tripData.tripDuration,
       numberOfTravelers: tripData.numberOfTravelers,
       travelSeason: tripData.travelSeason,
+      departureCity: tripData.departureCity,
+      departureCountry: tripData.departureCountry,
+      departureAirport: tripData.departureAirport,
     };
 
     setItinerary(newItinerary);
@@ -186,6 +276,9 @@ export function useItinerary() {
     removeCity,
     reorderCities,
     updateDates,
+    updateDatesAndSeason,
+    updateDeparture,
+    getSeasonFromDate,
     initializeFromTripData,
   };
 }

@@ -210,7 +210,11 @@ export const insertTripSchema = createInsertSchema(trips).omit({
   updatedAt: true,
 });
 
-export const insertDestinationSchema = createInsertSchema(destinations).omit({
+// Destination insert schema with proper jsonb type refinements
+export const insertDestinationSchema = createInsertSchema(destinations, {
+  activities: () => z.array(z.string()).optional(),
+  transportToNext: () => transportSegmentSchema.optional().nullable(),
+}).omit({
   id: true,
 });
 
