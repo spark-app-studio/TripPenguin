@@ -56,11 +56,21 @@ export const trips = pgTable("trips", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
+  // Trip title
+  title: text("title"), // Creative name like "The Mediterranean Dream"
+  
   // Step 1: Dream - Know the Basics
   travelers: text("travelers").notNull(), // "Just me" or "Me plus family/friends"
   numberOfTravelers: integer("number_of_travelers").notNull().default(1),
   travelSeason: text("travel_season").notNull(), // "Summer", "Winter Break", etc.
   tripDuration: integer("trip_duration").notNull(), // in days
+  
+  // Trip dates and departure info
+  startDate: text("start_date"), // ISO date string YYYY-MM-DD
+  endDate: text("end_date"), // ISO date string YYYY-MM-DD
+  departureCity: text("departure_city"), // User's home city they're departing from
+  departureCountry: text("departure_country"), // Country of departure (typically user's home country)
+  departureAirport: text("departure_airport"), // IATA airport code like "SFO"
   
   // Step 2: Save & Book - Savings Account
   savingsAccountLinked: boolean("savings_account_linked").default(false),
@@ -77,6 +87,16 @@ export const trips = pgTable("trips", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Transport segment type for travel between destinations
+export const transportSegmentSchema = z.object({
+  mode: z.string(), // "flight", "train", "bus", "car", "ferry"
+  durationMinutes: z.number().optional(),
+  estimatedCost: z.number().optional(),
+  notes: z.string().optional(),
+});
+
+export type TransportSegment = z.infer<typeof transportSegmentSchema>;
+
 // Destinations for a trip (cities to visit)
 export const destinations = pgTable("destinations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -86,6 +106,20 @@ export const destinations = pgTable("destinations", {
   numberOfNights: integer("number_of_nights").notNull().default(3),
   imageUrl: text("image_url"),
   order: integer("order").notNull().default(0), // for ordering destinations in trip
+  
+  // Arrival and departure dates for this destination
+  arrivalDate: text("arrival_date"), // ISO date string YYYY-MM-DD
+  departureDate: text("departure_date"), // ISO date string YYYY-MM-DD
+  
+  // Airport information
+  arrivalAirport: text("arrival_airport"), // IATA code like "CDG"
+  departureAirport: text("departure_airport"), // IATA code - may differ for open-jaw tickets
+  
+  // AI-recommended activities for this destination
+  activities: jsonb("activities").$type<string[]>().default([]),
+  
+  // Transport to next destination (null for last destination)
+  transportToNext: jsonb("transport_to_next").$type<TransportSegment>(),
 });
 
 // Budget categories and items
@@ -226,7 +260,7 @@ export type TripWithDetails = Trip & {
 
 // Trip summary for list views (trip with destination names only)
 export type TripWithDestinations = Trip & {
-  destinations: Pick<Destination, 'id' | 'cityName' | 'countryName' | 'numberOfNights' | 'order'>[];
+  destinations: Pick<Destination, 'id' | 'cityName' | 'countryName' | 'numberOfNights' | 'order' | 'arrivalDate' | 'departureDate' | 'arrivalAirport' | 'departureAirport' | 'activities' | 'transportToNext'>[];
 };
 
 // Quiz schemas for destination recommendations
