@@ -302,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/trips", isAuthenticated, async (req, res) => {
     try {
       const user = req.user as PublicUser;
-      const userTrips = await storage.getTripsByUser(user.id);
+      const userTrips = await storage.getTripsWithDestinationsByUser(user.id);
       res.json(userTrips);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch trips" });

@@ -15,6 +15,7 @@ import {
   type Booking,
   type InsertBooking,
   type TripWithDetails,
+  type TripWithDestinations,
   type User,
   type InsertUser,
   type EmailVerificationToken,
@@ -48,6 +49,7 @@ export interface IStorage {
   // Trip operations
   getAllTrips(): Promise<Trip[]>;
   getTripsByUser(userId: string): Promise<Trip[]>;
+  getTripsWithDestinationsByUser(userId: string): Promise<TripWithDestinations[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   getTrip(id: string): Promise<Trip | undefined>;
   getTripWithDetails(id: string): Promise<TripWithDetails | undefined>;
@@ -112,6 +114,32 @@ export class DatabaseStorage implements IStorage {
 
   async getTripsByUser(userId: string): Promise<Trip[]> {
     return await db.select().from(trips).where(eq(trips.userId, userId));
+  }
+
+  async getTripsWithDestinationsByUser(userId: string): Promise<TripWithDestinations[]> {
+    const userTrips = await db.select().from(trips).where(eq(trips.userId, userId));
+    
+    const tripsWithDestinations: TripWithDestinations[] = await Promise.all(
+      userTrips.map(async (trip) => {
+        const tripDestinations = await db
+          .select({
+            id: destinations.id,
+            cityName: destinations.cityName,
+            countryName: destinations.countryName,
+            numberOfNights: destinations.numberOfNights,
+            order: destinations.order,
+          })
+          .from(destinations)
+          .where(eq(destinations.tripId, trip.id));
+        
+        return {
+          ...trip,
+          destinations: tripDestinations,
+        };
+      })
+    );
+    
+    return tripsWithDestinations;
   }
 
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {

@@ -219,6 +219,11 @@ export type TripWithDetails = Trip & {
   bookings: Booking[];
 };
 
+// Trip summary for list views (trip with destination names only)
+export type TripWithDestinations = Trip & {
+  destinations: Pick<Destination, 'id' | 'cityName' | 'countryName' | 'numberOfNights' | 'order'>[];
+};
+
 // Quiz schemas for destination recommendations
 // Note: Quiz responses are intentionally ephemeral (not persisted to database)
 // They are only used to generate AI destination recommendations via the API

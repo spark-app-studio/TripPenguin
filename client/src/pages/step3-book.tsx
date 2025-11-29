@@ -271,7 +271,7 @@ export default function Step3Book({ budgetCategories, tripContext, onComplete, o
               onClick={onBack}
               data-testid="button-back-to-plan"
             >
-              Back to Planning
+              Back to Plan & Save
             </Button>
             <Button
               size="lg"

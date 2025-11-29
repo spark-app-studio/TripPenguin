@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
-import type { Trip } from "@shared/schema";
+import type { TripWithDestinations } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, MapPin, Calendar, Users, Trash2, Edit, Plane, LogOut, User } from "lucide-react";
@@ -33,7 +33,7 @@ export default function TripsList() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: trips, isLoading } = useQuery<Trip[]>({
+  const { data: trips, isLoading } = useQuery<TripWithDestinations[]>({
     queryKey: ["/api/trips"],
   });
 
@@ -193,12 +193,24 @@ export default function TripsList() {
                 className="hover-elevate cursor-pointer transition-all"
                 data-testid={`card-trip-${trip.id}`}
               >
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">
-                        {trip.travelSeason && getSeasonDisplay(trip.travelSeason)} Trip
+                      <CardTitle className="text-xl mb-1">
+                        {trip.destinations && trip.destinations.length > 0 ? (
+                          trip.destinations
+                            .sort((a, b) => a.order - b.order)
+                            .map(d => d.cityName)
+                            .join(" → ")
+                        ) : (
+                          `${trip.travelSeason && getSeasonDisplay(trip.travelSeason)} Trip`
+                        )}
                       </CardTitle>
+                      {trip.destinations && trip.destinations.length > 0 && (
+                        <p className="text-sm text-muted-foreground mb-2" data-testid={`text-country-${trip.id}`}>
+                          {[...new Set(trip.destinations.map(d => d.countryName))].join(", ")}
+                        </p>
+                      )}
                       <CardDescription className="space-y-1">
                         <div className="flex items-center gap-2 text-sm">
                           <Users className="w-4 h-4" />
@@ -208,6 +220,12 @@ export default function TripsList() {
                           <Calendar className="w-4 h-4" />
                           {trip.tripDuration} days
                         </div>
+                        {trip.destinations && trip.destinations.length > 0 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4" />
+                            {trip.destinations.length} {trip.destinations.length === 1 ? 'destination' : 'destinations'}
+                          </div>
+                        )}
                       </CardDescription>
                     </div>
                     <div className="flex gap-1">
@@ -236,7 +254,7 @@ export default function TripsList() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-2">
                   <Button
                     variant="secondary"
                     className="w-full"

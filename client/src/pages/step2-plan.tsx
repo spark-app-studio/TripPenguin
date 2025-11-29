@@ -5034,7 +5034,7 @@ export default function Step2Plan({
               className="min-h-0"
               data-testid="button-continue-to-book"
             >
-              Continue to Booking
+              Continue to Go
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>
           </div>
