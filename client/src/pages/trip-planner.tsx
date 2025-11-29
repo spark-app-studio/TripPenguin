@@ -17,11 +17,24 @@ interface TripPlanData {
     numberOfTravelers: number;
     travelSeason: string;
     tripDuration: number;
+    title?: string;
+    departureCity?: string;
+    departureCountry?: string;
+    departureAirport?: string;
     selectedDestinations: Array<{
       cityName: string;
       countryName: string;
       imageUrl: string;
       numberOfNights: number;
+      arrivalAirport?: string;
+      departureAirport?: string;
+      activities?: string[];
+      transportToNext?: {
+        mode: string;
+        durationMinutes?: number;
+        estimatedCost?: number;
+        notes?: string;
+      };
     }>;
   };
   step2?: {
@@ -203,12 +216,22 @@ export default function TripPlanner() {
           // Determine travelers radio value based on numberOfTravelers
           const travelersValue = numberOfTravelers === 1 ? "just_me" : "with_others";
           
-          // Convert itinerary cities to destinations
-          const selectedDestinations = itinerary.cities.map((city: any) => ({
+          // Convert itinerary cities to destinations with full AI data
+          const selectedDestinations = itinerary.cities.map((city: any, index: number) => ({
             cityName: city.cityName,
             countryName: city.countryName,
             imageUrl: "",
             numberOfNights: city.stayLengthNights,
+            arrivalAirport: city.arrivalAirport,
+            departureAirport: city.departureAirport,
+            activities: city.activities || [],
+            // Generate transport to next city if not last city
+            transportToNext: index < itinerary.cities.length - 1 ? {
+              mode: "flight", // Default - can be updated later
+              estimatedCost: undefined,
+              durationMinutes: undefined,
+              notes: `Travel to ${itinerary.cities[index + 1]?.cityName}`,
+            } : undefined,
           }));
           
           // Pre-populate budget categories from cost breakdown
@@ -249,6 +272,7 @@ export default function TripPlanner() {
               numberOfTravelers: numberOfTravelers,
               travelSeason: normalizeSeason(itinerary.bestTimeToVisit),
               tripDuration: itinerary.totalNights || 7,
+              title: itinerary.title,
               selectedDestinations: selectedDestinations,
             },
             step2: step2Data,
@@ -558,7 +582,7 @@ export default function TripPlanner() {
           // Update URL with new trip ID
           setLocation(`/trip/${newTrip.id}`);
           
-          // Create destinations
+          // Create destinations with full AI data (activities, airports, transport)
           for (let i = 0; i < data.selectedDestinations.length; i++) {
             const dest = data.selectedDestinations[i];
             await apiRequest("POST", "/api/destinations", {
@@ -568,6 +592,10 @@ export default function TripPlanner() {
               numberOfNights: dest.numberOfNights,
               imageUrl: dest.imageUrl,
               order: i,
+              arrivalAirport: dest.arrivalAirport,
+              departureAirport: dest.departureAirport,
+              activities: dest.activities || [],
+              transportToNext: dest.transportToNext || null,
             });
           }
         } catch (error) {
@@ -625,7 +653,7 @@ export default function TripPlanner() {
         // Update URL with new trip ID
         setLocation(`/trip/${newTrip.id}`);
         
-        // Create destinations
+        // Create destinations with full data
         for (let i = 0; i < data.selectedDestinations.length; i++) {
           const dest = data.selectedDestinations[i];
           await apiRequest("POST", "/api/destinations", {
@@ -635,6 +663,10 @@ export default function TripPlanner() {
             numberOfNights: dest.numberOfNights,
             imageUrl: dest.imageUrl,
             order: i,
+            arrivalAirport: dest.arrivalAirport,
+            departureAirport: dest.departureAirport,
+            activities: dest.activities || [],
+            transportToNext: dest.transportToNext || null,
           });
         }
       } else {
@@ -647,7 +679,7 @@ export default function TripPlanner() {
           await apiRequest("DELETE", `/api/destinations/${dest.id}`);
         }
         
-        // Create new destinations
+        // Create new destinations with full data
         for (let i = 0; i < data.selectedDestinations.length; i++) {
           const dest = data.selectedDestinations[i];
           await apiRequest("POST", "/api/destinations", {
@@ -657,6 +689,10 @@ export default function TripPlanner() {
             numberOfNights: dest.numberOfNights,
             imageUrl: dest.imageUrl,
             order: i,
+            arrivalAirport: dest.arrivalAirport,
+            departureAirport: dest.departureAirport,
+            activities: dest.activities || [],
+            transportToNext: dest.transportToNext || null,
           });
         }
       }
