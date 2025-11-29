@@ -258,19 +258,18 @@ export default function GettingStarted() {
       tripLengthPreference: mapToTripLength(),
     };
     
-    // Store quiz data in sessionStorage for the planner
+    // Store quiz data in sessionStorage for the recommendations page
     sessionStorage.setItem("quizData", JSON.stringify(quizCompatibleData));
     sessionStorage.setItem("gettingStartedData", JSON.stringify(quizData));
-    sessionStorage.setItem("tripSource", "quiz");
     
-    // If user is already logged in, go directly to planner
-    // Otherwise, redirect to registration first
+    // If user is already logged in, go directly to recommendations
+    // Otherwise, redirect to registration first, then to recommendations
     if (isAuthenticated) {
       setTimeout(() => {
-        setLocation("/planner");
+        setLocation("/recommendations");
       }, 500);
     } else {
-      sessionStorage.setItem("redirectAfterAuth", "/planner");
+      sessionStorage.setItem("redirectAfterAuth", "/recommendations");
       setTimeout(() => {
         setLocation("/register");
       }, 500);

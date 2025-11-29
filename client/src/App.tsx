@@ -20,6 +20,7 @@ import TermsOfService from "@/pages/terms-of-service";
 import TripsList from "@/pages/trips-list";
 import TripPlanner from "@/pages/trip-planner";
 import Itinerary from "@/pages/itinerary";
+import Recommendations from "@/pages/recommendations";
 import MeetPebbles from "@/pages/meet-pebbles";
 import NotFound from "@/pages/not-found";
 import { PenguinLogo } from "@/components/PenguinLogo";
@@ -69,6 +70,7 @@ function Router() {
           <Route path="/planner" component={TripPlanner} />
           <Route path="/trip-planner" component={TripPlanner} />
           <Route path="/trip/:id" component={TripPlanner} />
+          <Route path="/recommendations" component={Recommendations} />
           <Route path="/itinerary" component={Itinerary} />
         </>
       )}
