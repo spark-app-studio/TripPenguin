@@ -29,7 +29,8 @@
  */
 
 import { db } from "../server/db";
-import { users } from "../shared/schema";
+import { users, sessions } from "../shared/schema";
+import { sql } from "drizzle-orm";
 
 async function deleteAllUsers(): Promise<void> {
   console.log("\n🔍 Fetching all users from database...");
@@ -65,17 +66,25 @@ async function deleteAllUsers(): Promise<void> {
   console.log("   - ALL bookings");
   console.log("   - ALL email verification tokens");
   console.log("   - ALL password reset tokens");
-  console.log("   - ALL sessions");
+  console.log("   - ALL sessions (automatic cleanup)");
 
   console.log("\n🗑️  Deleting all users...");
 
   try {
-    // Delete all users (cascade will handle all related data)
+    // First, clear all sessions (they're not cascade-deleted with users)
+    console.log("   Step 1/2: Clearing sessions table...");
+    await db.delete(sessions);
+    console.log("   ✓ Sessions cleared");
+    
+    // Then delete all users (cascade will handle trips, destinations, budgets, bookings, tokens)
+    console.log("   Step 2/2: Deleting users and all associated data...");
     const result = await db.delete(users);
+    console.log("   ✓ Users deleted");
 
     console.log("\n✅ All users deleted successfully!");
     console.log(`   Total deleted: ${allUsers.length} user(s)`);
-    console.log("   All associated data removed via cascade deletion.\n");
+    console.log("   All associated data removed (trips, destinations, budgets, bookings, tokens).");
+    console.log("   All sessions cleared.\n");
   } catch (error) {
     console.error("\n❌ Error deleting users:");
     console.error(error);

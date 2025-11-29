@@ -81,6 +81,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
+        // Clear any stale session cookies on registration error
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        });
         res.status(400).json({ error: "Email already registered" });
         return;
       }
@@ -191,14 +198,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(500).json({ error: "Logout failed" });
           return;
         }
-        // Clear the session cookie
-        res.clearCookie('connect.sid');
+        // Clear the session cookie with all options
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        });
         res.status(200).json({ message: "Logged out successfully" });
       });
     });
   });
 
-  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+  app.get("/api/auth/user", async (req, res) => {
+    // Check authentication without the middleware to handle stale sessions gracefully
+    if (!req.isAuthenticated() || !req.user) {
+      // Clear any stale cookies
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      });
+      res.status(401).json({ error: "Unauthorized", staleSession: true });
+      return;
+    }
+    
     res.json(req.user);
   });
 

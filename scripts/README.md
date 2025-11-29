@@ -86,6 +86,40 @@ tsx scripts/delete-all-users.ts --confirm
 
 ---
 
+### Delete All Sessions
+
+🧹 Clear all session data from the database.
+
+**Usage:**
+```bash
+npm run delete-all-sessions -- --confirm
+```
+
+**Important:** Note the extra `--` before `--confirm` when using npm.
+
+**What it deletes:**
+- ALL session records
+- Logs out all currently authenticated users
+
+**When to use:**
+- Clean up stale sessions during development
+- Clear sessions after deleting users
+- Fix authentication-related issues
+- Reset session state completely
+
+**Example:**
+```bash
+# Clear all sessions (using npm)
+npm run delete-all-sessions -- --confirm
+
+# Direct execution (alternative, no extra -- needed)
+tsx scripts/delete-all-sessions.ts --confirm
+```
+
+**Note:** The `delete-all-users` script now automatically clears sessions, so you typically won't need to run this separately. However, it's useful for clearing sessions without deleting users.
+
+---
+
 ## Adding New Scripts
 
 When adding new utility scripts:

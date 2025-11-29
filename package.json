@@ -10,7 +10,10 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "delete-user": "tsx scripts/delete-user.ts",
-    "delete-all-users": "tsx scripts/delete-all-users.ts"
+    "delete-all-users": "tsx scripts/delete-all-users.ts",
+    "delete-all-sessions": "tsx scripts/delete-all-sessions.ts",
+    "verify-db": "tsx scripts/verify-db-state.ts",
+    "test-registration": "tsx scripts/test-registration.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

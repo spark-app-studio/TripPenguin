@@ -27,6 +27,16 @@ app.use(helmet({
   },
 }));
 
+// Cache control headers - prevent caching of API responses
+app.use("/api", (req, res, next) => {
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, private",
+    "Pragma": "no-cache",
+    "Expires": "0",
+  });
+  next();
+});
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown

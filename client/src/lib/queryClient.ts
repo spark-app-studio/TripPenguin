@@ -3,6 +3,25 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    
+    // Handle stale session - clear client-side storage
+    if (res.status === 401) {
+      try {
+        const data = JSON.parse(text);
+        if (data.staleSession) {
+          console.warn("Detected stale session - clearing client state");
+          // Clear React Query cache
+          queryClient.clear();
+          // Clear any sessionStorage that might have user data
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("redirectAfterAuth");
+          }
+        }
+      } catch {
+        // Text wasn't JSON, continue with regular error
+      }
+    }
+    
     throw new Error(`${res.status}: ${text}`);
   }
 }
