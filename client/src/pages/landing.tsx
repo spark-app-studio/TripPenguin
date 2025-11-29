@@ -46,19 +46,19 @@ export default function Landing() {
     {
       step: 1,
       title: "Dream",
-      description: "Take a quick quiz about your family's travel style, preferences, and budget.",
+      description: "Take a quick quiz and discover your personalized multi-city itinerary.",
       icon: Sparkles,
     },
     {
       step: 2,
       title: "Save & Book",
-      description: "Get 3 personalized itineraries with real cost estimates — track savings and prepare for your trip.",
+      description: "Set your budget, track savings, and book travel as you save — debt-free.",
       icon: Compass,
     },
     {
       step: 3,
       title: "Go",
-      description: "Book when you're ready — no debt, no stress.",
+      description: "Everything's booked — enjoy your trip!",
       icon: Plane,
     },
   ];

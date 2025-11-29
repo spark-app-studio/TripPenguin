@@ -45,7 +45,7 @@ Preferred communication style: Simple, everyday language.
 - **Staycation Recommendations**: Strict driving distance enforcement and quiz-driven personalization for single destination itineraries with detailed plans.
 - **Remix Feature**: Allows regeneration of itineraries from the same quiz responses.
 - **Interactive Refinement Page**: Users can adjust trip duration, delete cities, and add "Add-On Extensions" with AI regeneration. State is managed client-side for pre-population in the trip planner.
-- **Streamlined Quiz-to-Plan Flow**: Users who finalize refined itineraries skip the Dream step and go directly to the Plan step with data preserved, auto-creating trip and destinations in the database.
+- **Streamlined Quiz-to-Save & Book Flow**: Users who finalize refined itineraries skip the Dream step and go directly to the Save & Book step with data preserved, auto-creating trip and destinations in the database.
 
 **Trip Management**:
 - **Full Database Persistence**: All trip data (destinations, budget categories, bookings) persists to PostgreSQL with full CRUD.
