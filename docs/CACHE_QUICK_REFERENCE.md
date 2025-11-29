@@ -112,3 +112,4 @@ Users should rarely encounter the "Email already registered" error, and when the
 
 For full details, see: `docs/STALE_CACHE_PREVENTION.md`
 
+

@@ -30,8 +30,16 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: `trips`, `destinations`, `budgetCategories`, `bookings`, `trip_memories` linked by `userId`.
 - **Migrations**: Drizzle Kit.
 
+### Security
+- **Input Sanitization**: Server-side sanitization in `server/routes.ts` using canonical-storage pattern:
+    - Text fields: Strip ASCII control characters (0x00-0x1F, 0x7F), preserve printable characters
+    - URLs: Validate with URL parser, enforce http/https only, reject auth credentials, decode and check for hidden control characters
+    - React handles HTML escaping on output; emails/logs must use proper escaping
+- **Profile Update**: PATCH `/api/auth/profile` sanitizes all fields before database storage
+
 ### Core Features
 - **User Authentication**: Session-based, bcrypt hashing, PostgreSQL session storage, CSRF protection.
+- **Profile Management**: Users can edit firstName, lastName, city, state, zipCode, profileImageUrl via Edit Profile dialog (email is immutable unique identifier).
 - **AI-Powered Planning**:
     - **Onboarding Quiz**: "Find Your Adventure Type" quiz (12 questions) personalizes trip recommendations.
     - **Itinerary Generation**: GPT-4o-mini generates 3 multi-city itineraries (Staycation, Domestic, International) with titles, activities, airport codes, and cost estimates, enforcing geography-aware routing. Includes remix functionality.

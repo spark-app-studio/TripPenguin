@@ -34,6 +34,86 @@ import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimit
 import { emailService } from "./email";
 import passport from "passport";
 
+// Input sanitization utilities
+// Strategy: Store canonical (unescaped) text, let output contexts handle encoding
+// - React JSX automatically escapes HTML entities
+// - Email templates should use proper escaping libraries
+// - We only strip dangerous control characters that could cause issues
+
+function sanitizeText(text: string | null | undefined): string | null {
+  if (text === null || text === undefined) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  // Remove control characters (ASCII 0-31 and 127) that could cause issues
+  // Keep only printable characters and standard whitespace
+  return trimmed.replace(/[\x00-\x1F\x7F]/g, '');
+}
+
+function sanitizeUrl(url: string | null | undefined): string | null {
+  if (url === null || url === undefined) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  
+  try {
+    const parsed = new URL(trimmed);
+    
+    // Only allow http and https protocols
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    
+    // Reject URLs with authentication (username:password@)
+    if (parsed.username || parsed.password) {
+      return null;
+    }
+    
+    // Decode URL and check for control characters that could cause issues
+    const decoded = decodeURIComponent(parsed.href);
+    if (/[\x00-\x1F\x7F]/.test(decoded)) {
+      return null;
+    }
+    
+    // Return the normalized URL
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+interface SanitizedProfileData {
+  firstName?: string | null;
+  lastName?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  profileImageUrl?: string | null;
+}
+
+function sanitizeProfileData(data: SanitizedProfileData): SanitizedProfileData {
+  const sanitized: SanitizedProfileData = {};
+  
+  if (data.firstName !== undefined) {
+    sanitized.firstName = sanitizeText(data.firstName);
+  }
+  if (data.lastName !== undefined) {
+    sanitized.lastName = sanitizeText(data.lastName);
+  }
+  if (data.city !== undefined) {
+    sanitized.city = sanitizeText(data.city);
+  }
+  if (data.state !== undefined) {
+    sanitized.state = sanitizeText(data.state);
+  }
+  if (data.zipCode !== undefined) {
+    sanitized.zipCode = sanitizeText(data.zipCode);
+  }
+  if (data.profileImageUrl !== undefined) {
+    sanitized.profileImageUrl = sanitizeUrl(data.profileImageUrl);
+  }
+  
+  return sanitized;
+}
+
 // Helper function to verify trip ownership
 async function verifyTripOwnership(tripId: string, userId: string): Promise<boolean> {
   const trip = await storage.getTrip(tripId);
@@ -234,7 +314,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as PublicUser).id;
       const profileData = updateProfileSchema.parse(req.body);
       
-      const updatedUser = await storage.updateUser(userId, profileData);
+      // Sanitize all profile fields to prevent XSS attacks
+      const sanitizedData = sanitizeProfileData(profileData);
+      
+      const updatedUser = await storage.updateUser(userId, sanitizedData);
       
       if (!updatedUser) {
         res.status(404).json({ error: "User not found" });
