@@ -6,6 +6,7 @@ import {
   insertDestinationSchema,
   insertBudgetCategorySchema,
   insertBookingSchema,
+  insertTripMemorySchema,
   registerUserSchema,
   loginUserSchema,
   passwordResetRequestSchema,
@@ -57,6 +58,13 @@ async function verifyBookingOwnership(bookingId: string, userId: string): Promis
   const booking = await storage.getBooking(bookingId);
   if (!booking) return false;
   return verifyTripOwnership(booking.tripId, userId);
+}
+
+// Helper function to verify trip memory ownership
+async function verifyTripMemoryOwnership(memoryId: string, userId: string): Promise<boolean> {
+  const memory = await storage.getTripMemory(memoryId);
+  if (!memory) return false;
+  return verifyTripOwnership(memory.tripId, userId);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -728,6 +736,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("AI add-on application error:", error);
         res.status(500).json({ error: "Failed to apply add-on" });
       }
+    }
+  });
+
+  // Trip Memory routes (Go stage photo sharing)
+  app.post("/api/trip-memories", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as PublicUser;
+      const memoryData = insertTripMemorySchema.parse(req.body);
+      
+      // Verify trip ownership
+      const hasAccess = await verifyTripOwnership(memoryData.tripId, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      
+      const memory = await storage.createTripMemory({
+        ...memoryData,
+        sharedBy: user.id,
+      });
+      res.json(memory);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid trip memory data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create trip memory" });
+      }
+    }
+  });
+
+  app.get("/api/trip-memories/trip/:tripId", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as PublicUser;
+      // Verify trip ownership
+      const hasAccess = await verifyTripOwnership(req.params.tripId, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      const memories = await storage.getTripMemoriesByTrip(req.params.tripId);
+      res.json(memories);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch trip memories" });
+    }
+  });
+
+  app.delete("/api/trip-memories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as PublicUser;
+      // Verify memory ownership
+      const hasAccess = await verifyTripMemoryOwnership(req.params.id, user.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      await storage.deleteTripMemory(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete trip memory" });
     }
   });
 

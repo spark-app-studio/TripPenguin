@@ -147,6 +147,16 @@ export const bookings = pgTable("bookings", {
   order: integer("order").notNull().default(0),
 });
 
+// Trip memories for photo sharing (Go stage)
+export const tripMemories = pgTable("trip_memories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tripId: varchar("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(),
+  caption: text("caption"),
+  sharedBy: varchar("shared_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -227,6 +237,11 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   bookedAt: true,
 });
 
+export const insertTripMemorySchema = createInsertSchema(tripMemories).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -254,6 +269,9 @@ export type BudgetCategory = typeof budgetCategories.$inferSelect;
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
+
+export type InsertTripMemory = z.infer<typeof insertTripMemorySchema>;
+export type TripMemory = typeof tripMemories.$inferSelect;
 
 // Complete trip data type (trip with all related data)
 export type TripWithDetails = Trip & {

@@ -3,6 +3,7 @@ import {
   destinations,
   budgetCategories,
   bookings,
+  tripMemories,
   users,
   emailVerificationTokens,
   passwordResetTokens,
@@ -14,6 +15,8 @@ import {
   type InsertBudgetCategory,
   type Booking,
   type InsertBooking,
+  type TripMemory,
+  type InsertTripMemory,
   type TripWithDetails,
   type TripWithDestinations,
   type User,
@@ -76,6 +79,12 @@ export interface IStorage {
   getBookingsByTrip(tripId: string): Promise<Booking[]>;
   updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
+  
+  // Trip memory operations
+  createTripMemory(memory: InsertTripMemory): Promise<TripMemory>;
+  getTripMemory(id: string): Promise<TripMemory | undefined>;
+  getTripMemoriesByTrip(tripId: string): Promise<TripMemory[]>;
+  deleteTripMemory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -396,6 +405,25 @@ export class DatabaseStorage implements IStorage {
 
   async deletePasswordResetTokensByUser(userId: string): Promise<void> {
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  }
+
+  // Trip memory operations
+  async createTripMemory(memory: InsertTripMemory): Promise<TripMemory> {
+    const [newMemory] = await db.insert(tripMemories).values(memory).returning();
+    return newMemory;
+  }
+
+  async getTripMemory(id: string): Promise<TripMemory | undefined> {
+    const [memory] = await db.select().from(tripMemories).where(eq(tripMemories.id, id));
+    return memory || undefined;
+  }
+
+  async getTripMemoriesByTrip(tripId: string): Promise<TripMemory[]> {
+    return await db.select().from(tripMemories).where(eq(tripMemories.tripId, tripId));
+  }
+
+  async deleteTripMemory(id: string): Promise<void> {
+    await db.delete(tripMemories).where(eq(tripMemories.id, id));
   }
 }
 

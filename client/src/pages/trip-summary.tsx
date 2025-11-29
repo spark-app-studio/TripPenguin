@@ -11,6 +11,8 @@ import {
   Download,
   Share2,
   Luggage,
+  ArrowRight,
+  Plane,
 } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation } from "wouter";
@@ -33,9 +35,10 @@ interface TripSummaryProps {
     bookingsCompleted: number;
     bookingsTotal: number;
   };
+  onContinueToGo?: () => void;
 }
 
-export default function TripSummary({ tripData }: TripSummaryProps) {
+export default function TripSummary({ tripData, onContinueToGo }: TripSummaryProps) {
   const [, setLocation] = useLocation();
 
   const totalNights = tripData.destinations.reduce((sum, d) => sum + d.numberOfNights, 0);
@@ -226,11 +229,41 @@ export default function TripSummary({ tripData }: TripSummaryProps) {
             </CardContent>
           </Card>
 
+          {/* Continue to Go - Primary Action */}
+          {onContinueToGo && (
+            <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-full bg-primary/20">
+                      <Plane className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Ready for Takeoff?</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Continue to the Go phase for trip tips, countdown, and photo sharing.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="lg"
+                    onClick={onContinueToGo}
+                    className="min-h-0 whitespace-nowrap"
+                    data-testid="button-continue-to-go"
+                  >
+                    Continue to Go
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button
               size="lg"
-              variant="default"
+              variant="outline"
               onClick={() => setLocation("/trip/new")}
               className="min-h-0"
               data-testid="button-plan-another-trip"
