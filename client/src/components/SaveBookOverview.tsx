@@ -85,7 +85,7 @@ export function SaveBookOverview({
     },
     {
       id: "extras",
-      label: "Activities, Dining, Insurance & Merch",
+      label: "Activities, Dining, Insurance & Prep",
       icon: <PartyPopper className="w-4 h-4" />,
       status: transportFunded ? "current" : "upcoming",
       isGroup: true
@@ -207,7 +207,7 @@ export function SaveBookOverview({
             ))}
           </div>
           <p className="text-xs text-muted-foreground mt-4">
-            The final four categories (Activities, Dining, Insurance, Merchandise) can be booked in any order once transportation is funded.
+            The final four categories (Activities, Dining, Insurance, Trip Prep) can be booked in any order once transportation is funded.
           </p>
         </CardContent>
       </Card>

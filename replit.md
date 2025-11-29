@@ -118,43 +118,43 @@ Sub-step state is hydrated from existing trip data, so returning users skip comp
 - **Savings Allocation**: Savings flow to transportation after flights and accommodations are covered.
 - **Segment Types**: Airport arrival/departure, within-city, and city-to-city transfers.
 
-**Fun & Activities Section**:
-- Dedicated section for activities tracking.
+**Save and Book Fun & Activities Section**:
+- Dedicated section for activities tracking with actual trip dates displayed.
 - **Activity Pace**: Based on quiz results (relaxed, balanced, packed).
-- **Activities by City and Day**: Daily activity suggestions categorized (Must See, Hidden Gem, Food & Drink, Outdoor, Cultural, Relaxation).
-- **Selection Mechanism**: Click to toggle activity selection; costs update.
-- **Savings Allocation**: Savings flow to activities after flights, stays, and transport are covered.
-- **Activity Savings Gap**: Difference between final cost and allocated savings.
-- **Book Activities Button**: Disabled until savings gap is zero or earliest booking date is reached.
+- **Activities by City and Day**: Daily activity suggestions categorized (Must See, Hidden Gem, Food & Drink, Outdoor, Cultural, Relaxation) with actual dates (e.g., "Monday, Dec 15, 2025").
+- **Booking Urgency Alerts**: Warning badges for activities that need advance booking (e.g., "Book 2-4 weeks ahead").
+- **Individual Activity Booking**: Each activity can be individually marked as booked with booking date tracking.
+- **Add-on Activities**: Button per day to browse additional activity options.
+- **Booking Tips**: 4 practical tips for booking popular attractions, flexible policies, local guides, and timing.
+- **Section Navigation**: After transportation is booked, users see quick-jump buttons to Activities, Dinner Reservations, Trip Insurance, and Trip Preparation sections.
+- **Flexible Booking Order**: Activities, Dining, Insurance, and Trip Prep can be booked in any order once transportation is funded.
 
-**Food Costs Section**:
-- Dedicated section for dining budget tracking.
-- **Two Budget Modes**: "Pick Restaurants" (select specific venues) or "Daily Budget" (slider $25-$200/day/person).
-- **Restaurant Options**: Mock restaurants organized by city and day with cuisine type, price range, description, and reservation recommendations.
-- **Food Experiences**: Food tours, cooking classes, tastings, market tours, and street food adventures.
-- **Selection Mechanism**: Click to toggle food selection; costs update.
-- **Savings Allocation**: Savings flow to food after flights, stays, transport, and activities are covered.
-- **Food Savings Gap**: Difference between final cost and allocated savings.
-- **Plan Dining Button**: Disabled until savings gap is zero or earliest planning date is reached.
+**Dinner Reservations Section**:
+- Simplified dining section focused on special dinner experiences only.
+- **1-2 Restaurant Recommendations**: Top restaurant picks per city with cuisine type, price range, and estimated cost.
+- **Direct Booking Links**: "Book / View Menu" button opens restaurant website or reservation platform.
+- **Dining Tips**: Practical tips for advance reservations, prix fixe menus, and concierge recommendations.
+- **No Complex Selection**: Removed daily budget slider and detailed food tracking - most meals don't need reservations.
 
-**Trip Preparation Section**:
-- Dedicated section for gear, supplies, and travel essentials.
-- **Smart Suggestions**: Items generated based on destinations (international vs. domestic), travel season (warm vs. cold weather gear), trip duration (carry-on vs. checked luggage), and travel style from quiz (minimalist vs. heavy packer).
+**Trip Insurance Section**:
+- New dedicated section for travel insurance recommendations.
+- **Two Coverage Options**: Comprehensive coverage (5-8% of trip cost) and Medical-only coverage (2-4% of trip cost).
+- **Coverage Details**: Trip cancellation, emergency medical, lost baggage, and 24/7 assistance features listed.
+- **Comparison Links**: Direct links to Squaremouth and World Nomads for comparing plans.
+- **Insurance Tips**: Credit card coverage checks, pre-existing condition windows, and price comparison advice.
+
+**Trip Preparation Purchases Section**:
+- Renamed from "Trip Preparation" with updated smart shopping guidance.
+- **Smart Shopping Tips Banner**: Emphasizes buying only what's needed, checking thrift stores/Facebook Marketplace/Buy Nothing groups, borrowing from friends/family, and waiting until savings are ready.
 - **Item Categories**: Luggage, Clothing & Apparel, Electronics (adapters, converters, power banks), Toiletries, Travel Gear (packing cubes, money belt, locks), Documents & Insurance.
 - **Priority Levels**: Essential, Recommended, Optional - each with color-coded badges.
 - **Own/Need Toggle**: Each item has "Already Own" and "Need to Buy" buttons to track what needs purchasing.
 - **Cost Aggregation**: Total estimated prep cost calculated from items marked "Need to Buy", broken down by priority level.
 - **Mock Product Links**: Each item includes an example product URL.
-- **Warning Banner**: Prominent reminder to wait until savings are sufficient before purchasing gear to avoid debt.
 
-**Books & Movies Section**:
-- Dedicated section for pre-trip inspiration and learning.
-- **Region-Based Recommendations**: Books and movies generated based on destination countries/regions (Europe, Asia, Latin America, Africa, Oceania, North America).
-- **Media Types**: Books, Movies, Documentaries, TV Series, and Travel Guides.
-- **Age-Appropriate Grouping**: Recommendations organized by audience (For Kids, For Teens, For Adults, All Ages).
-- **Relevance Descriptions**: Each item explains why it's relevant to the trip destinations.
-- **Mock Links**: Buy/Watch links for books (Amazon-style) and films (streaming-style).
-- **Summary Box**: Encourages using local libraries and existing streaming services to save money.
+**Books & Movies** (Moved to Go Page):
+- Books & Movies recommendations will appear on the Go page for pre-trip inspiration.
+- Removed from Save & Book phase to streamline the booking flow.
 
 ## External Dependencies
 
