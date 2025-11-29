@@ -20,9 +20,6 @@ import TermsOfService from "@/pages/terms-of-service";
 import TripsList from "@/pages/trips-list";
 import TripPlanner from "@/pages/trip-planner";
 import Itinerary from "@/pages/itinerary";
-import Quiz from "@/pages/quiz";
-import QuizResults from "@/pages/quiz-results";
-import QuizRefine from "@/pages/quiz-refine";
 import MeetPebbles from "@/pages/meet-pebbles";
 import NotFound from "@/pages/not-found";
 import { PenguinLogo } from "@/components/PenguinLogo";
@@ -64,17 +61,11 @@ function Router() {
           <Route path="/trips" component={Landing} />
           <Route path="/planner" component={Landing} />
           <Route path="/trip/:id" component={Landing} />
-          <Route path="/quiz" component={Landing} />
-          <Route path="/quiz/results" component={Landing} />
-          <Route path="/quiz/refine" component={Landing} />
         </>
       ) : (
         <>
           <Route path="/" component={Home} />
           <Route path="/trips" component={TripsList} />
-          <Route path="/quiz" component={Quiz} />
-          <Route path="/quiz/results" component={QuizResults} />
-          <Route path="/quiz/refine" component={QuizRefine} />
           <Route path="/planner" component={TripPlanner} />
           <Route path="/trip-planner" component={TripPlanner} />
           <Route path="/trip/:id" component={TripPlanner} />

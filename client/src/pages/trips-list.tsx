@@ -286,7 +286,7 @@ export default function TripsList() {
             </div>
             <Button
               size="lg"
-              onClick={() => setLocation("/trip/new")}
+              onClick={() => setLocation("/getting-started")}
               className="gap-2"
               data-testid="button-new-trip"
             >
@@ -356,7 +356,7 @@ export default function TripsList() {
                 </p>
                 <Button
                   size="lg"
-                  onClick={() => setLocation("/trip/new")}
+                  onClick={() => setLocation("/getting-started")}
                   className="gap-2"
                   data-testid="button-first-trip"
                 >
@@ -602,7 +602,7 @@ export default function TripsList() {
                     You have {pastTrips.length} completed {pastTrips.length === 1 ? "trip" : "trips"}. Start planning your next one!
                   </p>
                   <Button
-                    onClick={() => setLocation("/trip/new")}
+                    onClick={() => setLocation("/getting-started")}
                     className="gap-2"
                   >
                     <Plus className="w-4 h-4" />
