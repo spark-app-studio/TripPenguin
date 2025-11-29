@@ -213,6 +213,31 @@ export const resendVerificationSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+// Profile update schema (email is excluded as it's the unique identifier)
+// Only fields that are explicitly provided in the request will be updated
+export const updateProfileSchema = z.object({
+  firstName: z.string().max(100, "First name must be 100 characters or less").optional().nullable()
+    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
+  lastName: z.string().max(100, "Last name must be 100 characters or less").optional().nullable()
+    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
+  city: z.string().max(100, "City must be 100 characters or less").optional().nullable()
+    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
+  state: z.string().max(2, "State must be 2 characters").optional().nullable()
+    .transform(val => val === undefined ? undefined : (val?.trim().toUpperCase() || null)),
+  zipCode: z.string().max(10, "Zip code must be 10 characters or less").optional().nullable()
+    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
+  profileImageUrl: z.preprocess(
+    (val) => {
+      if (val === undefined) return undefined;
+      if (typeof val === "string" && val.trim() === "") return null;
+      return val;
+    },
+    z.string().url("Must be a valid URL").max(500, "URL must be 500 characters or less").optional().nullable()
+  ),
+});
+
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
+
 export const insertTripSchema = createInsertSchema(trips).omit({
   id: true,
   userId: true, // userId is added from authenticated session

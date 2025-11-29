@@ -1,12 +1,26 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
-import type { TripWithDestinations } from "@shared/schema";
+import type { TripWithDestinations, PublicUser, UpdateProfile } from "@shared/schema";
+import { updateProfileSchema } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, MapPin, Calendar, Users, Trash2, Edit, LogOut, User, Clock, Star, ChevronRight, History, Luggage, Mail, MapPinned } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Plus, MapPin, Calendar, Users, Trash2, Edit, LogOut, User, Clock, Star, ChevronRight, History, Luggage, Mail, MapPinned, Pencil } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import {
   AlertDialog,
@@ -19,13 +33,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,8 +55,34 @@ export default function TripsList() {
   const [, setLocation] = useLocation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const profileForm = useForm<z.input<typeof updateProfileSchema>>({
+    resolver: zodResolver(updateProfileSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      profileImageUrl: "",
+    },
+  });
+
+  useEffect(() => {
+    if (user && editProfileOpen) {
+      profileForm.reset({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        city: user.city || "",
+        state: user.state || "",
+        zipCode: user.zipCode || "",
+        profileImageUrl: user.profileImageUrl || "",
+      });
+    }
+  }, [user, editProfileOpen, profileForm]);
 
   const { data: trips, isLoading } = useQuery<TripWithDestinations[]>({
     queryKey: ["/api/trips"],
@@ -64,6 +112,61 @@ export default function TripsList() {
       setTripToDelete(null);
     },
   });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: UpdateProfile) => {
+      return await apiRequest("PATCH", "/api/auth/profile", data);
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["/api/auth/user"], updatedUser);
+      setEditProfileOpen(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleProfileSubmit = (data: z.output<typeof updateProfileSchema>) => {
+    const changes: Partial<z.output<typeof updateProfileSchema>> = {};
+    
+    if (data.firstName !== (user?.firstName || null)) {
+      changes.firstName = data.firstName;
+    }
+    if (data.lastName !== (user?.lastName || null)) {
+      changes.lastName = data.lastName;
+    }
+    if (data.city !== (user?.city || null)) {
+      changes.city = data.city;
+    }
+    if (data.state !== (user?.state || null)) {
+      changes.state = data.state;
+    }
+    if (data.zipCode !== (user?.zipCode || null)) {
+      changes.zipCode = data.zipCode;
+    }
+    if (data.profileImageUrl !== (user?.profileImageUrl || null)) {
+      changes.profileImageUrl = data.profileImageUrl;
+    }
+    
+    if (Object.keys(changes).length === 0) {
+      setEditProfileOpen(false);
+      toast({
+        title: "No changes",
+        description: "No changes were made to your profile.",
+      });
+      return;
+    }
+    
+    updateProfileMutation.mutate(changes as UpdateProfile);
+  };
 
   const handleDeleteClick = (tripId: string) => {
     setTripToDelete(tripId);
@@ -261,6 +364,14 @@ export default function TripsList() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
+                  onClick={() => setEditProfileOpen(true)}
+                  className="cursor-pointer"
+                  data-testid="button-edit-profile"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem 
                   onClick={() => logoutMutation.mutate()}
                   className="cursor-pointer"
                   data-testid="button-logout"
@@ -341,6 +452,15 @@ export default function TripsList() {
                     </Badge>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditProfileOpen(true)}
+                  className="shrink-0"
+                  data-testid="button-edit-profile-card"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -660,6 +780,163 @@ export default function TripsList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your personal information. Your email address cannot be changed.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...profileForm}>
+            <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={profileForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value || ""}
+                          placeholder="First name" 
+                          data-testid="input-first-name" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value || ""}
+                          placeholder="Last name" 
+                          data-testid="input-last-name" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={profileForm.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        value={field.value || ""}
+                        placeholder="City" 
+                        data-testid="input-city" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={profileForm.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value || ""}
+                          placeholder="CA" 
+                          maxLength={2}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase().slice(0, 2))}
+                          data-testid="input-state" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zip Code</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value || ""}
+                          placeholder="12345" 
+                          maxLength={10}
+                          data-testid="input-zip-code" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={profileForm.control}
+                name="profileImageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Profile Picture URL</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        value={field.value || ""}
+                        placeholder="https://example.com/your-photo.jpg" 
+                        data-testid="input-profile-image-url" 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Optional: Enter a URL to an image for your profile
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="pt-2 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  {user?.email}
+                </span>
+                <span className="text-xs mt-1 block">Email cannot be changed</span>
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditProfileOpen(false)}
+                  data-testid="button-cancel-profile"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateProfileMutation.isPending}
+                  data-testid="button-save-profile"
+                >
+                  {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

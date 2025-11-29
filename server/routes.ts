@@ -12,6 +12,7 @@ import {
   passwordResetRequestSchema,
   passwordResetSchema,
   resendVerificationSchema,
+  updateProfileSchema,
   quizResponseSchema,
   extendedQuizResponseSchema,
   adjustItineraryDurationRequestSchema,
@@ -225,6 +226,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(req.user);
+  });
+
+  // Profile update route (email cannot be changed as it's the unique identifier)
+  app.patch("/api/auth/profile", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as PublicUser).id;
+      const profileData = updateProfileSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUser(userId, profileData);
+      
+      if (!updatedUser) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const publicUser: PublicUser = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        zipCode: updatedUser.zipCode,
+        profileImageUrl: updatedUser.profileImageUrl,
+        acceptedTermsAt: updatedUser.acceptedTermsAt,
+        emailVerified: updatedUser.emailVerified,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      };
+
+      res.json(publicUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid profile data", details: error.errors });
+        return;
+      }
+      res.status(500).json({ error: "Failed to update profile" });
+    }
   });
 
   // Email verification routes
