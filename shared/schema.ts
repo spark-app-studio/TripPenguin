@@ -226,14 +226,19 @@ export const updateProfileSchema = z.object({
     .transform(val => val === undefined ? undefined : (val?.trim().toUpperCase() || null)),
   zipCode: z.string().max(10, "Zip code must be 10 characters or less").optional().nullable()
     .transform(val => val === undefined ? undefined : (val?.trim() || null)),
-  profileImageUrl: z.preprocess(
-    (val) => {
+  profileImageUrl: z.string().max(500, "URL must be 500 characters or less").optional().nullable()
+    .transform(val => {
       if (val === undefined) return undefined;
-      if (typeof val === "string" && val.trim() === "") return null;
-      return val;
-    },
-    z.string().url("Must be a valid URL").max(500, "URL must be 500 characters or less").optional().nullable()
-  ),
+      const trimmed = val?.trim();
+      if (!trimmed) return null;
+      // Validate URL format
+      try {
+        new URL(trimmed);
+        return trimmed;
+      } catch {
+        return null; // Invalid URL becomes null
+      }
+    }),
 });
 
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
