@@ -74,11 +74,11 @@ export default function MeetPebbles() {
           
           {/* Large Pebbles Image */}
           <div className="relative inline-block">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-110" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-125" />
             <img 
               src={penguinImage} 
               alt="Pebbles the Penguin" 
-              className="relative w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 object-contain mx-auto drop-shadow-xl"
+              className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem] object-contain mx-auto drop-shadow-2xl"
               data-testid="img-pebbles-hero"
             />
           </div>
