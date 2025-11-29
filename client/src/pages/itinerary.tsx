@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useItinerary, ItineraryCity } from "@/hooks/useItinerary";
+import { useItinerary, ItineraryCity, TransportSegment } from "@/hooks/useItinerary";
 import { 
   ChevronLeft, 
   MapPin, 
@@ -16,9 +16,15 @@ import {
   Users, 
   Plus, 
   Trash2, 
-  GripVertical,
   Plane,
-  Save
+  Save,
+  Train,
+  Car,
+  Bus,
+  Ship,
+  ArrowDown,
+  Star,
+  Home
 } from "lucide-react";
 
 export default function ItineraryPage() {
@@ -30,6 +36,7 @@ export default function ItineraryPage() {
     addCity, 
     removeCity, 
     updateDates,
+    updateDatesAndSeason,
     setItinerary 
   } = useItinerary();
   
@@ -49,12 +56,41 @@ export default function ItineraryPage() {
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
     if (date) {
-      updateDates(date);
+      updateDatesAndSeason(date);
       toast({
-        title: "Dates Updated",
-        description: "Your itinerary dates have been recalculated.",
+        title: "Dates & Season Updated",
+        description: "Your itinerary dates and travel season have been recalculated.",
       });
     }
+  };
+
+  // Helper to get transport mode icon
+  const getTransportIcon = (mode?: string) => {
+    switch (mode?.toLowerCase()) {
+      case "flight":
+        return <Plane className="w-4 h-4" />;
+      case "train":
+        return <Train className="w-4 h-4" />;
+      case "car":
+      case "drive":
+        return <Car className="w-4 h-4" />;
+      case "bus":
+        return <Bus className="w-4 h-4" />;
+      case "ferry":
+        return <Ship className="w-4 h-4" />;
+      default:
+        return <ArrowDown className="w-4 h-4" />;
+    }
+  };
+
+  // Format transport duration
+  const formatDuration = (minutes?: number) => {
+    if (!minutes) return "";
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}min`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}min`;
   };
 
   const handleNightsChange = (cityId: string, nights: number) => {
@@ -235,6 +271,25 @@ export default function ItineraryPage() {
               </div>
             </div>
 
+            {/* Departure Info */}
+            {itinerary.departureCity && (
+              <div className="mb-6 p-3 bg-secondary/30 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Home className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Departing from:</span>
+                  <span className="font-medium" data-testid="text-departure-city">
+                    {itinerary.departureCity}
+                    {itinerary.departureCountry && `, ${itinerary.departureCountry}`}
+                  </span>
+                  {itinerary.departureAirport && (
+                    <Badge variant="outline" className="ml-2" data-testid="badge-departure-airport">
+                      {itinerary.departureAirport}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+
             <Separator className="my-4" />
 
             {/* Start Date Picker */}
@@ -285,78 +340,149 @@ export default function ItineraryPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {itinerary.cities.map((city, index) => (
-                <Card key={city.id} data-testid={`card-city-${index}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
-                        {index + 1}
-                      </div>
-                      
-                      <div className="flex-1 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div>
-                            <Input
-                              value={city.cityName}
-                              onChange={(e) => updateCity(city.id, { cityName: e.target.value })}
-                              className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 bg-transparent"
-                              data-testid={`input-city-name-${index}`}
-                            />
-                            <Input
-                              value={city.countryName}
-                              onChange={(e) => updateCity(city.id, { countryName: e.target.value })}
-                              className="text-sm text-muted-foreground border-none p-0 h-auto focus-visible:ring-0 bg-transparent"
-                              data-testid={`input-country-name-${index}`}
-                            />
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <Label htmlFor={`nights-${city.id}`} className="text-sm whitespace-nowrap">
-                                Nights:
-                              </Label>
+                <div key={city.id}>
+                  <Card data-testid={`card-city-${index}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                          {index + 1}
+                        </div>
+                        
+                        <div className="flex-1 space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={city.cityName}
+                                  onChange={(e) => updateCity(city.id, { cityName: e.target.value })}
+                                  className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                  data-testid={`input-city-name-${index}`}
+                                />
+                                {/* Airport codes */}
+                                {(city.arrivalAirport || city.departureAirport) && (
+                                  <div className="flex gap-1">
+                                    {city.arrivalAirport && (
+                                      <Badge variant="secondary" className="text-xs" data-testid={`badge-arrival-airport-${index}`}>
+                                        <Plane className="w-3 h-3 mr-1" />
+                                        {city.arrivalAirport}
+                                      </Badge>
+                                    )}
+                                    {city.departureAirport && city.departureAirport !== city.arrivalAirport && (
+                                      <Badge variant="outline" className="text-xs" data-testid={`badge-departure-airport-${index}`}>
+                                        {city.departureAirport}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <Input
-                                id={`nights-${city.id}`}
-                                type="number"
-                                min="1"
-                                value={city.numberOfNights}
-                                onChange={(e) => handleNightsChange(city.id, parseInt(e.target.value) || 1)}
-                                className="w-16"
-                                data-testid={`input-nights-${index}`}
+                                value={city.countryName}
+                                onChange={(e) => updateCity(city.id, { countryName: e.target.value })}
+                                className="text-sm text-muted-foreground border-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                data-testid={`input-country-name-${index}`}
                               />
                             </div>
                             
-                            {itinerary.cities.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveCity(city.id, city.cityName)}
-                                className="text-destructive hover:text-destructive"
-                                data-testid={`button-remove-city-${index}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor={`nights-${city.id}`} className="text-sm whitespace-nowrap">
+                                  Nights:
+                                </Label>
+                                <Input
+                                  id={`nights-${city.id}`}
+                                  type="number"
+                                  min="1"
+                                  value={city.numberOfNights}
+                                  onChange={(e) => handleNightsChange(city.id, parseInt(e.target.value) || 1)}
+                                  className="w-16"
+                                  data-testid={`input-nights-${index}`}
+                                />
+                              </div>
+                              
+                              {itinerary.cities.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveCity(city.id, city.cityName)}
+                                  className="text-destructive hover:text-destructive"
+                                  data-testid={`button-remove-city-${index}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {city.arrivalDate && city.departureDate && (
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <Badge variant="outline" className="gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Arrive: {formatDate(city.arrivalDate)}
-                            </Badge>
-                            <Badge variant="outline" className="gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Depart: {formatDate(city.departureDate)}
-                            </Badge>
-                          </div>
+                          {city.arrivalDate && city.departureDate && (
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <Badge variant="outline" className="gap-1">
+                                <Calendar className="w-3 h-3" />
+                                Arrive: {formatDate(city.arrivalDate)}
+                              </Badge>
+                              <Badge variant="outline" className="gap-1">
+                                <Calendar className="w-3 h-3" />
+                                Depart: {formatDate(city.departureDate)}
+                              </Badge>
+                            </div>
+                          )}
+
+                          {/* Activities Section */}
+                          {city.activities && city.activities.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                <Star className="w-4 h-4" />
+                                Activities & Highlights
+                              </div>
+                              <ul className="space-y-1 pl-6" data-testid={`list-activities-${index}`}>
+                                {city.activities.map((activity, actIndex) => (
+                                  <li 
+                                    key={actIndex} 
+                                    className="text-sm text-foreground flex items-start gap-2"
+                                    data-testid={`activity-${index}-${actIndex}`}
+                                  >
+                                    <span className="text-primary mt-1.5 shrink-0">•</span>
+                                    <span>{activity}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Transport Segment (between cities) */}
+                  {index < itinerary.cities.length - 1 && city.transportToNext && (
+                    <div className="flex justify-center py-2" data-testid={`transport-segment-${index}`}>
+                      <div className="flex items-center gap-2 px-4 py-2 bg-secondary/30 rounded-full">
+                        {getTransportIcon(city.transportToNext.mode)}
+                        <span className="text-sm font-medium capitalize">
+                          {city.transportToNext.mode || "Travel"}
+                        </span>
+                        {city.transportToNext.durationMinutes && (
+                          <span className="text-sm text-muted-foreground">
+                            ({formatDuration(city.transportToNext.durationMinutes)})
+                          </span>
+                        )}
+                        {city.transportToNext.estimatedCost && (
+                          <Badge variant="outline" className="text-xs ml-1">
+                            ~${city.transportToNext.estimatedCost}
+                          </Badge>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+
+                  {/* Simple connector arrow if no transport data */}
+                  {index < itinerary.cities.length - 1 && !city.transportToNext && (
+                    <div className="flex justify-center py-2">
+                      <ArrowDown className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
