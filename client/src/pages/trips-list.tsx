@@ -4,7 +4,9 @@ import { useLocation, Link } from "wouter";
 import type { TripWithDestinations } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin, Calendar, Users, Trash2, Edit, Plane, LogOut, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Plus, MapPin, Calendar, Users, Trash2, Edit, Plane, LogOut, User, Clock, Star, ChevronRight, History } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -86,6 +88,134 @@ export default function TripsList() {
   const getTravelersDisplay = (travelers: string, count: number) => {
     if (travelers === "just_me") return "Solo trip";
     return `${count} travelers`;
+  };
+
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    // Guard against Invalid Date
+    if (isNaN(date.getTime())) return null;
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateRange = (startDate?: string | null, endDate?: string | null) => {
+    const start = formatDate(startDate);
+    if (!start) return null;
+    const end = formatDate(endDate);
+    if (!end || start === end) return start;
+    return `${start} — ${end}`;
+  };
+
+  // Helper to validate and parse date strings
+  const parseValidDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    // Check for valid date (not NaN)
+    if (isNaN(date.getTime())) return null;
+    return date;
+  };
+
+  // Helper to calculate effective end date
+  const getEffectiveEndDate = (trip: TripWithDestinations): Date | null => {
+    if (trip.endDate) {
+      const end = parseValidDate(trip.endDate);
+      if (end) return end;
+    }
+    // If no end date but has start date and duration, calculate it
+    if (trip.startDate && trip.tripDuration) {
+      const start = parseValidDate(trip.startDate);
+      if (start) {
+        const end = new Date(start);
+        end.setDate(end.getDate() + trip.tripDuration);
+        return end;
+      }
+    }
+    return null;
+  };
+
+  // Categorize trips into current (upcoming/in-progress) and past
+  const { currentTrips, pastTrips } = useMemo(() => {
+    if (!trips) return { currentTrips: [], pastTrips: [] };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const current: TripWithDestinations[] = [];
+    const past: TripWithDestinations[] = [];
+    
+    trips.forEach(trip => {
+      const effectiveEnd = getEffectiveEndDate(trip);
+      
+      if (effectiveEnd) {
+        // Clone date to avoid mutating cached values
+        const endForCompare = new Date(effectiveEnd.getTime());
+        endForCompare.setHours(23, 59, 59, 999);
+        if (endForCompare < today) {
+          past.push(trip);
+        } else {
+          current.push(trip);
+        }
+      } else {
+        // No dates at all - consider current/planning phase
+        current.push(trip);
+      }
+    });
+    
+    // Sort current trips by start date (soonest first)
+    current.sort((a, b) => {
+      const startA = parseValidDate(a.startDate);
+      const startB = parseValidDate(b.startDate);
+      if (!startA && !startB) return 0;
+      if (!startA) return 1;
+      if (!startB) return -1;
+      return startA.getTime() - startB.getTime();
+    });
+    
+    // Sort past trips by effective end date (most recent first)
+    past.sort((a, b) => {
+      const endA = getEffectiveEndDate(a);
+      const endB = getEffectiveEndDate(b);
+      if (!endA && !endB) return 0;
+      if (!endA) return 1;
+      if (!endB) return -1;
+      return endB.getTime() - endA.getTime();
+    });
+    
+    return { currentTrips: current, pastTrips: past };
+  }, [trips]);
+
+  // Get trip status badge
+  const getTripStatus = (trip: TripWithDestinations) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const effectiveEnd = getEffectiveEndDate(trip);
+    
+    if (trip.startDate && effectiveEnd) {
+      const startDate = parseValidDate(trip.startDate);
+      if (!startDate) return { label: "Planning", variant: "outline" as const };
+      
+      // Clone dates to avoid mutating cached values
+      const startForCompare = new Date(startDate.getTime());
+      const endForCompare = new Date(effectiveEnd.getTime());
+      startForCompare.setHours(0, 0, 0, 0);
+      endForCompare.setHours(23, 59, 59, 999);
+      
+      if (today >= startForCompare && today <= endForCompare) {
+        return { label: "In Progress", variant: "default" as const };
+      } else if (today < startForCompare) {
+        const daysUntil = Math.ceil((startForCompare.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysUntil <= 30) {
+          return { label: `${daysUntil} days away`, variant: "secondary" as const };
+        }
+        return { label: "Upcoming", variant: "outline" as const };
+      }
+    }
+    return { label: "Planning", variant: "outline" as const };
   };
 
   if (isLoading) {
@@ -186,86 +316,240 @@ export default function TripsList() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {trips.map((trip) => (
-              <Card
-                key={trip.id}
-                className="hover-elevate cursor-pointer transition-all"
-                data-testid={`card-trip-${trip.id}`}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-1">
-                        {trip.destinations && trip.destinations.length > 0 ? (
-                          trip.destinations
-                            .sort((a, b) => a.order - b.order)
-                            .map(d => d.cityName)
-                            .join(" → ")
-                        ) : (
-                          `${trip.travelSeason && getSeasonDisplay(trip.travelSeason)} Trip`
-                        )}
-                      </CardTitle>
-                      {trip.destinations && trip.destinations.length > 0 && (
-                        <p className="text-sm text-muted-foreground mb-2" data-testid={`text-country-${trip.id}`}>
-                          {[...new Set(trip.destinations.map(d => d.countryName))].join(", ")}
-                        </p>
-                      )}
-                      <CardDescription className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Users className="w-4 h-4" />
-                          {getTravelersDisplay(trip.travelers, trip.numberOfTravelers)}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4" />
-                          {trip.tripDuration} days
-                        </div>
-                        {trip.destinations && trip.destinations.length > 0 && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="w-4 h-4" />
-                            {trip.destinations.length} {trip.destinations.length === 1 ? 'destination' : 'destinations'}
+          <div className="space-y-10">
+            {/* Current Trips Section */}
+            {currentTrips.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-6">
+                  <Plane className="w-5 h-5 text-primary" />
+                  <h2 className="text-2xl font-bold">Current & Upcoming Trips</h2>
+                  <Badge variant="secondary" className="ml-2">
+                    {currentTrips.length}
+                  </Badge>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {currentTrips.map((trip) => {
+                    const status = getTripStatus(trip);
+                    const dateRange = formatDateRange(trip.startDate, trip.endDate);
+                    const sortedDestinations = trip.destinations?.sort((a, b) => a.order - b.order) || [];
+                    
+                    return (
+                      <Card
+                        key={trip.id}
+                        className="hover-elevate cursor-pointer transition-all"
+                        onClick={() => setLocation(`/trip/${trip.id}`)}
+                        data-testid={`card-trip-${trip.id}`}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant={status.variant} data-testid={`badge-status-${trip.id}`}>
+                                  {status.label}
+                                </Badge>
+                                {trip.travelSeason && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {getSeasonDisplay(trip.travelSeason)}
+                                  </Badge>
+                                )}
+                              </div>
+                              <CardTitle className="text-xl mb-1">
+                                {sortedDestinations.length > 0 ? (
+                                  sortedDestinations.map(d => d.cityName).join(" → ")
+                                ) : (
+                                  `${trip.travelSeason ? getSeasonDisplay(trip.travelSeason) : "New"} Trip`
+                                )}
+                              </CardTitle>
+                              {sortedDestinations.length > 0 && (
+                                <p className="text-sm text-muted-foreground" data-testid={`text-country-${trip.id}`}>
+                                  {Array.from(new Set(sortedDestinations.map(d => d.countryName))).join(", ")}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setLocation(`/trip/${trip.id}`)}
+                                data-testid={`button-edit-${trip.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteClick(trip.id)}
+                                data-testid={`button-delete-${trip.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLocation(`/trip/${trip.id}`);
-                        }}
-                        data-testid={`button-edit-${trip.id}`}
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            {/* Trip Details */}
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Calendar className="w-4 h-4" />
+                                {dateRange || `${trip.tripDuration} days`}
+                              </div>
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Users className="w-4 h-4" />
+                                {getTravelersDisplay(trip.travelers, trip.numberOfTravelers)}
+                              </div>
+                              {sortedDestinations.length > 0 && (
+                                <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                                  <MapPin className="w-4 h-4" />
+                                  {sortedDestinations.length} {sortedDestinations.length === 1 ? 'destination' : 'destinations'}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Departure Info */}
+                            {trip.departureCity && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded px-2 py-1">
+                                <Plane className="w-3 h-3" />
+                                <span>From {trip.departureCity}</span>
+                              </div>
+                            )}
+
+                            {/* First City Activities Preview */}
+                            {sortedDestinations[0]?.activities && sortedDestinations[0].activities.length > 0 && (
+                              <div className="border-t pt-2">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                  <Star className="w-3 h-3" />
+                                  Highlights in {sortedDestinations[0].cityName}
+                                </div>
+                                <p className="text-xs line-clamp-2">
+                                  {sortedDestinations[0].activities.slice(0, 2).join(" • ")}
+                                  {sortedDestinations[0].activities.length > 2 && " ..."}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* View Button */}
+                            <Button
+                              variant="secondary"
+                              className="w-full gap-2"
+                              data-testid={`button-view-${trip.id}`}
+                            >
+                              View Trip
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Past Trips Section */}
+            {pastTrips.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-6">
+                  <History className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="text-2xl font-bold text-muted-foreground">Past Adventures</h2>
+                  <Badge variant="outline" className="ml-2">
+                    {pastTrips.length}
+                  </Badge>
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {pastTrips.map((trip) => {
+                    const dateRange = formatDateRange(trip.startDate, trip.endDate);
+                    const sortedDestinations = trip.destinations?.sort((a, b) => a.order - b.order) || [];
+                    
+                    return (
+                      <Card
+                        key={trip.id}
+                        className="hover-elevate cursor-pointer transition-all opacity-80 hover:opacity-100"
+                        onClick={() => setLocation(`/trip/${trip.id}`)}
+                        data-testid={`card-trip-${trip.id}`}
                       >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(trip.id);
-                        }}
-                        data-testid={`button-delete-${trip.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-2">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  Completed
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-lg mb-1">
+                                {sortedDestinations.length > 0 ? (
+                                  sortedDestinations.map(d => d.cityName).join(" → ")
+                                ) : (
+                                  `${trip.travelSeason ? getSeasonDisplay(trip.travelSeason) : "Past"} Trip`
+                                )}
+                              </CardTitle>
+                              {sortedDestinations.length > 0 && (
+                                <p className="text-sm text-muted-foreground" data-testid={`text-country-${trip.id}`}>
+                                  {Array.from(new Set(sortedDestinations.map(d => d.countryName))).join(", ")}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteClick(trip.id)}
+                                data-testid={`button-delete-${trip.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              {dateRange && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  {dateRange}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4" />
+                                {getTravelersDisplay(trip.travelers, trip.numberOfTravelers)}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              className="w-full text-muted-foreground"
+                              data-testid={`button-view-${trip.id}`}
+                            >
+                              View Memories
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Empty Current Trips but have Past */}
+            {currentTrips.length === 0 && pastTrips.length > 0 && (
+              <Card className="text-center py-8 mb-8">
+                <CardContent>
+                  <Plane className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Ready for your next adventure?</h3>
+                  <p className="text-muted-foreground mb-4">
+                    You have {pastTrips.length} completed {pastTrips.length === 1 ? "trip" : "trips"}. Start planning your next one!
+                  </p>
                   <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => setLocation(`/trip/${trip.id}`)}
-                    data-testid={`button-view-${trip.id}`}
+                    onClick={() => setLocation("/trip/new")}
+                    className="gap-2"
                   >
-                    View Trip
+                    <Plus className="w-4 h-4" />
+                    Plan New Trip
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         )}
         </div>

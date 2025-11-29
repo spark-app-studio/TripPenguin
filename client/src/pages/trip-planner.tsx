@@ -637,12 +637,20 @@ export default function TripPlanner() {
     
     if (!data) return;
     
-    // Create or update trip
+    // Create or update trip - include departure info and dates from itinerary state if available
     const tripPayload: InsertTrip = {
       travelers: data.travelers,
       numberOfTravelers: data.numberOfTravelers,
-      travelSeason: data.travelSeason,
+      travelSeason: itinerary?.travelSeason || data.travelSeason,
       tripDuration: data.tripDuration,
+      // Include title and departure info from step1 data or itinerary
+      title: data.title || itinerary?.title,
+      departureCity: data.departureCity || itinerary?.departureCity,
+      departureCountry: data.departureCountry || itinerary?.departureCountry,
+      departureAirport: data.departureAirport || itinerary?.departureAirport,
+      // Only include dates if they are defined (avoid nulling out stored values)
+      ...(itinerary?.startDate ? { startDate: itinerary.startDate } : {}),
+      ...(itinerary?.endDate ? { endDate: itinerary.endDate } : {}),
     };
 
     try {
@@ -653,20 +661,38 @@ export default function TripPlanner() {
         // Update URL with new trip ID
         setLocation(`/trip/${newTrip.id}`);
         
+        // Get destination data - prefer itinerary state (updated via /itinerary page) over step1 data
+        const destinationsToSave = itinerary?.cities?.length 
+          ? itinerary.cities.map((city, i) => ({
+              cityName: city.cityName,
+              countryName: city.countryName,
+              numberOfNights: city.numberOfNights,
+              imageUrl: city.imageUrl || "",
+              order: i,
+              arrivalAirport: city.arrivalAirport,
+              departureAirport: city.departureAirport,
+              activities: city.activities || [],
+              transportToNext: city.transportToNext || null,
+              arrivalDate: city.arrivalDate,
+              departureDate: city.departureDate,
+            }))
+          : data.selectedDestinations.map((dest, i) => ({
+              cityName: dest.cityName,
+              countryName: dest.countryName,
+              numberOfNights: dest.numberOfNights,
+              imageUrl: dest.imageUrl,
+              order: i,
+              arrivalAirport: dest.arrivalAirport,
+              departureAirport: dest.departureAirport,
+              activities: dest.activities || [],
+              transportToNext: dest.transportToNext || null,
+            }));
+        
         // Create destinations with full data
-        for (let i = 0; i < data.selectedDestinations.length; i++) {
-          const dest = data.selectedDestinations[i];
+        for (const dest of destinationsToSave) {
           await apiRequest("POST", "/api/destinations", {
             tripId: newTrip.id,
-            cityName: dest.cityName,
-            countryName: dest.countryName,
-            numberOfNights: dest.numberOfNights,
-            imageUrl: dest.imageUrl,
-            order: i,
-            arrivalAirport: dest.arrivalAirport,
-            departureAirport: dest.departureAirport,
-            activities: dest.activities || [],
-            transportToNext: dest.transportToNext || null,
+            ...dest,
           });
         }
       } else {
@@ -679,20 +705,38 @@ export default function TripPlanner() {
           await apiRequest("DELETE", `/api/destinations/${dest.id}`);
         }
         
+        // Get destination data - prefer itinerary state (updated via /itinerary page) over step1 data
+        const destinationsToSave = itinerary?.cities?.length 
+          ? itinerary.cities.map((city, i) => ({
+              cityName: city.cityName,
+              countryName: city.countryName,
+              numberOfNights: city.numberOfNights,
+              imageUrl: city.imageUrl || "",
+              order: i,
+              arrivalAirport: city.arrivalAirport,
+              departureAirport: city.departureAirport,
+              activities: city.activities || [],
+              transportToNext: city.transportToNext || null,
+              arrivalDate: city.arrivalDate,
+              departureDate: city.departureDate,
+            }))
+          : data.selectedDestinations.map((dest, i) => ({
+              cityName: dest.cityName,
+              countryName: dest.countryName,
+              numberOfNights: dest.numberOfNights,
+              imageUrl: dest.imageUrl,
+              order: i,
+              arrivalAirport: dest.arrivalAirport,
+              departureAirport: dest.departureAirport,
+              activities: dest.activities || [],
+              transportToNext: dest.transportToNext || null,
+            }));
+        
         // Create new destinations with full data
-        for (let i = 0; i < data.selectedDestinations.length; i++) {
-          const dest = data.selectedDestinations[i];
+        for (const dest of destinationsToSave) {
           await apiRequest("POST", "/api/destinations", {
             tripId: currentTripId,
-            cityName: dest.cityName,
-            countryName: dest.countryName,
-            numberOfNights: dest.numberOfNights,
-            imageUrl: dest.imageUrl,
-            order: i,
-            arrivalAirport: dest.arrivalAirport,
-            departureAirport: dest.departureAirport,
-            activities: dest.activities || [],
-            transportToNext: dest.transportToNext || null,
+            ...dest,
           });
         }
       }
