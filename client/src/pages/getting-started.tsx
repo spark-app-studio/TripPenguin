@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,7 @@ const initialQuizData: QuizData = {
 
 export default function GettingStarted() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [currentScreen, setCurrentScreen] = useState(0); // Start at trip type selection (screen 0)
   const [quizData, setQuizData] = useState<QuizData>(initialQuizData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -256,16 +258,23 @@ export default function GettingStarted() {
       tripLengthPreference: mapToTripLength(),
     };
     
-    // Store quiz data in sessionStorage for after authentication
+    // Store quiz data in sessionStorage for the planner
     sessionStorage.setItem("quizData", JSON.stringify(quizCompatibleData));
     sessionStorage.setItem("gettingStartedData", JSON.stringify(quizData));
     sessionStorage.setItem("tripSource", "quiz");
-    sessionStorage.setItem("redirectAfterAuth", "/planner");
     
-    // Navigate to registration - user needs account to see AI recommendations
-    setTimeout(() => {
-      setLocation("/register");
-    }, 500);
+    // If user is already logged in, go directly to planner
+    // Otherwise, redirect to registration first
+    if (isAuthenticated) {
+      setTimeout(() => {
+        setLocation("/planner");
+      }, 500);
+    } else {
+      sessionStorage.setItem("redirectAfterAuth", "/planner");
+      setTimeout(() => {
+        setLocation("/register");
+      }, 500);
+    }
   };
 
   const updateQuizData = (updates: Partial<QuizData>) => {
