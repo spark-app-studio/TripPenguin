@@ -28,7 +28,7 @@ export default function TermsOfService() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -75,7 +75,7 @@ export default function TermsOfService() {
       <section className="py-16 lg:py-24">
         <div className="max-w-3xl mx-auto px-4">
           <p className="text-lg text-muted-foreground mb-12">
-            Welcome to TripPirate! By using our app or website, you agree to these Terms of Service.
+            Welcome to TripPenguin! By using our app or website, you agree to these Terms of Service.
           </p>
 
           <div className="space-y-12">
@@ -86,12 +86,12 @@ export default function TermsOfService() {
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Compass className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold font-serif">1. What TripPirate Does</h2>
+                <h2 className="text-2xl font-bold font-serif">1. What TripPenguin Does</h2>
               </div>
               
               <Card>
                 <CardContent className="pt-6">
-                  <p className="mb-3">TripPirate helps families:</p>
+                  <p className="mb-3">TripPenguin helps families:</p>
                   <ul className="space-y-2 text-muted-foreground mb-6">
                     <li>Plan trips</li>
                     <li>Build budgets</li>
@@ -100,7 +100,7 @@ export default function TermsOfService() {
                     <li>Book travel components through trusted partners</li>
                   </ul>
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="font-semibold mb-2">TripPirate is not:</p>
+                    <p className="font-semibold mb-2">TripPenguin is not:</p>
                     <ul className="space-y-1 text-muted-foreground">
                       <li>A direct travel agency</li>
                       <li>A financial institution</li>
@@ -124,7 +124,7 @@ export default function TermsOfService() {
                 <CardContent className="pt-6">
                   <p className="mb-3">You agree to:</p>
                   <ul className="space-y-2 text-muted-foreground">
-                    <li>Use TripPirate legally and responsibly</li>
+                    <li>Use TripPenguin legally and responsibly</li>
                     <li>Provide accurate information</li>
                     <li>Not misuse or attempt to hack the platform</li>
                     <li>Not exploit the service commercially without permission</li>
@@ -151,7 +151,7 @@ export default function TermsOfService() {
                     <li>They hold responsibility for fulfillment and service</li>
                   </ul>
                   <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="font-semibold mb-2">TripPirate is not responsible for:</p>
+                    <p className="font-semibold mb-2">TripPenguin is not responsible for:</p>
                     <ul className="space-y-1 text-muted-foreground">
                       <li>Flight cancellations</li>
                       <li>Hotel errors</li>
@@ -176,7 +176,7 @@ export default function TermsOfService() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground mb-4">
-                    TripPirate encourages responsible, debt-free travel, but:
+                    TripPenguin encourages responsible, debt-free travel, but:
                   </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li>We do not provide financial advice</li>
@@ -200,8 +200,8 @@ export default function TermsOfService() {
                 <CardContent className="pt-6">
                   <p className="mb-3">If you connect a financial account:</p>
                   <ul className="space-y-2 text-muted-foreground mb-4">
-                    <li>TripPirate only reads balance data</li>
-                    <li>TripPirate never sees or stores your bank login credentials</li>
+                    <li>TripPenguin only reads balance data</li>
+                    <li>TripPenguin never sees or stores your bank login credentials</li>
                     <li>All data connections are encrypted</li>
                   </ul>
                   <p className="text-sm font-medium">
@@ -223,7 +223,7 @@ export default function TermsOfService() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground">
-                    TripPirate, its logo, brand language, and interface are proprietary and protected. You agree not to copy, resell, reverse-engineer, or extract trade secrets.
+                    TripPenguin, its logo, brand language, and interface are proprietary and protected. You agree not to copy, resell, reverse-engineer, or extract trade secrets.
                   </p>
                 </CardContent>
               </Card>
@@ -240,8 +240,8 @@ export default function TermsOfService() {
               
               <Card>
                 <CardContent className="pt-6">
-                  <p className="font-medium mb-4">TripPirate is offered "as is" without warranties.</p>
-                  <p className="mb-3">TripPirate is not liable for:</p>
+                  <p className="font-medium mb-4">TripPenguin is offered "as is" without warranties.</p>
+                  <p className="mb-3">TripPenguin is not liable for:</p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li>Third-party travel provider errors</li>
                     <li>Trip cancellations</li>
@@ -290,7 +290,7 @@ export default function TermsOfService() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground">
-                    We may update these Terms as TripPirate grows. We will notify users of material changes.
+                    We may update these Terms as TripPenguin grows. We will notify users of material changes.
                   </p>
                 </CardContent>
               </Card>
@@ -308,7 +308,7 @@ export default function TermsOfService() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground">
-                    Questions about Terms? Email: <a href="mailto:legal@trippirate.com" className="text-primary hover:underline">legal@trippirate.com</a>
+                    Questions about Terms? Email: <a href="mailto:legal@trippenguin.com" className="text-primary hover:underline">legal@trippenguin.com</a>
                   </p>
                 </CardContent>
               </Card>
@@ -320,19 +320,19 @@ export default function TermsOfService() {
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Handshake className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold font-serif">How TripPirate Makes Money</h2>
+                <h2 className="text-2xl font-bold font-serif">How TripPenguin Makes Money</h2>
               </div>
               
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground mb-4">
-                    TripPirate is free for users. We do not charge families for using the platform.
+                    TripPenguin is free for users. We do not charge families for using the platform.
                   </p>
                   <p className="text-muted-foreground mb-4">
-                    TripPirate earns revenue through affiliate partnerships and commissions from third-party travel providers when users make bookings through the app. These commissions are paid by the provider and do not increase the cost to the user.
+                    TripPenguin earns revenue through affiliate partnerships and commissions from third-party travel providers when users make bookings through the app. These commissions are paid by the provider and do not increase the cost to the user.
                   </p>
                   <p className="text-muted-foreground mb-4">
-                    TripPirate does not sell personal data, financial data, or itinerary information.
+                    TripPenguin does not sell personal data, financial data, or itinerary information.
                   </p>
                   <p className="text-muted-foreground">
                     We may receive compensation from booking links, recommended services, and integrated partners.
@@ -351,7 +351,7 @@ export default function TermsOfService() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -364,7 +364,7 @@ export default function TermsOfService() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

@@ -224,7 +224,7 @@ export function SavingsConnection({
           <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
             <PiggyBank className="w-4 h-4 text-blue-600" />
             <AlertDescription className="text-blue-700 dark:text-blue-300">
-              <strong>Why track savings?</strong> TripPirate uses your savings to show you when you can afford to book each part of your trip — helping you travel debt-free!
+              <strong>Why track savings?</strong> TripPenguin uses your savings to show you when you can afford to book each part of your trip — helping you travel debt-free!
             </AlertDescription>
           </Alert>
         </div>

@@ -62,7 +62,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Plane className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">TripPirate</span>
+            <span className="text-xl font-bold">TripPenguin</span>
           </Link>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 text-sm">

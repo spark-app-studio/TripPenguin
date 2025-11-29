@@ -19,15 +19,15 @@ export default function FAQ() {
       title: "General",
       questions: [
         {
-          question: "What is TripPirate?",
-          answer: "TripPirate is a free travel planning app built specifically for families. It helps you create personalized itineraries, manage budgets, track savings, and book trip components responsibly—without hidden fees or debt pressure."
+          question: "What is TripPenguin?",
+          answer: "TripPenguin is a free travel planning app built specifically for families. It helps you create personalized itineraries, manage budgets, track savings, and book trip components responsibly—without hidden fees or debt pressure."
         },
         {
-          question: "Is TripPirate really free?",
-          answer: "Yes! TripPirate is completely free for families to use. No monthly fees. No usage charges. No price inflation."
+          question: "Is TripPenguin really free?",
+          answer: "Yes! TripPenguin is completely free for families to use. No monthly fees. No usage charges. No price inflation."
         },
         {
-          question: "Why is TripPirate free?",
+          question: "Why is TripPenguin free?",
           answer: "Because travel companies pay us—not you. When you book through our trusted affiliates, they pay a small referral commission. You pay nothing extra."
         },
       ]
@@ -37,7 +37,7 @@ export default function FAQ() {
       questions: [
         {
           question: "How does the AI itinerary engine work?",
-          answer: "You answer a few questions about your family's preferences, pace, interests, and budget. TripPirate then generates three personalized itineraries you can review, modify, and customize."
+          answer: "You answer a few questions about your family's preferences, pace, interests, and budget. TripPenguin then generates three personalized itineraries you can review, modify, and customize."
         },
         {
           question: "Can we adjust or change the AI itineraries?",
@@ -49,15 +49,15 @@ export default function FAQ() {
       title: "Budgeting & Savings",
       questions: [
         {
-          question: "How does TripPirate help with budgeting?",
-          answer: "TripPirate provides cost estimates for your finalized itinerary across each category—flights, accommodations, activities, meals, insurance, and more."
+          question: "How does TripPenguin help with budgeting?",
+          answer: "TripPenguin provides cost estimates for your finalized itinerary across each category—flights, accommodations, activities, meals, insurance, and more."
         },
         {
           question: "Can I connect my savings account?",
-          answer: "Yes — you can link your account so TripPirate can track real-time savings progress toward the total trip cost."
+          answer: "Yes — you can link your account so TripPenguin can track real-time savings progress toward the total trip cost."
         },
         {
-          question: "Does TripPirate encourage using credit cards or debt to travel?",
+          question: "Does TripPenguin encourage using credit cards or debt to travel?",
           answer: "No. Our philosophy is responsible, debt-free travel. Trips should enrich your life—not strain your finances."
         },
         {
@@ -70,16 +70,16 @@ export default function FAQ() {
       title: "Booking & Security",
       questions: [
         {
-          question: "Is it safe to book through TripPirate?",
-          answer: "Yes. TripPirate routes bookings through trusted partners such as Booking.com, Expedia, and other established providers."
+          question: "Is it safe to book through TripPenguin?",
+          answer: "Yes. TripPenguin routes bookings through trusted partners such as Booking.com, Expedia, and other established providers."
         },
         {
-          question: "Does TripPirate handle payments directly?",
-          answer: "Payments are securely processed via Stripe or through affiliate partners. TripPirate never stores your credit card details."
+          question: "Does TripPenguin handle payments directly?",
+          answer: "Payments are securely processed via Stripe or through affiliate partners. TripPenguin never stores your credit card details."
         },
         {
           question: "Are the accommodations and activities legitimate and vetted?",
-          answer: "Yes — TripPirate only works with reputable booking platforms with verified reviews and strong trust histories."
+          answer: "Yes — TripPenguin only works with reputable booking platforms with verified reviews and strong trust histories."
         },
       ]
     },
@@ -87,7 +87,7 @@ export default function FAQ() {
       title: "Family Travel, Domestic & Local",
       questions: [
         {
-          question: "Does TripPirate only support international travel?",
+          question: "Does TripPenguin only support international travel?",
           answer: "No — we support international travel, domestic U.S. travel, weekend trips, regional road trips, local city tourism, and low-cost staycations. Family adventure is not defined by distance."
         },
       ]
@@ -96,7 +96,7 @@ export default function FAQ() {
       title: "Account & Privacy",
       questions: [
         {
-          question: "Does TripPirate sell or share my data?",
+          question: "Does TripPenguin sell or share my data?",
           answer: "No. We never sell user data or share personal financial information."
         },
         {
@@ -104,7 +104,7 @@ export default function FAQ() {
           answer: "Yes — and all associated data will be fully removed."
         },
         {
-          question: "Is TripPirate kid-friendly?",
+          question: "Is TripPenguin kid-friendly?",
           answer: "Absolutely. It is designed to be safe, playful, and family-appropriate."
         },
       ]
@@ -119,7 +119,7 @@ export default function FAQ() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -157,7 +157,7 @@ export default function FAQ() {
             Frequently Asked Questions
           </h1>
           <p className="text-xl lg:text-2xl text-primary-foreground/90">
-            Everything you need to know about TripPirate
+            Everything you need to know about TripPenguin
           </p>
         </div>
       </section>
@@ -219,7 +219,7 @@ export default function FAQ() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -232,7 +232,7 @@ export default function FAQ() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

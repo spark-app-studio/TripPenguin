@@ -1726,7 +1726,7 @@ export default function Step2Plan({
   const activityPace: ActivityPace = useMemo(() => {
     // Try to get pace from sessionStorage quiz results
     try {
-      const quizData = sessionStorage.getItem("trippirate_quiz_results");
+      const quizData = sessionStorage.getItem("trippenguin_quiz_results");
       if (quizData) {
         const parsed = JSON.parse(quizData);
         // Check for pace-related quiz answers

@@ -236,7 +236,7 @@ export default function TripsList() {
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -561,7 +561,7 @@ export default function TripsList() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -573,7 +573,7 @@ export default function TripsList() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

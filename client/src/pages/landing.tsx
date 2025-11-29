@@ -93,7 +93,7 @@ export default function Landing() {
 
   const testimonials = [
     {
-      quote: "TripPirate helped us plan our first international trip with the kids — and we stayed on budget!",
+      quote: "TripPenguin helped us plan our first international trip with the kids — and we stayed on budget!",
       author: "Sarah M.",
     },
     {
@@ -114,7 +114,7 @@ export default function Landing() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-white" />
-              <span className="text-xl font-bold text-white">TripPirate</span>
+              <span className="text-xl font-bold text-white">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -160,7 +160,7 @@ export default function Landing() {
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center text-white py-20">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 font-serif">
-            TripPirate
+            TripPenguin
           </h1>
           <p className="text-2xl sm:text-3xl lg:text-4xl font-medium mb-6 text-white/95">
             Family adventures, finally within reach.
@@ -220,7 +220,7 @@ export default function Landing() {
               className="text-lg px-8 py-6 min-h-0"
               data-testid="button-try-free"
             >
-              Try TripPirate Free
+              Try TripPenguin Free
             </Button>
           </div>
         </div>
@@ -272,7 +272,7 @@ export default function Landing() {
             Because family travel shouldn't feel impossible
           </h2>
           <p className="text-lg mb-8 text-primary-foreground/90 max-w-3xl mx-auto">
-            TripPirate is free because travel companies pay us a small commission when you book through us.
+            TripPenguin is free because travel companies pay us a small commission when you book through us.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
             {[
@@ -432,7 +432,7 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -441,11 +441,11 @@ export default function Landing() {
               <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
               <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <a href="mailto:contact@trippirate.com" className="hover:text-foreground transition-colors">Contact</a>
+              <a href="mailto:contact@trippenguin.com" className="hover:text-foreground transition-colors">Contact</a>
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

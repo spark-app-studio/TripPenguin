@@ -1,5 +1,5 @@
 /**
- * Budget Calculation Utilities for TripPirate
+ * Budget Calculation Utilities for TripPenguin
  * 
  * These utilities provide consistent financial calculations across the application,
  * supporting the goal of debt-free travel planning.

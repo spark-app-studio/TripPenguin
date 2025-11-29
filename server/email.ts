@@ -67,10 +67,10 @@ class SendGridEmailService implements EmailService {
     
     const msg = {
       to: email,
-      from: process.env.FROM_EMAIL || 'noreply@trippirate.com',
+      from: process.env.FROM_EMAIL || 'noreply@trippenguin.com',
       subject: 'Verify your email address',
       html: `
-        <h2>Welcome to TripPirate!</h2>
+        <h2>Welcome to TripPenguin!</h2>
         <p>Please verify your email address by clicking the button below:</p>
         <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a>
         <p>Or copy and paste this link in your browser:</p>

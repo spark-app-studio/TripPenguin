@@ -36,7 +36,7 @@ export interface ItineraryData {
   departureAirport?: string; // IATA code like "SFO"
 }
 
-const ITINERARY_STORAGE_KEY = "trippirate_itinerary";
+const ITINERARY_STORAGE_KEY = "trippenguin_itinerary";
 
 export function useItinerary() {
   const [itinerary, setItineraryState] = useState<ItineraryData | null>(() => {

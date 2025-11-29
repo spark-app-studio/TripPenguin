@@ -19,7 +19,7 @@ export default function About() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -54,7 +54,7 @@ export default function About() {
       <section className="py-16 lg:py-24 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 font-serif">
-            About TripPirate
+            About TripPenguin
           </h1>
           <p className="text-xl lg:text-2xl text-primary-foreground/90">
             Family adventures, finally within reach.
@@ -71,7 +71,7 @@ export default function About() {
             <div className="flex items-start gap-4 p-6 rounded-lg bg-muted/30">
               <Heart className="w-8 h-8 text-primary flex-shrink-0 mt-1" />
               <p className="text-lg leading-relaxed m-0">
-                TripPirate is a free, family-focused travel app designed to bring people together for unforgettable journeys—without the financial burden. Built for busy families who want seamless dreaming, planning, budgeting, and booking, TripPirate provides a centralized platform for organizing international trips, domestic adventures, and local staycations—with ease and confidence.
+                TripPenguin is a free, family-focused travel app designed to bring people together for unforgettable journeys—without the financial burden. Built for busy families who want seamless dreaming, planning, budgeting, and booking, TripPenguin provides a centralized platform for organizing international trips, domestic adventures, and local staycations—with ease and confidence.
               </p>
             </div>
 
@@ -79,7 +79,7 @@ export default function About() {
             <div className="flex items-start gap-4 p-6 rounded-lg bg-muted/30">
               <Sparkles className="w-8 h-8 text-primary flex-shrink-0 mt-1" />
               <p className="text-lg leading-relaxed m-0">
-                TripPirate leverages intelligent technology to simplify planning and remove financial stress from the travel experience. Through its unique AI-driven itinerary engine, the app learns each family's goals, preferences, pace, and budget, and then generates three comprehensive personalized itineraries—each tailored to their aspirations and financial means. Families can then review, personalize, and finalize their chosen itinerary. This transforms family travel dreams into realistic, achievable plans.
+                TripPenguin leverages intelligent technology to simplify planning and remove financial stress from the travel experience. Through its unique AI-driven itinerary engine, the app learns each family's goals, preferences, pace, and budget, and then generates three comprehensive personalized itineraries—each tailored to their aspirations and financial means. Families can then review, personalize, and finalize their chosen itinerary. This transforms family travel dreams into realistic, achievable plans.
               </p>
             </div>
 
@@ -87,13 +87,13 @@ export default function About() {
             <div className="flex items-start gap-4 p-6 rounded-lg bg-muted/30">
               <PiggyBank className="w-8 h-8 text-primary flex-shrink-0 mt-1" />
               <p className="text-lg leading-relaxed m-0">
-                At its core, TripPirate includes powerful planning and budgeting tools. The app provides detailed cost estimates for the selected itinerary across all trip categories—flights, accommodations, transportation, activities, insurance, and more. Families can link their savings accounts to monitor real-time progress toward the total trip cost. As savings accumulate, TripPirate enables users to book trip components through trusted affiliates, one at a time and in order of priority, ensuring that the joy of travel never comes with debt.
+                At its core, TripPenguin includes powerful planning and budgeting tools. The app provides detailed cost estimates for the selected itinerary across all trip categories—flights, accommodations, transportation, activities, insurance, and more. Families can link their savings accounts to monitor real-time progress toward the total trip cost. As savings accumulate, TripPenguin enables users to book trip components through trusted affiliates, one at a time and in order of priority, ensuring that the joy of travel never comes with debt.
               </p>
             </div>
 
             {/* Design Philosophy */}
             <p className="text-lg leading-relaxed text-center py-6">
-              Designed with a playful, family-friendly interface and sophisticated planning functionality, TripPirate turns travel from stressful logistics into joyful anticipation. It enables end-to-end trip realization—from dreaming to planning to going—while encouraging thoughtful and responsible spending.
+              Designed with a playful, family-friendly interface and sophisticated planning functionality, TripPenguin turns travel from stressful logistics into joyful anticipation. It enables end-to-end trip realization—from dreaming to planning to going—while encouraging thoughtful and responsible spending.
             </p>
 
             {/* Closing Statement */}
@@ -102,7 +102,7 @@ export default function About() {
                 Because family adventures should feel exciting—not impossible.
               </p>
               <p className="text-2xl font-bold text-primary font-serif">
-                TripPirate makes travel finally feel within reach.
+                TripPenguin makes travel finally feel within reach.
               </p>
             </div>
 
@@ -135,7 +135,7 @@ export default function About() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -147,7 +147,7 @@ export default function About() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

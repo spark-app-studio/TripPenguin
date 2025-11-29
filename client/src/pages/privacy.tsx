@@ -28,7 +28,7 @@ export default function Privacy() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -75,7 +75,7 @@ export default function Privacy() {
       <section className="py-16 lg:py-24">
         <div className="max-w-3xl mx-auto px-4">
           <p className="text-lg text-muted-foreground mb-12">
-            TripPirate is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and how we keep it secure.
+            TripPenguin is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and how we keep it secure.
           </p>
 
           <div className="space-y-12">
@@ -119,13 +119,13 @@ export default function Privacy() {
                 <Card>
                   <CardContent className="pt-6">
                     <h3 className="font-semibold mb-3">C) Savings Account Data (optional)</h3>
-                    <p className="text-muted-foreground mb-3">If you choose to link a savings account, TripPirate accesses:</p>
+                    <p className="text-muted-foreground mb-3">If you choose to link a savings account, TripPenguin accesses:</p>
                     <ul className="space-y-2 text-muted-foreground mb-4">
                       <li>Account balance</li>
                       <li>Transaction history related to savings accumulation</li>
                       <li>Bank name and account type</li>
                     </ul>
-                    <p className="text-sm font-medium">TripPirate never stores your login credentials for financial accounts.</p>
+                    <p className="text-sm font-medium">TripPenguin never stores your login credentials for financial accounts.</p>
                     <p className="text-sm text-muted-foreground mt-2">All financial connections are handled through secure bank-grade APIs such as Plaid or similar services.</p>
                   </CardContent>
                 </Card>
@@ -176,7 +176,7 @@ export default function Privacy() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground mb-4">
-                    TripPirate is free to use. We earn commissions from hotels, airlines, tour operators, and other travel partners when bookings are made through the app.
+                    TripPenguin is free to use. We earn commissions from hotels, airlines, tour operators, and other travel partners when bookings are made through the app.
                   </p>
                   <p className="text-lg font-semibold text-primary">
                     Companies pay us — not you.
@@ -251,7 +251,7 @@ export default function Privacy() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground">
-                    TripPirate is intended for family use. Parents manage accounts and control child involvement. We do not knowingly collect personal information directly from children under 13.
+                    TripPenguin is intended for family use. Parents manage accounts and control child involvement. We do not knowingly collect personal information directly from children under 13.
                   </p>
                 </CardContent>
               </Card>
@@ -308,7 +308,7 @@ export default function Privacy() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground">
-                    If you have questions, email us at: <a href="mailto:support@trippirate.com" className="text-primary hover:underline">support@trippirate.com</a>
+                    If you have questions, email us at: <a href="mailto:support@trippenguin.com" className="text-primary hover:underline">support@trippenguin.com</a>
                   </p>
                 </CardContent>
               </Card>
@@ -324,7 +324,7 @@ export default function Privacy() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -337,7 +337,7 @@ export default function Privacy() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

@@ -1,7 +1,7 @@
 # Security Fixes Applied - November 2025
 
 ## Overview
-This document details all critical security vulnerabilities that have been identified and FIXED in the TripPirate application following a comprehensive security audit.
+This document details all critical security vulnerabilities that have been identified and FIXED in the TripPenguin application following a comprehensive security audit.
 
 ---
 

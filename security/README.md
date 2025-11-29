@@ -1,6 +1,6 @@
 # Security Documentation
 
-This folder contains all security-related documentation for the TripPirate application.
+This folder contains all security-related documentation for the TripPenguin application.
 
 ## 📚 Documents
 

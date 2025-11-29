@@ -1,6 +1,6 @@
 # Utility Scripts
 
-This directory contains administrative and utility scripts for managing the TripPirate application.
+This directory contains administrative and utility scripts for managing the TripPenguin application.
 
 ## Available Scripts
 

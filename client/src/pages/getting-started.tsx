@@ -1597,7 +1597,7 @@ export default function GettingStarted() {
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
 
             {/* Navigation Links - hidden on mobile */}
@@ -1645,7 +1645,7 @@ export default function GettingStarted() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground text-sm">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
@@ -1654,11 +1654,11 @@ export default function GettingStarted() {
               <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
               <Link href="/terms-of-service" className="hover:text-foreground transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <a href="mailto:contact@trippirate.com" className="hover:text-foreground transition-colors">Contact</a>
+              <a href="mailto:contact@trippenguin.com" className="hover:text-foreground transition-colors">Contact</a>
             </nav>
           </div>
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

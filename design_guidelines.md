@@ -1,4 +1,4 @@
-# TripPirate Trip Planning App - Design Guidelines
+# TripPenguin Trip Planning App - Design Guidelines
 
 ## Design Approach
 

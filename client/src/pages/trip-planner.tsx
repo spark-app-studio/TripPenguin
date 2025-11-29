@@ -59,7 +59,7 @@ interface TripPlanData {
   }>;
 }
 
-const TRIP_PLANNER_STATE_KEY = "trippirate_planner_state";
+const TRIP_PLANNER_STATE_KEY = "trippenguin_planner_state";
 
 export default function TripPlanner() {
   const [, params] = useRoute("/trip/:id");

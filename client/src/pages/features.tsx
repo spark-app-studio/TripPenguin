@@ -28,7 +28,7 @@ export default function Features() {
     {
       icon: Sparkles,
       title: "Personalized AI-Generated Family Itineraries",
-      description: "Your family is unique — your trip should be too. TripPirate learns your family's interests, pace, budget, and travel style, then generates three tailored trip options. Not generic. Not influencer-fantasy-travel. Realistic trips for real families.",
+      description: "Your family is unique — your trip should be too. TripPenguin learns your family's interests, pace, budget, and travel style, then generates three tailored trip options. Not generic. Not influencer-fantasy-travel. Realistic trips for real families.",
       bullets: [
         "Age-smart recommendations",
         "Trip pace aligned with kid stamina",
@@ -39,7 +39,7 @@ export default function Features() {
     {
       icon: DollarSign,
       title: "Smart Trip Budgeting & Cost Transparency",
-      description: "See every cost upfront — no surprises. TripPirate breaks down projected costs for your chosen itinerary:",
+      description: "See every cost upfront — no surprises. TripPenguin breaks down projected costs for your chosen itinerary:",
       bullets: [
         "Flights",
         "Lodging",
@@ -53,7 +53,7 @@ export default function Features() {
     {
       icon: PiggyBank,
       title: "Savings Integration & Progress Tracking",
-      description: "Watch your trip come closer each week. You can manually enter savings or link your bank — TripPirate tracks it and visualizes your progress.",
+      description: "Watch your trip come closer each week. You can manually enter savings or link your bank — TripPenguin tracks it and visualizes your progress.",
       bullets: [
         "Real-time savings progress",
         "Encouraging milestone celebrations (\"You're halfway there!\")",
@@ -64,7 +64,7 @@ export default function Features() {
     {
       icon: ShoppingCart,
       title: "Book As You're Ready — One Step at a Time",
-      description: "Travel at the pace of your savings. TripPirate lets you book trip components individually as you're financially ready:",
+      description: "Travel at the pace of your savings. TripPenguin lets you book trip components individually as you're financially ready:",
       bullets: [
         "Flights first",
         "Or lodging first",
@@ -75,7 +75,7 @@ export default function Features() {
     {
       icon: Shield,
       title: "Trusted Affiliate Booking — Same Price or Lower",
-      description: "TripPirate is free because companies pay us — not you. When you book through a partner link:",
+      description: "TripPenguin is free because companies pay us — not you. When you book through a partner link:",
       bullets: [
         "You don't pay extra",
         "No hidden fees",
@@ -87,7 +87,7 @@ export default function Features() {
     {
       icon: Baby,
       title: "Built for Families at Every Stage",
-      description: "Finally — a travel planning tool designed with real family needs in mind. TripPirate considers:",
+      description: "Finally — a travel planning tool designed with real family needs in mind. TripPenguin considers:",
       bullets: [
         "Ages of your children",
         "Nap & downtime needs",
@@ -100,7 +100,7 @@ export default function Features() {
     {
       icon: Globe,
       title: "Domestic, International, or Staycation Support",
-      description: "Adventure exists at every scale. TripPirate helps families plan:",
+      description: "Adventure exists at every scale. TripPenguin helps families plan:",
       bullets: [
         "Big international vacations",
         "Cross-country road trips",
@@ -112,7 +112,7 @@ export default function Features() {
     {
       icon: Smartphone,
       title: "Joyful, Simple, Stress-Reducing Interface",
-      description: "Travel planning doesn't need to be overwhelming. TripPirate uses:",
+      description: "Travel planning doesn't need to be overwhelming. TripPenguin uses:",
       bullets: [
         "Friendly language",
         "Clean layout",
@@ -132,7 +132,7 @@ export default function Features() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 cursor-pointer">
               <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">TripPirate</span>
+              <span className="text-xl font-bold">TripPenguin</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -222,7 +222,7 @@ export default function Features() {
       <section className="py-20 lg:py-28 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 font-serif">
-            TripPirate — Family adventures, finally within reach.
+            TripPenguin — Family adventures, finally within reach.
           </h2>
           <p className="text-xl mb-10 text-primary-foreground/90">
             Plan your trip at your pace, with your budget, your way.
@@ -246,7 +246,7 @@ export default function Features() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Plane className="h-5 w-5 text-primary" />
-              <span className="font-bold">TripPirate</span>
+              <span className="font-bold">TripPenguin</span>
               <span className="text-muted-foreground">— Family adventures, finally within reach.</span>
             </div>
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
@@ -257,7 +257,7 @@ export default function Features() {
             </nav>
           </div>
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2025 TripPirate
+            © 2025 TripPenguin
           </div>
         </div>
       </footer>

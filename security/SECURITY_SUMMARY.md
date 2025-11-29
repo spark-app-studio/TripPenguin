@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-A comprehensive security audit was performed on the TripPirate authentication system and application security. **3 CRITICAL vulnerabilities** were identified and **IMMEDIATELY FIXED**, along with 2 HIGH and 4 MEDIUM priority issues.
+A comprehensive security audit was performed on the TripPenguin authentication system and application security. **3 CRITICAL vulnerabilities** were identified and **IMMEDIATELY FIXED**, along with 2 HIGH and 4 MEDIUM priority issues.
 
 ---
 
