@@ -33,10 +33,10 @@ import { useTripBudget, CategoryCosts } from "@/hooks/useTripBudget";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X, BookOpen, Film, Tv, Map, Play } from "lucide-react";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X, BookOpen, Film, Tv, Map, Play, Train, Bus, Car, Ship } from "lucide-react";
 
 interface BudgetData {
-  flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
+  flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string; booked: boolean; bookedDate?: string };
   housing: { cost: string; notes: string };
   food: { cost: string; notes: string };
   transportation: { cost: string; notes: string };
@@ -46,6 +46,8 @@ interface BudgetData {
   monthlySavings: string;
   currentSavings: string;
   creditCardPoints: string;
+  accommodationsBooked: { [cityName: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
+  transportBooked: { [segmentId: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
 }
 
 // Mock credit card offers data
@@ -171,13 +173,17 @@ function generateMockAccommodations(cityName: string, countryName: string): Acco
 // Transportation option interface
 interface TransportOption {
   id: string;
-  type: "metro" | "train" | "bus" | "rideshare" | "taxi" | "shuttle";
+  type: "metro" | "train" | "bus" | "rideshare" | "taxi" | "shuttle" | "rental-car" | "ferry";
   name: string;
   cost: number;
   description: string;
   duration: string;
   url: string;
 }
+
+// Major transportation types (exclude taxis, rideshares, and local transit)
+const MAJOR_TRANSPORT_TYPES = ["train", "bus", "shuttle", "rental-car", "ferry"];
+const isMinorTransport = (type: string) => ["taxi", "rideshare", "metro"].includes(type);
 
 // Transportation segment interface
 interface TransportSegment {
@@ -204,8 +210,7 @@ function generateTransportOptions(
   
   if (segmentType === "airport-arrival" || segmentType === "airport-departure") {
     const baseShuttleCost = isInternational ? 25 : 18;
-    const baseRideshareCost = isInternational ? 35 : 25;
-    const baseTaxiCost = isInternational ? 55 : 40;
+    const baseRentalCarCost = isInternational ? 65 : 45;
     
     return [
       {
@@ -218,59 +223,58 @@ function generateTransportOptions(
         url: `https://example.com/shuttle/${citySlug}-airport`
       },
       {
-        id: `${citySlug}-${segmentType}-rideshare`,
-        type: "rideshare",
-        name: "Uber/Lyft",
-        cost: Math.round((baseRideshareCost + (cityHash % 20)) / 5) * 5,
-        description: "On-demand rideshare. Prices vary by time of day and demand.",
-        duration: "25-40 min",
-        url: "https://example.com/rideshare"
+        id: `${citySlug}-${segmentType}-rental-car`,
+        type: "rental-car",
+        name: `${cityName} Car Rental`,
+        cost: Math.round((baseRentalCarCost + (cityHash % 30)) / 5) * 5,
+        description: "Rent a car at the airport. Flexible transportation for your entire stay.",
+        duration: "Self-drive",
+        url: `https://example.com/car-rental/${citySlug}`
       },
       {
-        id: `${citySlug}-${segmentType}-taxi`,
-        type: "taxi",
-        name: `${cityName} Taxi`,
-        cost: Math.round((baseTaxiCost + (cityHash % 25)) / 5) * 5,
-        description: "Traditional taxi service. Fixed rates often available from airport.",
-        duration: "25-40 min",
-        url: `https://example.com/taxi/${citySlug}`
+        id: `${citySlug}-${segmentType}-bus`,
+        type: "bus",
+        name: `${cityName} Airport Express Bus`,
+        cost: Math.round((15 + (cityHash % 10)) / 5) * 5,
+        description: "Direct express bus to city center. Affordable and reliable.",
+        duration: "30-50 min",
+        url: `https://example.com/airport-bus/${citySlug}`
       }
     ];
   }
   
   if (segmentType === "within-city") {
     const nights = numberOfNights || 3;
-    const baseMetroCost = isInternational ? 8 : 5;
+    const baseRentalCarCost = isInternational ? 55 : 40;
     const baseBusCost = isInternational ? 6 : 4;
-    const baseRideshareBudget = isInternational ? 15 : 12;
     
     return [
       {
-        id: `${citySlug}-metro-pass`,
-        type: "metro",
-        name: `${cityName} Metro/Subway Pass`,
-        cost: Math.round((baseMetroCost * nights + (cityHash % 10)) / 5) * 5,
-        description: `${nights}-day unlimited metro pass. Covers all subway and light rail lines.`,
-        duration: "Unlimited rides",
-        url: `https://example.com/transit/${citySlug}-metro`
+        id: `${citySlug}-rental-car`,
+        type: "rental-car",
+        name: `${cityName} Car Rental (${nights} days)`,
+        cost: Math.round((baseRentalCarCost * nights + (cityHash % 30)) / 5) * 5,
+        description: `${nights}-day car rental for flexible exploration. Includes insurance.`,
+        duration: `${nights} days`,
+        url: `https://example.com/car-rental/${citySlug}`
       },
       {
         id: `${citySlug}-bus-pass`,
         type: "bus",
-        name: `${cityName} Bus Pass`,
+        name: `${cityName} Transit Pass`,
         cost: Math.round((baseBusCost * nights + (cityHash % 8)) / 5) * 5,
-        description: `${nights}-day unlimited bus pass. Extensive network coverage.`,
+        description: `${nights}-day unlimited transit pass. Covers buses and local trains.`,
         duration: "Unlimited rides",
         url: `https://example.com/transit/${citySlug}-bus`
       },
       {
-        id: `${citySlug}-rideshare-budget`,
-        type: "rideshare",
-        name: "Rideshare Budget",
-        cost: Math.round((baseRideshareBudget * nights + (cityHash % 20)) / 5) * 5,
-        description: `Estimated budget for ${nights} days of occasional Uber/Lyft rides.`,
-        duration: "As needed",
-        url: "https://example.com/rideshare"
+        id: `${citySlug}-shuttle`,
+        type: "shuttle",
+        name: `${cityName} Tour Shuttle`,
+        cost: Math.round((20 + (cityHash % 15)) / 5) * 5,
+        description: "Hop-on-hop-off tourist shuttle to major attractions.",
+        duration: "Day pass",
+        url: `https://example.com/shuttle/${citySlug}`
       }
     ];
   }
@@ -1578,7 +1582,7 @@ export default function Step2Plan({
   })) || destinationDetails;
   
   const [budgetData, setBudgetData] = useState<BudgetData>({
-    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false, pointsToUse: "0" },
+    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false, pointsToUse: "0", booked: false },
     housing: initialData?.housing || { cost: "0", notes: "" },
     food: initialData?.food || { cost: "0", notes: "" },
     transportation: initialData?.transportation || { cost: "0", notes: "" },
@@ -1588,6 +1592,8 @@ export default function Step2Plan({
     monthlySavings: initialData?.monthlySavings || "500",
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
+    accommodationsBooked: {},
+    transportBooked: {},
   });
 
   // Sub-step state for Save & Book flow: "savings" -> "overview" -> "budget"
@@ -1717,6 +1723,64 @@ export default function Step2Plan({
     if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return [];
     return generateTransportSegments(displayedDestinationDetails);
   }, [displayedDestinationDetails]);
+  
+  // Sanitize selectedTransport and transportBooked to remove minor transport and orphaned IDs
+  useEffect(() => {
+    if (transportSegments.length === 0) return;
+    
+    // Build set of valid segment IDs and map of valid option IDs per segment
+    const validSegmentIds = new Set(transportSegments.map(s => s.id));
+    const validMajorOptionIds = new Set<string>();
+    transportSegments.forEach(segment => {
+      segment.options
+        .filter(opt => !isMinorTransport(opt.type))
+        .forEach(opt => validMajorOptionIds.add(opt.id));
+    });
+    
+    // Build clean selectedTransport - only include valid entries with major transport
+    const validSelectionEntries: [string, string][] = [];
+    transportSegments.forEach(segment => {
+      const selectedId = selectedTransport[segment.id];
+      if (selectedId) {
+        const selectedOption = segment.options.find(opt => opt.id === selectedId);
+        if (selectedOption && !isMinorTransport(selectedOption.type)) {
+          validSelectionEntries.push([segment.id, selectedId]);
+        }
+      }
+    });
+    const cleanedSelections = Object.fromEntries(validSelectionEntries) as Record<string, string | null>;
+    
+    // Check if selectedTransport needs updating
+    const currentKeys = Object.keys(selectedTransport).filter(k => selectedTransport[k] !== null);
+    const cleanedKeys = Object.keys(cleanedSelections);
+    const selectionsNeedUpdate = currentKeys.length !== cleanedKeys.length || 
+      currentKeys.some(k => !cleanedSelections[k] || cleanedSelections[k] !== selectedTransport[k]);
+    
+    if (selectionsNeedUpdate) {
+      setSelectedTransport(cleanedSelections);
+    }
+    
+    // Build clean transportBooked - only include valid entries with major transport
+    const validBookingEntries: [string, { booked: boolean; bookedDate?: string; optionId?: string }][] = [];
+    Object.entries(budgetData.transportBooked).forEach(([segmentId, booking]) => {
+      if (validSegmentIds.has(segmentId) && booking.optionId && validMajorOptionIds.has(booking.optionId)) {
+        validBookingEntries.push([segmentId, booking]);
+      }
+    });
+    const cleanedBookings = Object.fromEntries(validBookingEntries) as Record<string, { booked: boolean; bookedDate?: string; optionId?: string }>;
+    
+    // Check if transportBooked needs updating
+    const currentBookedKeys = Object.keys(budgetData.transportBooked);
+    const cleanedBookedKeys = Object.keys(cleanedBookings);
+    const bookingsNeedUpdate = currentBookedKeys.length !== cleanedBookedKeys.length;
+    
+    if (bookingsNeedUpdate) {
+      setBudgetData(prev => ({
+        ...prev,
+        transportBooked: cleanedBookings
+      }));
+    }
+  }, [transportSegments, selectedTransport, budgetData.transportBooked]);
 
   // Activity selection state
   // Maps "cityName-dayNumber-activityId" -> boolean (selected or not)
@@ -2092,6 +2156,68 @@ export default function Step2Plan({
     });
   };
 
+  // Handle booking flights
+  const handleBookFlights = () => {
+    setBudgetData(prev => ({
+      ...prev,
+      flights: {
+        ...prev.flights,
+        booked: true,
+        bookedDate: new Date().toISOString()
+      }
+    }));
+    toast({
+      title: "Flights Booked!",
+      description: "Great job! Your flights have been marked as booked. You can now move on to book accommodations.",
+    });
+  };
+
+  // Handle booking an accommodation
+  const handleBookAccommodation = (cityName: string, optionId: string) => {
+    setBudgetData(prev => ({
+      ...prev,
+      accommodationsBooked: {
+        ...prev.accommodationsBooked,
+        [cityName]: {
+          booked: true,
+          bookedDate: new Date().toISOString(),
+          optionId
+        }
+      }
+    }));
+    toast({
+      title: "Stay Booked!",
+      description: `Your accommodation in ${cityName} has been marked as booked.`,
+    });
+  };
+
+  // Handle booking a transport segment
+  const handleBookTransport = (segmentId: string, optionId: string) => {
+    setBudgetData(prev => ({
+      ...prev,
+      transportBooked: {
+        ...prev.transportBooked,
+        [segmentId]: {
+          booked: true,
+          bookedDate: new Date().toISOString(),
+          optionId
+        }
+      }
+    }));
+    toast({
+      title: "Transportation Booked!",
+      description: "Your transportation has been marked as booked.",
+    });
+  };
+
+  // Check if all accommodations are booked
+  const allAccommodationsBooked = useMemo(() => {
+    if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return false;
+    return displayedDestinationDetails.every(dest => 
+      budgetData.accommodationsBooked[dest.cityName]?.booked
+    );
+  }, [displayedDestinationDetails, budgetData.accommodationsBooked]);
+
   // Placeholder function to estimate flight cost based on destinations
   // This simulates an API call that would normally check flight prices
   // In production, this would use actual flight price APIs
@@ -2276,7 +2402,7 @@ export default function Step2Plan({
     }));
   };
 
-  // Estimate transportation cost (AI estimate before selections)
+  // Estimate transportation cost (AI estimate before selections) - only major transport
   const estimatedTransportCost = useMemo(() => {
     // If user has manually entered transportation cost, use that
     const transportBudget = parseFloat(budgetData.transportation.cost || "0");
@@ -2284,12 +2410,13 @@ export default function Step2Plan({
       return transportBudget;
     }
     
-    // Otherwise estimate based on typical rates
+    // Otherwise estimate based on typical rates - only major transport options
     let totalCost = 0;
     transportSegments.forEach(segment => {
-      // Use the middle-cost option as the estimate
-      if (segment.options.length > 0) {
-        const sortedOptions = [...segment.options].sort((a, b) => a.cost - b.cost);
+      // Filter to only major transport options
+      const majorOptions = segment.options.filter(opt => !isMinorTransport(opt.type));
+      if (majorOptions.length > 0) {
+        const sortedOptions = [...majorOptions].sort((a, b) => a.cost - b.cost);
         const middleIndex = Math.floor(sortedOptions.length / 2);
         totalCost += sortedOptions[middleIndex].cost;
       }
@@ -2297,17 +2424,23 @@ export default function Step2Plan({
     return totalCost;
   }, [budgetData.transportation.cost, transportSegments]);
 
-  // Calculate actual transport cost based on selections
+  // Calculate actual transport cost based on selections - only major transport
   const selectedTransportCost = useMemo(() => {
     let totalCost = 0;
     let allSelected = true;
     
     transportSegments.forEach(segment => {
+      // Filter to only major transport options for counting
+      const majorOptions = segment.options.filter(opt => !isMinorTransport(opt.type));
+      if (majorOptions.length === 0) return; // Skip segments with no major options
+      
       const selectedId = selectedTransport[segment.id];
       if (selectedId) {
-        const selected = segment.options.find(opt => opt.id === selectedId);
+        const selected = majorOptions.find(opt => opt.id === selectedId);
         if (selected) {
           totalCost += selected.cost;
+        } else {
+          allSelected = false; // Selected a minor transport option
         }
       } else {
         allSelected = false;
@@ -2468,9 +2601,23 @@ export default function Step2Plan({
       bus: "Bus",
       rideshare: "Rideshare",
       taxi: "Taxi",
-      shuttle: "Shuttle/Flight"
+      shuttle: "Shuttle/Flight",
+      "rental-car": "Car Rental",
+      ferry: "Ferry"
     };
     return typeMap[type] || type;
+  };
+  
+  // Get transport type icon
+  const getTransportTypeIcon = (type: TransportOption["type"]) => {
+    switch (type) {
+      case "train": return <Train className="w-4 h-4" />;
+      case "bus": return <Bus className="w-4 h-4" />;
+      case "rental-car": return <Car className="w-4 h-4" />;
+      case "ferry": return <Ship className="w-4 h-4" />;
+      case "shuttle": return <Plane className="w-4 h-4" />;
+      default: return <ChevronRight className="w-4 h-4" />;
+    }
   };
 
   // Get segment type label
@@ -3336,59 +3483,118 @@ export default function Step2Plan({
 
               {/* Book Flights Button - Prominent CTA at bottom */}
               <div className="pt-4 border-t" data-testid="container-flight-cta">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground" data-testid="text-flight-status">
-                      {canBookFlightsNow 
-                        ? "You've saved enough! Time to book your flights." 
-                        : `Save $${flightSavingsGap.toLocaleString()} more to unlock booking.`}
-                    </p>
+                {budgetData.flights.booked ? (
+                  <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900" data-testid="alert-flights-booked">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-green-700 dark:text-green-400" data-testid="text-flights-booked">Flights Booked!</p>
+                          <p className="text-sm text-green-600 dark:text-green-500">
+                            Booked on {budgetData.flights.bookedDate ? new Date(budgetData.flights.bookedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'today'}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="default" className="bg-green-600">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Complete
+                      </Badge>
+                    </div>
                   </div>
-                  <BookingButton
-                    category="flights"
-                    isFunded={tripBudget.categories.flights.isFunded}
-                    monthsToFund={tripBudget.categories.flights.monthsToFund}
-                    earliestDate={tripBudget.categories.flights.earliestBookingDate}
-                    label="Book the Flights"
-                    onClick={() => {
-                      toast({
-                        title: "Ready to Book!",
-                        description: "Opening flight booking options...",
-                      });
-                    }}
-                    testId="button-book-flights"
-                  />
-                </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground" data-testid="text-flight-status">
+                        {canBookFlightsNow 
+                          ? "You've saved enough! Time to book your flights." 
+                          : `Save $${flightSavingsGap.toLocaleString()} more to unlock booking.`}
+                      </p>
+                    </div>
+                    <Button
+                      size="lg"
+                      className="gap-2"
+                      disabled={!canBookFlightsNow}
+                      onClick={handleBookFlights}
+                      data-testid="button-book-flights"
+                    >
+                      <Plane className="w-4 h-4" />
+                      {canBookFlightsNow ? "Mark Flights as Booked" : `Book the Flights`}
+                      {!canBookFlightsNow && (
+                        <Lock className="w-4 h-4 ml-1" />
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Accommodation Costs Section */}
-          <Card data-testid="card-accommodation-costs">
-            <CardHeader>
+          {/* Navigation to Accommodations (after flights booked) */}
+          {budgetData.flights.booked && (
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                className="gap-2"
+                onClick={() => {
+                  document.getElementById('accommodations-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                data-testid="button-continue-to-accommodations"
+              >
+                Continue to Book Accommodations
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Save and Book Accommodations Section */}
+          <Card id="accommodations-section" data-testid="card-accommodation-costs" className="border-2 border-purple-200 dark:border-purple-900/50">
+            <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30">
                     <MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Accommodation Costs</CardTitle>
-                    <CardDescription>Select and compare stays for each destination</CardDescription>
+                    <CardTitle className="text-xl">Save and Book Accommodations</CardTitle>
+                    <CardDescription>Book each stay when you have enough saved for it</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={selectedAccommodationCost.allSelected ? "default" : "secondary"}>
-                    {Object.values(selectedAccommodations).filter(Boolean).length} of {displayedDestinationDetails?.length || 0} selected
-                  </Badge>
+                  {allAccommodationsBooked ? (
+                    <Badge variant="default" className="bg-green-600 gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      All Booked
+                    </Badge>
+                  ) : (
+                    <Badge variant={selectedAccommodationCost.allSelected ? "default" : "secondary"}>
+                      {Object.keys(budgetData.accommodationsBooked).filter(k => budgetData.accommodationsBooked[k]?.booked).length} of {displayedDestinationDetails?.length || 0} booked
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Estimated Accommodation Costs Summary */}
+              {/* Savings Reminder */}
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-accommodation-reminder">
+                <div className="flex items-start gap-3">
+                  <PiggyBank className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Book Only When You Have the Savings</p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      Each accommodation should only be booked when you have enough in your savings account to cover it. 
+                      This keeps you on track for a debt-free trip!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accommodation Summary Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50 border">
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-muted-foreground">Estimated Accommodation Costs</p>
+                    <p className="text-xs text-muted-foreground">Total Accommodation Cost</p>
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -3442,20 +3648,37 @@ export default function Step2Plan({
                 </div>
               </div>
 
-              {/* Accommodation Savings Progress */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Accommodation Savings Progress</span>
-                  <span className="font-medium">{accommodationSavingsProgress.toFixed(0)}% saved</span>
+              {/* Booking Tips */}
+              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-accommodation-tips">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <h4 className="font-semibold text-sm">Booking Tips</h4>
                 </div>
-                <Progress value={accommodationSavingsProgress} className="h-3" />
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2" data-testid="tip-accommodation-refundable">
+                    <span className="text-purple-600 font-bold">1.</span>
+                    <span>Look for refundable or free cancellation options in case plans change</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-accommodation-reviews">
+                    <span className="text-purple-600 font-bold">2.</span>
+                    <span>Read recent reviews and check photos to verify the property matches the listing</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-accommodation-location">
+                    <span className="text-purple-600 font-bold">3.</span>
+                    <span>Consider location - staying near public transport can save on transportation costs</span>
+                  </li>
+                  <li className="flex items-start gap-2" data-testid="tip-accommodation-amenities">
+                    <span className="text-purple-600 font-bold">4.</span>
+                    <span>Check for included breakfast or kitchen access to save on food expenses</span>
+                  </li>
+                </ul>
               </div>
 
               <Separator />
 
               {/* Itinerary Destinations with Accommodation Options */}
               <div className="space-y-6">
-                <h3 className="font-semibold text-lg">Choose Your Stays</h3>
+                <h3 className="font-semibold text-lg">Book Your Stays</h3>
                 
                 {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
                   displayedDestinationDetails.map((dest, idx) => {
@@ -3464,32 +3687,52 @@ export default function Step2Plan({
                     const selectedOption = selectedId && cityAccommodations
                       ? cityAccommodations.options.find(opt => opt.id === selectedId)
                       : null;
+                    const isBooked = budgetData.accommodationsBooked[dest.cityName]?.booked;
+                    
+                    const cityFromItinerary = itinerary?.cities?.find(c => c.cityName === dest.cityName);
+                    const arrivalDate = cityFromItinerary?.arrivalDate 
+                      ? new Date(cityFromItinerary.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : null;
+                    const departureDate = cityFromItinerary?.departureDate
+                      ? new Date(cityFromItinerary.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : null;
                     
                     return (
                       <div 
                         key={dest.cityName} 
-                        className="p-4 rounded-lg border bg-muted/20"
+                        className={`p-4 rounded-lg border ${isBooked ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' : 'bg-muted/20'}`}
                         data-testid={`accommodation-location-${idx}`}
                       >
                         {/* Location Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                              {idx + 1}
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${isBooked ? 'bg-green-600 text-white' : 'bg-primary text-primary-foreground'}`}>
+                              {isBooked ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                             </div>
                             <div>
                               <h4 className="font-semibold">{dest.cityName}, {dest.countryName}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
-                              </p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <CalendarIcon className="w-3 h-3" />
+                                <span>
+                                  {arrivalDate && departureDate 
+                                    ? `${arrivalDate} - ${departureDate}` 
+                                    : `${dest.numberOfNights} night${dest.numberOfNights > 1 ? 's' : ''}`}
+                                </span>
+                                <span className="text-xs">({dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''})</span>
+                              </div>
                             </div>
                           </div>
-                          {selectedOption && (
-                            <Badge variant="default" className="gap-1">
+                          {isBooked ? (
+                            <Badge variant="default" className="bg-green-600 gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Booked
+                            </Badge>
+                          ) : selectedOption ? (
+                            <Badge variant="secondary" className="gap-1">
                               <CheckCircle2 className="w-3 h-3" />
                               Selected
                             </Badge>
-                          )}
+                          ) : null}
                         </div>
 
                         {/* Accommodation Options */}
@@ -3497,8 +3740,8 @@ export default function Step2Plan({
                           {cityAccommodations?.options.map((option) => {
                             const isSelected = selectedId === option.id;
                             const totalCost = option.nightlyCost * dest.numberOfNights;
+                            const canAffordThis = currentSavingsNum >= totalCost;
                             
-                            // If an option is selected, only show the selected one
                             if (selectedId && !isSelected) {
                               return null;
                             }
@@ -3507,11 +3750,13 @@ export default function Step2Plan({
                               <div
                                 key={option.id}
                                 className={`p-4 rounded-lg border transition-all ${
-                                  isSelected 
+                                  isBooked
+                                    ? 'border-green-300 dark:border-green-800 bg-white dark:bg-green-950/30'
+                                    : isSelected 
                                     ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                                     : 'bg-background hover-elevate cursor-pointer'
                                 }`}
-                                onClick={() => handleSelectAccommodation(dest.cityName, option.id)}
+                                onClick={() => !isBooked && handleSelectAccommodation(dest.cityName, option.id)}
                                 data-testid={`accommodation-option-${option.id}`}
                               >
                                 <div className="flex items-start justify-between mb-2">
@@ -3524,8 +3769,8 @@ export default function Step2Plan({
                                       <span className="text-xs font-medium">{option.rating.toFixed(1)}</span>
                                     </div>
                                   </div>
-                                  {isSelected && (
-                                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                                  {(isSelected || isBooked) && (
+                                    <CheckCircle2 className={`w-5 h-5 ${isBooked ? 'text-green-600' : 'text-primary'}`} />
                                   )}
                                 </div>
                                 <h5 className="font-medium text-sm mb-1">{option.name}</h5>
@@ -3542,19 +3787,52 @@ export default function Step2Plan({
                                     <p className="text-xs text-muted-foreground">total for {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}</p>
                                   </div>
                                 </div>
-                                {isSelected ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full mt-3 gap-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSelectAccommodation(dest.cityName, option.id);
-                                    }}
-                                    data-testid={`button-change-${option.id}`}
-                                  >
-                                    Change Selection
-                                  </Button>
+                                {isBooked ? (
+                                  <div className="mt-3 p-2 rounded bg-green-100 dark:bg-green-900/30 text-center">
+                                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                                      Booked on {budgetData.accommodationsBooked[dest.cityName]?.bookedDate 
+                                        ? new Date(budgetData.accommodationsBooked[dest.cityName].bookedDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                        : 'today'}
+                                    </p>
+                                  </div>
+                                ) : isSelected ? (
+                                  <div className="space-y-2 mt-3">
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      className="w-full gap-1"
+                                      disabled={!canAffordThis}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleBookAccommodation(dest.cityName, option.id);
+                                      }}
+                                      data-testid={`button-book-${option.id}`}
+                                    >
+                                      {canAffordThis ? (
+                                        <>
+                                          <CheckCircle2 className="w-4 h-4" />
+                                          Book This Stay
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Lock className="w-4 h-4" />
+                                          Need ${(totalCost - currentSavingsNum).toLocaleString()} more
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full gap-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSelectAccommodation(dest.cityName, option.id);
+                                      }}
+                                      data-testid={`button-change-${option.id}`}
+                                    >
+                                      Change Selection
+                                    </Button>
+                                  </div>
                                 ) : (
                                   <Button
                                     variant="default"
@@ -3569,19 +3847,21 @@ export default function Step2Plan({
                                     Select This Stay
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full mt-2 gap-1 text-muted-foreground"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(option.url, '_blank');
-                                  }}
-                                  data-testid={`button-view-details-${option.id}`}
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  View Details
-                                </Button>
+                                {!isBooked && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full mt-2 gap-1 text-muted-foreground"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(option.url, '_blank');
+                                    }}
+                                    data-testid={`button-view-details-${option.id}`}
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View Details
+                                  </Button>
+                                )}
                               </div>
                             );
                           })}
@@ -3597,94 +3877,42 @@ export default function Step2Plan({
                 )}
               </div>
 
-              <Separator />
-
-              {/* Booking Info Section */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Earliest Date to Book */}
-                <div className="p-4 rounded-lg bg-muted/50 border">
-                  <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-muted-foreground">Earliest Date to Book Stays</p>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Based on needing ${totalFlightsAndAccommodation.toLocaleString()} total for flights + accommodations, with ${currentSavingsNum.toLocaleString()} saved and ${monthlySavingsNum.toLocaleString()}/month savings.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookAccommodationNow ? 'text-green-600' : ''}`} data-testid="text-earliest-accommodation-date">
-                    <CalendarIcon className="w-4 h-4" />
-                    {canBookAccommodationNow 
-                      ? "Ready now!" 
-                      : earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    }
-                  </p>
-                  {!canBookAccommodationNow && monthsToCombined > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {monthsToCombined} month{monthsToCombined > 1 ? 's' : ''} away
-                    </p>
-                  )}
-                </div>
-
-                {/* Book Stays Button - Uses centralized budget calculations */}
-                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
-                  <BookingButton
-                    category="accommodations"
-                    isFunded={tripBudget.categories.accommodations.isFunded}
-                    monthsToFund={tripBudget.categories.accommodations.monthsToFund}
-                    earliestDate={tripBudget.categories.accommodations.earliestBookingDate}
-                    label="Book Your Stays"
-                    className="w-full"
-                    testId="button-book-stays"
-                  />
-                </div>
-              </div>
-
-              {/* Helper Text */}
-              {!canBookAccommodationNow && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
-                  <div className="flex items-start gap-2">
-                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
-                      <span className="font-medium">We recommend waiting until {earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book stays without going into debt. 
-                      At your current savings rate, you'll have enough for both flights and accommodations by then.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {canBookAccommodationNow && (
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-green-700 dark:text-green-400">
-                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover both flights (${estimatedFlightCost.toLocaleString()}) and accommodations (${finalAccommodationCost.toLocaleString()}). 
-                      Book now to secure the best rates and availability.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
+              </CardContent>
           </Card>
 
-          {/* Transportation Costs Section */}
-          <Card data-testid="card-transportation-costs">
-            <CardHeader>
+          {/* Navigation to Transportation (after all accommodations booked) */}
+          {allAccommodationsBooked && (
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                className="gap-2"
+                onClick={() => {
+                  document.getElementById('transportation-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                data-testid="button-continue-to-transportation"
+              >
+                Continue to Book Major Transportation
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Save and Book Major Transportation Section */}
+          <Card id="transportation-section" data-testid="card-transportation-costs" className="border-2 border-blue-200 dark:border-blue-900/50">
+            <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <ChevronRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                    <Train className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Transportation Costs</CardTitle>
-                    <CardDescription>Plan how you'll get around during your trip</CardDescription>
+                    <CardTitle className="text-xl">Save and Book Major Transportation</CardTitle>
+                    <CardDescription>Book car rentals, trains, buses, ferries, and regional flights</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
-                    {Object.values(selectedTransport).filter(Boolean).length} of {transportSegments.length} selected
+                    {Object.values(selectedTransport).filter(Boolean).length} of {transportSegments.filter(s => !['taxi', 'rideshare', 'uber', 'lyft'].includes(s.type.toLowerCase())).length} selected
                   </Badge>
                 </div>
               </div>
@@ -3807,9 +4035,11 @@ export default function Step2Plan({
                           )}
                         </div>
 
-                        {/* Transport Options */}
+                        {/* Transport Options - Only major transport types */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {segment.options.map((option) => {
+                          {segment.options
+                            .filter(option => !isMinorTransport(option.type))
+                            .map((option) => {
                             const isSelected = selectedId === option.id;
                             
                             // If an option is selected, only show the selected one

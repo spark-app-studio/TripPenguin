@@ -92,23 +92,31 @@ Sub-step state is hydrated from existing trip data, so returning users skip comp
 - **Book Flights Button**: Disabled until flight savings gap is zero or earliest booking date is reached.
 - **Flight Points Subsection**: Toggle to use credit card points, manual input for points, and simulated card account connection for points balance. Points conversion reduces flight cost. Advisory on responsible credit card usage and mock credit card offers.
 
-**Accommodation Costs Section**:
-- Dedicated section for accommodation tracking.
-- **Simplified Itinerary List**: Shows destinations with nights.
-- **Mock Accommodation Options**: 3 generated options per destination (hotel, Airbnb, additional) with details.
-- **Selection Mechanism**: Users select one option per location; estimated costs update accordingly.
-- **Savings Allocation**: Savings flow to accommodations after flights are covered.
-- **Accommodation Savings Gap**: Difference between final cost and allocated savings.
-- **Book Stays Button**: Disabled until savings gap is zero or earliest booking date is reached.
+**Booking Status Tracking System**:
+- All bookings tracked in BudgetData state with `booked`, `bookedDate`, and `optionId` fields.
+- Flights: Single booking with status badge, "Mark Flights as Booked" button when funded.
+- Accommodations: Individual booking per city - each stay booked separately when savings cover its cost.
+- Transportation: Individual booking per segment - each major transport option booked separately.
+- Visual feedback: Green badges and cards for booked items, navigation prompts between sections.
+- Progressive flow: Flights → Accommodations (per city) → Transportation → Continue to next phase.
 
-**Transportation Costs Section**:
-- Dedicated section for transportation tracking.
-- **Transport Segments**: Generated based on itinerary (airport, within-city, city-to-city).
-- **Segment Types**: Options for shuttle, rideshare, metro, train, regional flights.
-- **Selection Mechanism**: Users select one option per segment; estimated costs update accordingly.
+**Save and Book Accommodations Section**:
+- Renamed from "Accommodation Costs Section" with purple border accent.
+- **Savings Reminder Banner**: Prominent reminder to only book when savings cover the cost.
+- **Exact Date Display**: Shows check-in and check-out dates from itinerary for each city.
+- **Individual City Booking**: Each city's accommodation booked separately via "Book This Stay" button.
+- **Booking Affordability Check**: Button disabled with "Need $X more" when savings insufficient.
+- **Booking Status Badges**: Green "Booked" badge with booked date for completed bookings.
+- **Booking Tips**: 4 practical tips for finding refundable options, reading reviews, location, and amenities.
+- **Navigation Prompt**: "Continue to Book Major Transportation" appears after all accommodations booked.
+
+**Save and Book Major Transportation Section**:
+- Renamed from "Transportation Costs Section" with blue border accent.
+- **Major Transport Only**: Excludes taxis, rideshares, and metro - focuses on car rentals, trains, buses, regional flights, and ferries.
+- **Transport Types Available**: Rental car, train, bus, shuttle/flight, ferry.
+- **Transport Icons**: Visual icons for each transport type (Train, Bus, Car, Ship, Plane).
 - **Savings Allocation**: Savings flow to transportation after flights and accommodations are covered.
-- **Transport Savings Gap**: Difference between final cost and allocated savings.
-- **Book Transportation Button**: Disabled until savings gap is zero or earliest booking date is reached.
+- **Segment Types**: Airport arrival/departure, within-city, and city-to-city transfers.
 
 **Fun & Activities Section**:
 - Dedicated section for activities tracking.
