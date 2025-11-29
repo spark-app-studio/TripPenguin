@@ -11,6 +11,8 @@ import { ProgressStepper } from "@/components/ProgressStepper";
 import { BudgetCategoryCard } from "@/components/BudgetCategoryCard";
 import { BudgetAlert } from "@/components/BudgetAlert";
 import { BookingButton, BookingStatusBadge, SavingsProgressIndicator } from "@/components/BookingButton";
+import { SavingsConnection } from "@/components/SavingsConnection";
+import { SaveBookOverview } from "@/components/SaveBookOverview";
 import {
   Dialog,
   DialogContent,
@@ -1473,7 +1475,10 @@ interface Step2PlanProps {
   destinations: string[];
   destinationDetails?: DestinationDetail[];
   travelSeason: string;
-  onComplete: (data: BudgetData) => void;
+  savingsAccountLinked?: boolean;
+  savingsAmountManual?: boolean;
+  onComplete: (data: BudgetData, savingsState: { savingsAccountLinked: boolean; savingsAmountManual: boolean }) => void;
+  onSavingsStateChange?: (state: { savingsAccountLinked: boolean; savingsAmountManual: boolean }) => void;
   onBack: () => void;
   onViewItinerary?: () => void;
 }
@@ -1537,7 +1542,10 @@ export default function Step2Plan({
   destinations,
   destinationDetails,
   travelSeason,
+  savingsAccountLinked: initialSavingsAccountLinked,
+  savingsAmountManual: initialSavingsAmountManual,
   onComplete,
+  onSavingsStateChange,
   onBack,
   onViewItinerary,
 }: Step2PlanProps) {
@@ -1581,6 +1589,38 @@ export default function Step2Plan({
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
   });
+
+  // Sub-step state for Save & Book flow: "savings" -> "overview" -> "budget"
+  type SubStep = "savings" | "overview" | "budget";
+  const [subStep, setSubStep] = useState<SubStep>(() => {
+    // Check if user has budget data (has been through the flow before)
+    const hasBudgetData = initialData && (
+      parseFloat(initialData.flights?.cost || "0") > 0 ||
+      parseFloat(initialData.housing?.cost || "0") > 0 ||
+      parseFloat(initialData.food?.cost || "0") > 0
+    );
+    
+    // If user has budget data, skip directly to budget
+    if (hasBudgetData) {
+      return "budget";
+    }
+    
+    // If savings account is already linked (via Plaid or manual entry), skip to overview
+    if (initialSavingsAccountLinked || initialSavingsAmountManual) {
+      return "overview";
+    }
+    
+    // If we have savings data with a positive amount, also skip to overview
+    if (initialData?.currentSavings && parseFloat(initialData.currentSavings) > 0) {
+      return "overview";
+    }
+    
+    return "savings";
+  });
+  
+  // Savings account connection state - hydrate from props
+  const [savingsAccountLinked, setSavingsAccountLinked] = useState(initialSavingsAccountLinked || false);
+  const [savingsAmountManual, setSavingsAmountManual] = useState(initialSavingsAmountManual || false);
 
   // Connected credit card points state
   const [connectedPointsBalance, setConnectedPointsBalance] = useState<number | null>(null);
@@ -1837,7 +1877,7 @@ export default function Step2Plan({
 
   // Trip Preparation state
   // Maps "prepItemId" -> "own" | "need" | undefined (not set)
-  const [prepItemStatus, setPrepItemStatus] = useState<Record<string, "own" | "need">>({});
+  const [prepItemStatus, setPrepItemStatus] = useState<Record<string, "own" | "need" | undefined>>({});
   
   // Generate preparation items based on trip details
   const prepItems = useMemo(() => {
@@ -2006,7 +2046,10 @@ export default function Step2Plan({
   };
 
   const handleContinue = () => {
-    onComplete(budgetData);
+    onComplete(budgetData, {
+      savingsAccountLinked,
+      savingsAmountManual,
+    });
   };
 
   // Stub function to simulate connecting credit card account to fetch points
@@ -2453,6 +2496,80 @@ export default function Step2Plan({
     return seasonMap[season] || season;
   };
 
+  // Handler for savings connection completion
+  const handleSavingsComplete = (data: { 
+    currentSavings: string; 
+    savingsAccountLinked: boolean; 
+    savingsAmountManual: boolean;
+  }) => {
+    setBudgetData(prev => ({
+      ...prev,
+      currentSavings: data.currentSavings,
+    }));
+    setSavingsAccountLinked(data.savingsAccountLinked);
+    setSavingsAmountManual(data.savingsAmountManual);
+    
+    // Notify parent of savings state change
+    onSavingsStateChange?.({
+      savingsAccountLinked: data.savingsAccountLinked,
+      savingsAmountManual: data.savingsAmountManual,
+    });
+    
+    setSubStep("overview");
+  };
+
+  // Handler for overview continuation
+  const handleOverviewContinue = () => {
+    setSubStep("budget");
+  };
+
+  // Handler for going back to savings from overview
+  const handleBackToSavings = () => {
+    setSubStep("savings");
+  };
+
+  // Render savings connection sub-step
+  if (subStep === "savings") {
+    return (
+      <div className="min-h-screen bg-background pb-12">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <ProgressStepper currentStep={2} completedSteps={[1]} />
+          <SavingsConnection
+            initialSavings={budgetData.currentSavings}
+            initialLinked={savingsAccountLinked}
+            initialManual={savingsAmountManual}
+            onComplete={handleSavingsComplete}
+            onBack={onBack}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Render overview sub-step
+  if (subStep === "overview") {
+    return (
+      <div className="min-h-screen bg-background pb-12">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <ProgressStepper currentStep={2} completedSteps={[1]} />
+          <SaveBookOverview
+            tripTitle={itinerary?.title}
+            destinations={displayedDestinationDetails || []}
+            tripDuration={displayedDuration}
+            numberOfTravelers={itinerary?.numberOfTravelers || numberOfTravelers}
+            travelSeason={itinerary?.travelSeason || travelSeason}
+            currentSavings={budgetData.currentSavings}
+            savingsAccountLinked={savingsAccountLinked}
+            onViewItinerary={() => setLocation("/itinerary")}
+            onContinue={handleOverviewContinue}
+            onBack={handleBackToSavings}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Render budget sub-step (existing content)
   return (
     <div className="min-h-screen bg-background pb-12">
       <div className="max-w-7xl mx-auto px-4 py-8">

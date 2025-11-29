@@ -61,6 +61,14 @@ Preferred communication style: Simple, everyday language.
 - **Dedicated Itinerary Page**: `/itinerary` route for viewing/editing detailed trip itinerary with city management and date calculations.
 - **State Persistence**: Trip planner step and data persisted to sessionStorage for seamless navigation.
 
+**Save & Book Sub-Step Flow**:
+The Save & Book phase (Step 2) now has three sub-steps for a streamlined user experience:
+1. **Savings Connection (subStep="savings")**: Users connect their savings account via Plaid stub or enter savings manually. Features include bank connection simulation and manual entry with alerts about requirements.
+2. **Trip Overview (subStep="overview")**: Displays trip summary including title, destinations, dates, traveler count, and current savings. Provides quick navigation to detailed itinerary.
+3. **Budget Details (subStep="budget")**: Full budget management with sequential savings allocation across all categories.
+
+Sub-step state is hydrated from existing trip data, so returning users skip completed steps. Savings linkage state (savingsAccountLinked, savingsAmountManual) is persisted to the database and propagated between Step2Plan and TripPlanner components.
+
 **Trip Financing Summary**:
 - **Total Estimated Trip Cost**: Auto-updates based on budget categories.
 - **Current Savings**: Manual entry or mocked "Connect Savings Account".

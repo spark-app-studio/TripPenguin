@@ -62,7 +62,12 @@ export const trips = pgTable("trips", {
   travelSeason: text("travel_season").notNull(), // "Summer", "Winter Break", etc.
   tripDuration: integer("trip_duration").notNull(), // in days
   
-  // Step 2: Plan - Budget
+  // Step 2: Save & Book - Savings Account
+  savingsAccountLinked: boolean("savings_account_linked").default(false),
+  savingsAccountId: text("savings_account_id"), // Plaid account ID (stub)
+  savingsAmountManual: boolean("savings_amount_manual").default(false), // true if amount was entered manually
+  
+  // Step 2: Save & Book - Budget
   monthlySavingsAmount: decimal("monthly_savings_amount", { precision: 10, scale: 2 }).default("0"),
   currentSavings: decimal("current_savings", { precision: 10, scale: 2 }).default("0"),
   creditCardPoints: integer("credit_card_points").default(0),

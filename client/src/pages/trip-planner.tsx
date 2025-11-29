@@ -25,12 +25,13 @@ interface TripPlanData {
     }>;
   };
   step2?: {
-    flights: { cost: string; notes: string; usePoints: boolean };
+    flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
     housing: { cost: string; notes: string };
     food: { cost: string; notes: string };
     transportation: { cost: string; notes: string };
     fun: { cost: string; notes: string };
     preparation: { cost: string; notes: string };
+    booksMovies: { cost: string; notes: string };
     monthlySavings: string;
     currentSavings: string;
     creditCardPoints: string;
@@ -82,6 +83,10 @@ export default function TripPlanner() {
   
   // Track whether Step 2 has been submitted (for quiz flow budget preservation)
   const [step2Submitted, setStep2Submitted] = useState(false);
+  
+  // Track savings account connection state
+  const [savingsAccountLinked, setSavingsAccountLinked] = useState(false);
+  const [savingsAmountManual, setSavingsAmountManual] = useState(false);
   
   // Access shared itinerary state - changes made on /itinerary page will be reflected here
   const { itinerary } = useItinerary();
@@ -467,7 +472,8 @@ export default function TripPlanner() {
           flights: { 
             cost: existingTrip.budgetCategories.find(c => c.category === "flights")?.estimatedCost.toString() || "0",
             notes: existingTrip.budgetCategories.find(c => c.category === "flights")?.notes || "",
-            usePoints: false 
+            usePoints: false,
+            pointsToUse: "0"
           },
           housing: { 
             cost: existingTrip.budgetCategories.find(c => c.category === "housing")?.estimatedCost.toString() || "0",
@@ -489,6 +495,10 @@ export default function TripPlanner() {
             cost: existingTrip.budgetCategories.find(c => c.category === "preparation")?.estimatedCost.toString() || "0",
             notes: existingTrip.budgetCategories.find(c => c.category === "preparation")?.notes || ""
           },
+          booksMovies: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "booksMovies")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "booksMovies")?.notes || ""
+          },
           monthlySavings: existingTrip.monthlySavingsAmount?.toString() || "0",
           currentSavings: existingTrip.currentSavings?.toString() || "0",
           creditCardPoints: "0",
@@ -505,6 +515,10 @@ export default function TripPlanner() {
       }));
 
       setTripData({ step1: step1Data, step2: step2Data, step3: step3Data });
+      
+      // Hydrate savings account state from existing trip
+      setSavingsAccountLinked(existingTrip.savingsAccountLinked ?? false);
+      setSavingsAmountManual(existingTrip.savingsAmountManual ?? false);
       
       // Determine current step based on data completeness (but don't override quiz flow)
       if (!isQuizFlow) {
@@ -653,19 +667,30 @@ export default function TripPlanner() {
     }
   };
 
-  const handleStep2Complete = async (data: TripPlanData["step2"]) => {
+  const handleStep2Complete = async (
+    data: TripPlanData["step2"],
+    savingsState?: { savingsAccountLinked: boolean; savingsAmountManual: boolean }
+  ) => {
     if (!currentTripId || !data) return;
 
     try {
-      // Update trip with savings data
+      // Update trip with savings data and account linkage state
       await updateTripMutation.mutateAsync({
         id: currentTripId,
         data: {
           monthlySavingsAmount: data.monthlySavings,
           currentSavings: data.currentSavings,
           creditCardPoints: parseInt(data.creditCardPoints || "0"),
+          savingsAccountLinked: savingsState?.savingsAccountLinked ?? savingsAccountLinked,
+          savingsAmountManual: savingsState?.savingsAmountManual ?? savingsAmountManual,
         },
       });
+      
+      // Update local savings state if provided
+      if (savingsState) {
+        setSavingsAccountLinked(savingsState.savingsAccountLinked);
+        setSavingsAmountManual(savingsState.savingsAmountManual);
+      }
 
       // Delete existing budget categories and recreate
       const existingCategories = await fetch(`/api/budget-categories/trip/${currentTripId}`).then(r => r.json());
@@ -673,14 +698,15 @@ export default function TripPlanner() {
         await apiRequest("DELETE", `/api/budget-categories/${cat.id}`);
       }
 
-      // Create budget categories
+      // Create budget categories (including booksMovies)
       const categories = [
-        { category: "flights", cost: data.flights.cost, notes: data.flights.notes, usePoints: data.flights.usePoints },
+        { category: "flights", cost: data.flights.cost, notes: data.flights.notes, usePoints: data.flights.usePoints, pointsToUse: data.flights.pointsToUse },
         { category: "housing", cost: data.housing.cost, notes: data.housing.notes },
         { category: "food", cost: data.food.cost, notes: data.food.notes },
         { category: "transportation", cost: data.transportation.cost, notes: data.transportation.notes },
         { category: "fun", cost: data.fun.cost, notes: data.fun.notes },
         { category: "preparation", cost: data.preparation.cost, notes: data.preparation.notes },
+        { category: "booksMovies", cost: data.booksMovies.cost, notes: data.booksMovies.notes },
       ];
 
       for (const cat of categories) {
@@ -818,7 +844,13 @@ export default function TripPlanner() {
             numberOfNights: d.numberOfNights,
           }))}
           travelSeason={tripData.step1.travelSeason}
+          savingsAccountLinked={savingsAccountLinked}
+          savingsAmountManual={savingsAmountManual}
           onComplete={handleStep2Complete}
+          onSavingsStateChange={(state) => {
+            setSavingsAccountLinked(state.savingsAccountLinked);
+            setSavingsAmountManual(state.savingsAmountManual);
+          }}
           onBack={isQuizFlow ? () => setLocation("/trips") : () => setCurrentStep("dream")}
           onViewItinerary={() => setCurrentStep("dream")}
         />
