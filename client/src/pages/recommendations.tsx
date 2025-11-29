@@ -109,25 +109,70 @@ export default function Recommendations() {
     }
   }, [destinationMutation.isPending, staycationMutation.isPending, recommendations]);
 
+  // Build extended quiz request from gettingStartedData
+  const buildExtendedQuizRequest = () => {
+    if (!gettingStartedData) return null;
+    
+    // Map common fields that both old quiz format (quizData) and new format (gettingStartedData) provide
+    const baseRequest = {
+      tripType: gettingStartedData.tripType as "international" | "domestic" | "staycation",
+      numberOfTravelers: (gettingStartedData.adults || 1) + (gettingStartedData.kids || 0),
+      adults: gettingStartedData.adults || 1,
+      kids: gettingStartedData.kids || 0,
+      childAges: gettingStartedData.childAges || [],
+      accessibilityNeeds: gettingStartedData.accessibilityNeeds || [],
+      departureLocation: gettingStartedData.departureLocation || "",
+    };
+    
+    // Add trip-type specific fields
+    if (gettingStartedData.tripType === "staycation") {
+      return {
+        ...baseRequest,
+        timeAvailable: gettingStartedData.timeAvailable || "full-day",
+        travelDistance: gettingStartedData.travelDistance || "2-3hrs",
+        staycationGoal: gettingStartedData.staycationGoal || [],
+        staycationBudget: gettingStartedData.staycationBudget || "150-300",
+      };
+    } else if (gettingStartedData.tripType === "domestic") {
+      return {
+        ...baseRequest,
+        usRegion: gettingStartedData.usRegion,
+        tripLength: gettingStartedData.tripLength,
+        tripGoal: quizData?.tripGoal,
+        placeType: quizData?.placeType,
+        dayPace: quizData?.dayPace,
+        spendingPriority: quizData?.spendingPriority,
+        postcardImage: gettingStartedData.postcardImage,
+        favoriteMedia: gettingStartedData.favoriteMedia,
+        kidActivities: gettingStartedData.kidActivities || [],
+      };
+    } else {
+      // International
+      return {
+        ...baseRequest,
+        internationalRegion: gettingStartedData.internationalRegion,
+        tripLength: gettingStartedData.tripLength,
+        tripGoal: quizData?.tripGoal,
+        placeType: quizData?.placeType,
+        dayPace: quizData?.dayPace,
+        spendingPriority: quizData?.spendingPriority,
+        postcardImage: gettingStartedData.internationalPostcard,
+        favoriteMedia: gettingStartedData.favoriteMedia,
+        kidActivities: gettingStartedData.kidActivities || [],
+      };
+    }
+  };
+
   // Auto-fetch recommendations when quiz data is loaded
   useEffect(() => {
-    if (quizData && gettingStartedData && !recommendations && !destinationMutation.isPending && !staycationMutation.isPending) {
+    if (gettingStartedData && !recommendations && !destinationMutation.isPending && !staycationMutation.isPending) {
+      const requestData = buildExtendedQuizRequest();
+      if (!requestData) return;
+      
       if (isStaycation) {
-        // Build staycation request
-        staycationMutation.mutate({
-          departureLocation: gettingStartedData.departureLocation || "Unknown",
-          tripDuration: gettingStartedData.tripLength || "full-day",
-          budget: gettingStartedData.budget || "medium",
-          numberOfTravelers: (gettingStartedData.adults || 1) + (gettingStartedData.kids || 0),
-          hasKids: (gettingStartedData.kids || 0) > 0,
-          childAges: gettingStartedData.childAges || [],
-          goals: gettingStartedData.goals || [],
-          accessibilityNeeds: gettingStartedData.accessibilityNeeds || [],
-          maxDriveTime: gettingStartedData.maxDriveTime || "2-3 hours",
-        });
+        staycationMutation.mutate(requestData);
       } else {
-        // Build destination request using mapped quiz data
-        destinationMutation.mutate(quizData);
+        destinationMutation.mutate(requestData);
       }
     }
   }, [quizData, gettingStartedData, recommendations]);
@@ -166,20 +211,13 @@ export default function Recommendations() {
     setRecommendations(null);
     setLoadingProgress(0);
     
+    const requestData = buildExtendedQuizRequest();
+    if (!requestData) return;
+    
     if (isStaycation) {
-      staycationMutation.mutate({
-        departureLocation: gettingStartedData.departureLocation || "Unknown",
-        tripDuration: gettingStartedData.tripLength || "full-day",
-        budget: gettingStartedData.budget || "medium",
-        numberOfTravelers: (gettingStartedData.adults || 1) + (gettingStartedData.kids || 0),
-        hasKids: (gettingStartedData.kids || 0) > 0,
-        childAges: gettingStartedData.childAges || [],
-        goals: gettingStartedData.goals || [],
-        accessibilityNeeds: gettingStartedData.accessibilityNeeds || [],
-        maxDriveTime: gettingStartedData.maxDriveTime || "2-3 hours",
-      });
+      staycationMutation.mutate(requestData);
     } else {
-      destinationMutation.mutate(quizData);
+      destinationMutation.mutate(requestData);
     }
   };
 
