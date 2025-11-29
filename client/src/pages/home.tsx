@@ -188,7 +188,7 @@ export default function Home() {
                 <p className="text-muted-foreground mb-6">
                   Start planning your first adventure today!
                 </p>
-                <Button onClick={() => setLocation("/planner")} data-testid="button-start-planning">
+                <Button onClick={() => setLocation("/getting-started")} data-testid="button-start-planning">
                   <Plus className="h-4 w-4 mr-2" />
                   Plan Your First Trip
                 </Button>
