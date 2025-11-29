@@ -259,8 +259,8 @@ export default function GettingStarted() {
     // Store quiz data in sessionStorage for after authentication
     sessionStorage.setItem("quizData", JSON.stringify(quizCompatibleData));
     sessionStorage.setItem("gettingStartedData", JSON.stringify(quizData));
-    sessionStorage.setItem("tripSource", "getting-started");
-    sessionStorage.setItem("redirectAfterAuth", "/quiz/results");
+    sessionStorage.setItem("tripSource", "quiz");
+    sessionStorage.setItem("redirectAfterAuth", "/planner");
     
     // Navigate to registration - user needs account to see AI recommendations
     setTimeout(() => {
