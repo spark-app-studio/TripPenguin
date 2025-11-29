@@ -54,6 +54,12 @@ Preferred communication style: Simple, everyday language.
     - **Trip Preparation Purchases**: Smart shopping guidance, categorized items (Essential, Recommended, Optional), "Own/Need" toggle, and cost aggregation.
 - **Go Stage (Post-Booking)**: Countdown timer, quick links (itinerary, PDF, share), "While You Wait" content (books, movies, kids activities), trip tips, and photo sharing gallery.
 - **Itinerary Management**: `useItinerary` hook for shared state, dedicated `/itinerary` page, state persistence in sessionStorage.
+- **My Trips Page (trips-list.tsx)**: 
+    - User profile section displaying name, email, location, trip count, and completed trips count.
+    - Trip categorization: Current/Upcoming trips vs. Past Adventures based on end date.
+    - Smart navigation: Completed trips route directly to Go page (step4-go.tsx), in-progress trips route to trip planner at saved step.
+    - Session storage key `trippenguin_planner_state` preserves wizard navigation state.
+- **Authenticated Navigation**: "My Trips" link appears in header across all pages (landing, features, about, FAQ, privacy, meet-pebbles) when user is logged in, replacing Sign In/Get Started buttons with "My Trips" link and "Go to My Trips" button.
 
 ## External Dependencies
 

@@ -18,10 +18,12 @@ import {
 } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation, Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import penguinImage from "@assets/generated_images/cute_penguin_travel_mascot_logo.png";
 
 export default function MeetPebbles() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,20 +44,37 @@ export default function MeetPebbles() {
             </nav>
 
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/login")}
-                data-testid="button-signin"
-              >
-                Sign In
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => setLocation("/register")}
-                data-testid="button-get-started"
-              >
-                Get Started
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/trips" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors" data-testid="link-my-trips">
+                    My Trips
+                  </Link>
+                  <Button
+                    variant="default"
+                    onClick={() => setLocation("/trips")}
+                    data-testid="button-go-to-trips"
+                  >
+                    Go to My Trips
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setLocation("/login")}
+                    data-testid="button-signin"
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={() => setLocation("/register")}
+                    data-testid="button-get-started"
+                  >
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

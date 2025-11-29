@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, MapPin, Calendar, Users, Trash2, Edit, LogOut, User, Clock, Star, ChevronRight, History, Luggage } from "lucide-react";
+import { Plus, MapPin, Calendar, Users, Trash2, Edit, LogOut, User, Clock, Star, ChevronRight, History, Luggage, Mail, MapPinned } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import {
   AlertDialog,
@@ -295,6 +295,56 @@ export default function TripsList() {
             </Button>
           </div>
 
+          {/* User Profile Section */}
+          <Card className="mb-8" data-testid="card-user-profile">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  {user?.profileImageUrl ? (
+                    <img 
+                      src={user.profileImageUrl} 
+                      alt={`${user.firstName || "User"}'s profile`}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold" data-testid="text-user-name">
+                    {user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user?.firstName || "Traveler"}
+                  </h2>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                    {user?.email && (
+                      <span className="flex items-center gap-1" data-testid="text-user-email">
+                        <Mail className="w-3 h-3" />
+                        {user.email}
+                      </span>
+                    )}
+                    {(user?.city || user?.state) && (
+                      <span className="flex items-center gap-1" data-testid="text-user-location">
+                        <MapPinned className="w-3 h-3" />
+                        {[user.city, user.state].filter(Boolean).join(", ")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 mt-3">
+                    <Badge variant="outline" className="gap-1">
+                      <Luggage className="w-3 h-3" />
+                      {trips?.length || 0} {trips?.length === 1 ? "trip" : "trips"}
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <History className="w-3 h-3" />
+                      {pastTrips.length} completed
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         {!trips || trips.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
@@ -462,11 +512,16 @@ export default function TripsList() {
                     const dateRange = formatDateRange(trip.startDate, trip.endDate);
                     const sortedDestinations = trip.destinations?.sort((a, b) => a.order - b.order) || [];
                     
+                    const navigateToGoPage = () => {
+                      sessionStorage.setItem("trippenguin_planner_state", JSON.stringify({ currentStep: "go" }));
+                      setLocation(`/trip/${trip.id}`);
+                    };
+                    
                     return (
                       <Card
                         key={trip.id}
                         className="hover-elevate cursor-pointer transition-all opacity-80 hover:opacity-100"
-                        onClick={() => setLocation(`/trip/${trip.id}`)}
+                        onClick={navigateToGoPage}
                         data-testid={`card-trip-${trip.id}`}
                       >
                         <CardHeader className="pb-3">

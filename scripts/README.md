@@ -41,6 +41,51 @@ tsx scripts/delete-user.ts user@example.com
 
 ---
 
+### Delete All Users
+
+⚠️ **DANGER**: Delete ALL users and ALL data from the database.
+
+**Usage:**
+```bash
+npm run delete-all-users -- --confirm
+```
+
+**Important:** Note the extra `--` before `--confirm` when using npm. This tells npm to pass the flag to the script.
+
+**Safety Requirements:**
+- Requires `--confirm` flag to execute
+- Shows list of all users before deletion
+- Warns if running in production environment
+- Should only be used in development/testing
+
+**What it deletes:**
+- ALL user accounts
+- ALL trips (cascade)
+- ALL destinations (cascade)
+- ALL budget categories (cascade)
+- ALL bookings (cascade)
+- ALL email verification tokens (cascade)
+- ALL password reset tokens (cascade)
+- ALL sessions (cascade)
+
+**Example:**
+```bash
+# Development/testing cleanup (using npm)
+npm run delete-all-users -- --confirm
+
+# Direct execution (alternative, no extra -- needed)
+tsx scripts/delete-all-users.ts --confirm
+```
+
+**⚠️ Important Warnings:**
+- This is a DESTRUCTIVE operation
+- Cannot be undone
+- Resets the entire application database
+- Always backup before running in production
+- Best used for development/testing environment resets
+
+---
+
 ## Adding New Scripts
 
 When adding new utility scripts:
