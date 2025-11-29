@@ -309,7 +309,7 @@ export default function Step1Dream({ initialData, onComplete }: Step1DreamProps)
               className="min-h-0"
               data-testid="button-continue-to-plan"
             >
-              Continue to Plan & Save
+              Continue to Save & Book
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>
           </div>

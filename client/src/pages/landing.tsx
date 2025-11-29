@@ -51,7 +51,7 @@ export default function Landing() {
     },
     {
       step: 2,
-      title: "Plan & Save",
+      title: "Save & Book",
       description: "Get 3 personalized itineraries with real cost estimates — track savings and prepare for your trip.",
       icon: Compass,
     },
@@ -166,7 +166,7 @@ export default function Landing() {
             Family adventures, finally within reach.
           </p>
           <p className="text-lg sm:text-xl mb-10 text-white/80 max-w-2xl mx-auto font-lora">
-            Dream it. Plan & Save. Go! All in one free app built for real families.
+            Dream it. Save & Book. Go! All in one free app built for real families.
           </p>
           <div className="flex flex-col items-center gap-4">
             <Button

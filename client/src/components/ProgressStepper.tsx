@@ -25,7 +25,7 @@ export function ProgressStepper({ currentStep, completedSteps }: ProgressStepper
     },
     {
       number: 2,
-      title: "Plan & Save",
+      title: "Save & Book",
       subtitle: "Budget & Track",
       completed: completedSteps.includes(2),
       current: currentStep === 2,

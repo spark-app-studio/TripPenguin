@@ -2,7 +2,7 @@
 
 ## Overview
 
-TripPirate is a trip planning application designed to help users plan overseas trips without going into debt. It guides users through a three-step process: Dream, Plan, and Do, focusing on budget planning, savings tracking, and organized booking management. The application aims to transform trip planning into an exciting and manageable experience by providing AI-powered multi-city itinerary generation, budget guidance, and personalized booking recommendations. The project's ambition is to make international travel accessible by providing robust tools for financial planning and discovery.
+TripPirate is a trip planning application designed to help users plan overseas trips without going into debt. It guides users through a three-step process: Dream, Save & Book, and Go, focusing on budget planning, savings tracking, and organized booking management. The application aims to transform trip planning into an exciting and manageable experience by providing AI-powered multi-city itinerary generation, budget guidance, and personalized booking recommendations. The project's ambition is to make international travel accessible by providing robust tools for financial planning and discovery.
 
 ## User Preferences
 
@@ -18,7 +18,7 @@ Preferred communication style: Simple, everyday language.
 **Design Philosophy**: Inspired by Airbnb, Notion, and Mint, focusing on warmth, clarity, and precision. Uses Inter for UI and Lora for inspirational copy, with light/dark mode support.
 **State Management**: React Query for server state, React hooks for local component state.
 **Form Handling**: React Hook Form with Zod validation.
-**Multi-Step Flow**: Wizard pattern for trip planning (Dream, Plan, Do, Summary).
+**Multi-Step Flow**: Wizard pattern for trip planning (Dream, Save & Book, Go, Summary).
 
 ### Backend Architecture
 
