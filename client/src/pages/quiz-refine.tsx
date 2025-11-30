@@ -41,7 +41,31 @@ import type {
   AdjustItineraryDurationRequest,
   ItineraryAddonsRequest,
   ApplyAddonRequest,
+  QuizResponse,
 } from "@shared/schema";
+
+type TripType = "international" | "domestic" | "staycation";
+
+interface GettingStartedData {
+  tripType: TripType;
+  adults: number;
+  kids: number;
+  childAges: number[];
+  timeAvailable?: string;
+  travelDistance?: string;
+  staycationGoal?: string[];
+  staycationBudget?: string;
+  departureLocation?: string;
+  tripLength?: string;
+  usRegion?: string;
+  internationalRegion?: string;
+  dayFullness?: string;
+  budgetStyle?: string;
+  postcardImage?: string;
+  favoriteMedia?: string;
+  kidActivities?: string[];
+  accessibilityNeeds?: string[];
+}
 import { NavBar } from "@/components/NavBar";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import AIDayPlanner from "@/components/AIDayPlanner";
@@ -197,6 +221,10 @@ export default function QuizRefine() {
   const [addons, setAddons] = useState<ItineraryAddon[]>([]);
   const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
   
+  // Quiz preferences state
+  const [quizData, setQuizData] = useState<QuizResponse | null>(null);
+  const [tripType, setTripType] = useState<TripType>("international");
+  
   // Day plans state - stores activities per day directly
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
 
@@ -351,6 +379,9 @@ export default function QuizRefine() {
     try {
       const storedItinerary = sessionStorage.getItem("selectedItinerary");
       const storedTravelers = sessionStorage.getItem("quizNumberOfTravelers");
+      const storedQuizData = sessionStorage.getItem("quizData");
+      const storedGettingStartedData = sessionStorage.getItem("gettingStartedData");
+      const storedTripType = sessionStorage.getItem("tripType");
 
       if (!storedItinerary) {
         toast({
@@ -368,6 +399,26 @@ export default function QuizRefine() {
       setCurrentItinerary(itinerary);
       setNumberOfTravelers(travelers);
       setDesiredNights(itinerary.totalNights);
+      
+      // Load quiz preferences from quizData (both legacy and new flows store this)
+      if (storedQuizData) {
+        const quiz = JSON.parse(storedQuizData) as QuizResponse;
+        setQuizData(quiz);
+      }
+      
+      // Load trip type - check multiple sources in order of priority:
+      // 1. Direct tripType key (set by quiz-results for staycation)
+      // 2. Getting started data (new flow)
+      // 3. Default to international (legacy quiz fallback)
+      if (storedTripType && (storedTripType === "international" || storedTripType === "domestic" || storedTripType === "staycation")) {
+        setTripType(storedTripType as TripType);
+      } else if (storedGettingStartedData) {
+        const gsData = JSON.parse(storedGettingStartedData) as GettingStartedData;
+        if (gsData.tripType) {
+          setTripType(gsData.tripType);
+        }
+      }
+      // Otherwise, keep default "international"
       
       // Initialize day plans from the itinerary
       const initialDayPlans = generateDayByDayPlan(itinerary);
