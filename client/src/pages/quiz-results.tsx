@@ -225,12 +225,34 @@ export default function QuizResults() {
   if (isPending) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <PenguinLogo size="md" />
-              <span className="text-xl font-bold">TripPenguin</span>
-            </Link>
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="flex items-center gap-2 cursor-pointer">
+                <PenguinLogo size="md" />
+                <span className="text-xl font-bold">TripPenguin</span>
+              </Link>
+
+              <nav className="hidden md:flex items-center gap-6">
+                <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+                <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+                <Link href="/meet-pebbles" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Meet Pebbles</Link>
+                <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+              </nav>
+
+              <div className="flex items-center gap-2">
+                <Link href="/login">
+                  <Button variant="ghost" size="sm" data-testid="button-login">
+                    Log in
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm" data-testid="button-signup">
+                    Sign up
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </header>
         <ProgressStepper currentStep={1} completedSteps={[]} />
@@ -256,12 +278,34 @@ export default function QuizResults() {
   if (isError) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <PenguinLogo size="md" />
-              <span className="text-xl font-bold">TripPenguin</span>
-            </Link>
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="flex items-center gap-2 cursor-pointer">
+                <PenguinLogo size="md" />
+                <span className="text-xl font-bold">TripPenguin</span>
+              </Link>
+
+              <nav className="hidden md:flex items-center gap-6">
+                <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+                <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+                <Link href="/meet-pebbles" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Meet Pebbles</Link>
+                <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+              </nav>
+
+              <div className="flex items-center gap-2">
+                <Link href="/login">
+                  <Button variant="ghost" size="sm" data-testid="button-login">
+                    Log in
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm" data-testid="button-signup">
+                    Sign up
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </header>
         <ProgressStepper currentStep={1} completedSteps={[]} />
@@ -299,12 +343,34 @@ export default function QuizResults() {
 
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <PenguinLogo size="md" />
-              <span className="text-xl font-bold">TripPenguin</span>
-            </Link>
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="flex items-center gap-2 cursor-pointer">
+                <PenguinLogo size="md" />
+                <span className="text-xl font-bold">TripPenguin</span>
+              </Link>
+
+              <nav className="hidden md:flex items-center gap-6">
+                <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+                <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+                <Link href="/meet-pebbles" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Meet Pebbles</Link>
+                <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+              </nav>
+
+              <div className="flex items-center gap-2">
+                <Link href="/login">
+                  <Button variant="ghost" size="sm" data-testid="button-login">
+                    Log in
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button size="sm" data-testid="button-signup">
+                    Sign up
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </header>
         <ProgressStepper currentStep={1} completedSteps={[]} />
@@ -544,12 +610,34 @@ export default function QuizResults() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <PenguinLogo size="md" />
-            <span className="text-xl font-bold">TripPenguin</span>
-          </Link>
+      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/" className="flex items-center gap-2 cursor-pointer">
+              <PenguinLogo size="md" />
+              <span className="text-xl font-bold">TripPenguin</span>
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/features" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Features</Link>
+              <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">About</Link>
+              <Link href="/meet-pebbles" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">Meet Pebbles</Link>
+              <Link href="/faq" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">FAQ</Link>
+            </nav>
+
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="ghost" size="sm" data-testid="button-login">
+                  Log in
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button size="sm" data-testid="button-signup">
+                  Sign up
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </header>
       <ProgressStepper currentStep={1} completedSteps={[]} />
