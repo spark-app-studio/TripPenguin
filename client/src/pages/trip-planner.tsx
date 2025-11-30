@@ -7,10 +7,9 @@ import { useItinerary } from "@/hooks/useItinerary";
 import Step1Dream from "./step1-dream";
 import Step2Plan from "./step2-plan";
 import Step3Book from "./step3-book";
-import Step4Go from "./step4-go";
 import TripSummary from "./trip-summary";
 
-type Step = "dream" | "plan" | "book" | "summary" | "go";
+type Step = "dream" | "plan" | "book" | "summary";
 
 interface TripPlanData {
   step1?: {
@@ -39,17 +38,16 @@ interface TripPlanData {
     }>;
   };
   step2?: {
-    flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string; booked: boolean; bookedDate?: string };
+    flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
     housing: { cost: string; notes: string };
     food: { cost: string; notes: string };
     transportation: { cost: string; notes: string };
     fun: { cost: string; notes: string };
     preparation: { cost: string; notes: string };
+    booksMovies: { cost: string; notes: string };
     monthlySavings: string;
     currentSavings: string;
     creditCardPoints: string;
-    accommodationsBooked?: { [cityName: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
-    transportBooked?: { [segmentId: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
   };
   step3?: Array<{
     id: string;
@@ -499,8 +497,7 @@ export default function TripPlanner() {
             cost: existingTrip.budgetCategories.find(c => c.category === "flights")?.estimatedCost.toString() || "0",
             notes: existingTrip.budgetCategories.find(c => c.category === "flights")?.notes || "",
             usePoints: false,
-            pointsToUse: "0",
-            booked: false
+            pointsToUse: "0"
           },
           housing: { 
             cost: existingTrip.budgetCategories.find(c => c.category === "housing")?.estimatedCost.toString() || "0",
@@ -521,6 +518,10 @@ export default function TripPlanner() {
           preparation: { 
             cost: existingTrip.budgetCategories.find(c => c.category === "preparation")?.estimatedCost.toString() || "0",
             notes: existingTrip.budgetCategories.find(c => c.category === "preparation")?.notes || ""
+          },
+          booksMovies: { 
+            cost: existingTrip.budgetCategories.find(c => c.category === "booksMovies")?.estimatedCost.toString() || "0",
+            notes: existingTrip.budgetCategories.find(c => c.category === "booksMovies")?.notes || ""
           },
           monthlySavings: existingTrip.monthlySavingsAmount?.toString() || "0",
           currentSavings: existingTrip.currentSavings?.toString() || "0",
@@ -666,7 +667,7 @@ export default function TripPlanner() {
               cityName: city.cityName,
               countryName: city.countryName,
               numberOfNights: city.numberOfNights,
-              imageUrl: "",
+              imageUrl: city.imageUrl || "",
               order: i,
               arrivalAirport: city.arrivalAirport,
               departureAirport: city.departureAirport,
@@ -710,7 +711,7 @@ export default function TripPlanner() {
               cityName: city.cityName,
               countryName: city.countryName,
               numberOfNights: city.numberOfNights,
-              imageUrl: "",
+              imageUrl: city.imageUrl || "",
               order: i,
               arrivalAirport: city.arrivalAirport,
               departureAirport: city.departureAirport,
@@ -777,7 +778,7 @@ export default function TripPlanner() {
         await apiRequest("DELETE", `/api/budget-categories/${cat.id}`);
       }
 
-      // Create budget categories
+      // Create budget categories (including booksMovies)
       const categories = [
         { category: "flights", cost: data.flights.cost, notes: data.flights.notes, usePoints: data.flights.usePoints, pointsToUse: data.flights.pointsToUse },
         { category: "housing", cost: data.housing.cost, notes: data.housing.notes },
@@ -785,6 +786,7 @@ export default function TripPlanner() {
         { category: "transportation", cost: data.transportation.cost, notes: data.transportation.notes },
         { category: "fun", cost: data.fun.cost, notes: data.fun.notes },
         { category: "preparation", cost: data.preparation.cost, notes: data.preparation.notes },
+        { category: "booksMovies", cost: data.booksMovies.cost, notes: data.booksMovies.notes },
       ];
 
       for (const cat of categories) {
@@ -949,17 +951,7 @@ export default function TripPlanner() {
       )}
 
       {currentStep === "summary" && getSummaryData() && (
-        <TripSummary 
-          tripData={getSummaryData()!} 
-          onContinueToGo={() => setCurrentStep("go")}
-        />
-      )}
-
-      {currentStep === "go" && tripId && (
-        <Step4Go 
-          tripId={tripId} 
-          onBack={() => setCurrentStep("summary")}
-        />
+        <TripSummary tripData={getSummaryData()!} />
       )}
     </>
   );

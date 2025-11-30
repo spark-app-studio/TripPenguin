@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
+import { BudgetCategoryCard } from "@/components/BudgetCategoryCard";
 import { BudgetAlert } from "@/components/BudgetAlert";
 import { BookingButton, BookingStatusBadge, SavingsProgressIndicator } from "@/components/BookingButton";
 import { SavingsConnection } from "@/components/SavingsConnection";
@@ -31,20 +32,20 @@ import { useItinerary } from "@/hooks/useItinerary";
 import { useTripBudget, CategoryCosts } from "@/hooks/useTripBudget";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X, Train, Bus, Car, Ship, Shield, PartyPopper, Plus, CircleAlert, ArrowRight } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ChevronRight, DollarSign, TrendingUp, Calendar as CalendarIcon, Sparkles, Loader2, MapPin, Clock, Users, ExternalLink, PiggyBank, Edit, Link, HelpCircle, Wallet, Plane, CheckCircle2, Lock, CreditCard, Gift, Star, RefreshCw, AlertTriangle, Utensils, Briefcase, Package, Shirt, Zap, Droplets, Compass, FileText, ShoppingCart, Check, X, BookOpen, Film, Tv, Map, Play } from "lucide-react";
 
 interface BudgetData {
-  flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string; booked: boolean; bookedDate?: string };
+  flights: { cost: string; notes: string; usePoints: boolean; pointsToUse: string };
   housing: { cost: string; notes: string };
   food: { cost: string; notes: string };
   transportation: { cost: string; notes: string };
   fun: { cost: string; notes: string };
   preparation: { cost: string; notes: string };
+  booksMovies: { cost: string; notes: string };
   monthlySavings: string;
   currentSavings: string;
   creditCardPoints: string;
-  accommodationsBooked: { [cityName: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
-  transportBooked: { [segmentId: string]: { booked: boolean; bookedDate?: string; optionId?: string } };
 }
 
 // Mock credit card offers data
@@ -170,17 +171,13 @@ function generateMockAccommodations(cityName: string, countryName: string): Acco
 // Transportation option interface
 interface TransportOption {
   id: string;
-  type: "metro" | "train" | "bus" | "rideshare" | "taxi" | "shuttle" | "rental-car" | "ferry";
+  type: "metro" | "train" | "bus" | "rideshare" | "taxi" | "shuttle";
   name: string;
   cost: number;
   description: string;
   duration: string;
   url: string;
 }
-
-// Major transportation types (exclude taxis, rideshares, and local transit)
-const MAJOR_TRANSPORT_TYPES = ["train", "bus", "shuttle", "rental-car", "ferry"];
-const isMinorTransport = (type: string) => ["taxi", "rideshare", "metro"].includes(type);
 
 // Transportation segment interface
 interface TransportSegment {
@@ -207,7 +204,8 @@ function generateTransportOptions(
   
   if (segmentType === "airport-arrival" || segmentType === "airport-departure") {
     const baseShuttleCost = isInternational ? 25 : 18;
-    const baseRentalCarCost = isInternational ? 65 : 45;
+    const baseRideshareCost = isInternational ? 35 : 25;
+    const baseTaxiCost = isInternational ? 55 : 40;
     
     return [
       {
@@ -220,58 +218,59 @@ function generateTransportOptions(
         url: `https://example.com/shuttle/${citySlug}-airport`
       },
       {
-        id: `${citySlug}-${segmentType}-rental-car`,
-        type: "rental-car",
-        name: `${cityName} Car Rental`,
-        cost: Math.round((baseRentalCarCost + (cityHash % 30)) / 5) * 5,
-        description: "Rent a car at the airport. Flexible transportation for your entire stay.",
-        duration: "Self-drive",
-        url: `https://example.com/car-rental/${citySlug}`
+        id: `${citySlug}-${segmentType}-rideshare`,
+        type: "rideshare",
+        name: "Uber/Lyft",
+        cost: Math.round((baseRideshareCost + (cityHash % 20)) / 5) * 5,
+        description: "On-demand rideshare. Prices vary by time of day and demand.",
+        duration: "25-40 min",
+        url: "https://example.com/rideshare"
       },
       {
-        id: `${citySlug}-${segmentType}-bus`,
-        type: "bus",
-        name: `${cityName} Airport Express Bus`,
-        cost: Math.round((15 + (cityHash % 10)) / 5) * 5,
-        description: "Direct express bus to city center. Affordable and reliable.",
-        duration: "30-50 min",
-        url: `https://example.com/airport-bus/${citySlug}`
+        id: `${citySlug}-${segmentType}-taxi`,
+        type: "taxi",
+        name: `${cityName} Taxi`,
+        cost: Math.round((baseTaxiCost + (cityHash % 25)) / 5) * 5,
+        description: "Traditional taxi service. Fixed rates often available from airport.",
+        duration: "25-40 min",
+        url: `https://example.com/taxi/${citySlug}`
       }
     ];
   }
   
   if (segmentType === "within-city") {
     const nights = numberOfNights || 3;
-    const baseRentalCarCost = isInternational ? 55 : 40;
+    const baseMetroCost = isInternational ? 8 : 5;
     const baseBusCost = isInternational ? 6 : 4;
+    const baseRideshareBudget = isInternational ? 15 : 12;
     
     return [
       {
-        id: `${citySlug}-rental-car`,
-        type: "rental-car",
-        name: `${cityName} Car Rental (${nights} days)`,
-        cost: Math.round((baseRentalCarCost * nights + (cityHash % 30)) / 5) * 5,
-        description: `${nights}-day car rental for flexible exploration. Includes insurance.`,
-        duration: `${nights} days`,
-        url: `https://example.com/car-rental/${citySlug}`
+        id: `${citySlug}-metro-pass`,
+        type: "metro",
+        name: `${cityName} Metro/Subway Pass`,
+        cost: Math.round((baseMetroCost * nights + (cityHash % 10)) / 5) * 5,
+        description: `${nights}-day unlimited metro pass. Covers all subway and light rail lines.`,
+        duration: "Unlimited rides",
+        url: `https://example.com/transit/${citySlug}-metro`
       },
       {
         id: `${citySlug}-bus-pass`,
         type: "bus",
-        name: `${cityName} Transit Pass`,
+        name: `${cityName} Bus Pass`,
         cost: Math.round((baseBusCost * nights + (cityHash % 8)) / 5) * 5,
-        description: `${nights}-day unlimited transit pass. Covers buses and local trains.`,
+        description: `${nights}-day unlimited bus pass. Extensive network coverage.`,
         duration: "Unlimited rides",
         url: `https://example.com/transit/${citySlug}-bus`
       },
       {
-        id: `${citySlug}-shuttle`,
-        type: "shuttle",
-        name: `${cityName} Tour Shuttle`,
-        cost: Math.round((20 + (cityHash % 15)) / 5) * 5,
-        description: "Hop-on-hop-off tourist shuttle to major attractions.",
-        duration: "Day pass",
-        url: `https://example.com/shuttle/${citySlug}`
+        id: `${citySlug}-rideshare-budget`,
+        type: "rideshare",
+        name: "Rideshare Budget",
+        cost: Math.round((baseRideshareBudget * nights + (cityHash % 20)) / 5) * 5,
+        description: `Estimated budget for ${nights} days of occasional Uber/Lyft rides.`,
+        duration: "As needed",
+        url: "https://example.com/rideshare"
       }
     ];
   }
@@ -1529,6 +1528,11 @@ const budgetTips: Record<string, string[]> = {
     "Check if you need a power adapter",
     "Comfortable walking shoes are essential",
   ],
+  booksMovies: [
+    "Check your local library for free travel guides",
+    "Download movies/shows before the flight",
+    "Get destination-themed books to build excitement",
+  ],
 };
 
 export default function Step2Plan({
@@ -1574,17 +1578,16 @@ export default function Step2Plan({
   })) || destinationDetails;
   
   const [budgetData, setBudgetData] = useState<BudgetData>({
-    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false, pointsToUse: "0", booked: false },
+    flights: initialData?.flights || { cost: "0", notes: "", usePoints: false, pointsToUse: "0" },
     housing: initialData?.housing || { cost: "0", notes: "" },
     food: initialData?.food || { cost: "0", notes: "" },
     transportation: initialData?.transportation || { cost: "0", notes: "" },
     fun: initialData?.fun || { cost: "0", notes: "" },
     preparation: initialData?.preparation || { cost: "0", notes: "" },
+    booksMovies: initialData?.booksMovies || { cost: "0", notes: "" },
     monthlySavings: initialData?.monthlySavings || "500",
     currentSavings: initialData?.currentSavings || "0",
     creditCardPoints: initialData?.creditCardPoints || "0",
-    accommodationsBooked: {},
-    transportBooked: {},
   });
 
   // Sub-step state for Save & Book flow: "savings" -> "overview" -> "budget"
@@ -1714,64 +1717,6 @@ export default function Step2Plan({
     if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return [];
     return generateTransportSegments(displayedDestinationDetails);
   }, [displayedDestinationDetails]);
-  
-  // Sanitize selectedTransport and transportBooked to remove minor transport and orphaned IDs
-  useEffect(() => {
-    if (transportSegments.length === 0) return;
-    
-    // Build set of valid segment IDs and map of valid option IDs per segment
-    const validSegmentIds = new Set(transportSegments.map(s => s.id));
-    const validMajorOptionIds = new Set<string>();
-    transportSegments.forEach(segment => {
-      segment.options
-        .filter(opt => !isMinorTransport(opt.type))
-        .forEach(opt => validMajorOptionIds.add(opt.id));
-    });
-    
-    // Build clean selectedTransport - only include valid entries with major transport
-    const validSelectionEntries: [string, string][] = [];
-    transportSegments.forEach(segment => {
-      const selectedId = selectedTransport[segment.id];
-      if (selectedId) {
-        const selectedOption = segment.options.find(opt => opt.id === selectedId);
-        if (selectedOption && !isMinorTransport(selectedOption.type)) {
-          validSelectionEntries.push([segment.id, selectedId]);
-        }
-      }
-    });
-    const cleanedSelections = Object.fromEntries(validSelectionEntries) as Record<string, string | null>;
-    
-    // Check if selectedTransport needs updating
-    const currentKeys = Object.keys(selectedTransport).filter(k => selectedTransport[k] !== null);
-    const cleanedKeys = Object.keys(cleanedSelections);
-    const selectionsNeedUpdate = currentKeys.length !== cleanedKeys.length || 
-      currentKeys.some(k => !cleanedSelections[k] || cleanedSelections[k] !== selectedTransport[k]);
-    
-    if (selectionsNeedUpdate) {
-      setSelectedTransport(cleanedSelections);
-    }
-    
-    // Build clean transportBooked - only include valid entries with major transport
-    const validBookingEntries: [string, { booked: boolean; bookedDate?: string; optionId?: string }][] = [];
-    Object.entries(budgetData.transportBooked).forEach(([segmentId, booking]) => {
-      if (validSegmentIds.has(segmentId) && booking.optionId && validMajorOptionIds.has(booking.optionId)) {
-        validBookingEntries.push([segmentId, booking]);
-      }
-    });
-    const cleanedBookings = Object.fromEntries(validBookingEntries) as Record<string, { booked: boolean; bookedDate?: string; optionId?: string }>;
-    
-    // Check if transportBooked needs updating
-    const currentBookedKeys = Object.keys(budgetData.transportBooked);
-    const cleanedBookedKeys = Object.keys(cleanedBookings);
-    const bookingsNeedUpdate = currentBookedKeys.length !== cleanedBookedKeys.length;
-    
-    if (bookingsNeedUpdate) {
-      setBudgetData(prev => ({
-        ...prev,
-        transportBooked: cleanedBookings
-      }));
-    }
-  }, [transportSegments, selectedTransport, budgetData.transportBooked]);
 
   // Activity selection state
   // Maps "cityName-dayNumber-activityId" -> boolean (selected or not)
@@ -2030,7 +1975,8 @@ export default function Step2Plan({
     parseFloat(budgetData.food.cost || "0") +
     parseFloat(budgetData.transportation.cost || "0") +
     parseFloat(budgetData.fun.cost || "0") +
-    parseFloat(budgetData.preparation.cost || "0");
+    parseFloat(budgetData.preparation.cost || "0") +
+    parseFloat(budgetData.booksMovies.cost || "0");
 
   // Determine effective current savings (manual input overrides linked account)
   const manualSavingsNum = parseFloat(budgetData.currentSavings || "0");
@@ -2145,76 +2091,6 @@ export default function Step2Plan({
       }
     });
   };
-
-  // Handle booking flights
-  const handleBookFlights = () => {
-    setBudgetData(prev => ({
-      ...prev,
-      flights: {
-        ...prev.flights,
-        booked: true,
-        bookedDate: new Date().toISOString()
-      }
-    }));
-    toast({
-      title: "Flights Booked!",
-      description: "Great job! Your flights have been marked as booked. You can now move on to book accommodations.",
-    });
-  };
-
-  // Handle booking an accommodation
-  const handleBookAccommodation = (cityName: string, optionId: string) => {
-    setBudgetData(prev => ({
-      ...prev,
-      accommodationsBooked: {
-        ...prev.accommodationsBooked,
-        [cityName]: {
-          booked: true,
-          bookedDate: new Date().toISOString(),
-          optionId
-        }
-      }
-    }));
-    toast({
-      title: "Stay Booked!",
-      description: `Your accommodation in ${cityName} has been marked as booked.`,
-    });
-  };
-
-  // Handle booking a transport segment
-  const handleBookTransport = (segmentId: string, optionId: string) => {
-    setBudgetData(prev => ({
-      ...prev,
-      transportBooked: {
-        ...prev.transportBooked,
-        [segmentId]: {
-          booked: true,
-          bookedDate: new Date().toISOString(),
-          optionId
-        }
-      }
-    }));
-    toast({
-      title: "Transportation Booked!",
-      description: "Your transportation has been marked as booked.",
-    });
-  };
-
-  // Check if all accommodations are booked
-  const allAccommodationsBooked = useMemo(() => {
-    if (!displayedDestinationDetails || displayedDestinationDetails.length === 0) return false;
-    return displayedDestinationDetails.every(dest => 
-      budgetData.accommodationsBooked[dest.cityName]?.booked
-    );
-  }, [displayedDestinationDetails, budgetData.accommodationsBooked]);
-
-  // Check if all transport segments are booked
-  const allTransportBooked = useMemo(() => {
-    if (transportSegments.length === 0) return false;
-    return transportSegments.every(segment => 
-      budgetData.transportBooked[segment.id]?.booked
-    );
-  }, [transportSegments, budgetData.transportBooked]);
 
   // Placeholder function to estimate flight cost based on destinations
   // This simulates an API call that would normally check flight prices
@@ -2400,7 +2276,7 @@ export default function Step2Plan({
     }));
   };
 
-  // Estimate transportation cost (AI estimate before selections) - only major transport
+  // Estimate transportation cost (AI estimate before selections)
   const estimatedTransportCost = useMemo(() => {
     // If user has manually entered transportation cost, use that
     const transportBudget = parseFloat(budgetData.transportation.cost || "0");
@@ -2408,13 +2284,12 @@ export default function Step2Plan({
       return transportBudget;
     }
     
-    // Otherwise estimate based on typical rates - only major transport options
+    // Otherwise estimate based on typical rates
     let totalCost = 0;
     transportSegments.forEach(segment => {
-      // Filter to only major transport options
-      const majorOptions = segment.options.filter(opt => !isMinorTransport(opt.type));
-      if (majorOptions.length > 0) {
-        const sortedOptions = [...majorOptions].sort((a, b) => a.cost - b.cost);
+      // Use the middle-cost option as the estimate
+      if (segment.options.length > 0) {
+        const sortedOptions = [...segment.options].sort((a, b) => a.cost - b.cost);
         const middleIndex = Math.floor(sortedOptions.length / 2);
         totalCost += sortedOptions[middleIndex].cost;
       }
@@ -2422,23 +2297,17 @@ export default function Step2Plan({
     return totalCost;
   }, [budgetData.transportation.cost, transportSegments]);
 
-  // Calculate actual transport cost based on selections - only major transport
+  // Calculate actual transport cost based on selections
   const selectedTransportCost = useMemo(() => {
     let totalCost = 0;
     let allSelected = true;
     
     transportSegments.forEach(segment => {
-      // Filter to only major transport options for counting
-      const majorOptions = segment.options.filter(opt => !isMinorTransport(opt.type));
-      if (majorOptions.length === 0) return; // Skip segments with no major options
-      
       const selectedId = selectedTransport[segment.id];
       if (selectedId) {
-        const selected = majorOptions.find(opt => opt.id === selectedId);
+        const selected = segment.options.find(opt => opt.id === selectedId);
         if (selected) {
           totalCost += selected.cost;
-        } else {
-          allSelected = false; // Selected a minor transport option
         }
       } else {
         allSelected = false;
@@ -2599,23 +2468,9 @@ export default function Step2Plan({
       bus: "Bus",
       rideshare: "Rideshare",
       taxi: "Taxi",
-      shuttle: "Shuttle/Flight",
-      "rental-car": "Car Rental",
-      ferry: "Ferry"
+      shuttle: "Shuttle/Flight"
     };
     return typeMap[type] || type;
-  };
-  
-  // Get transport type icon
-  const getTransportTypeIcon = (type: TransportOption["type"]) => {
-    switch (type) {
-      case "train": return <Train className="w-4 h-4" />;
-      case "bus": return <Bus className="w-4 h-4" />;
-      case "rental-car": return <Car className="w-4 h-4" />;
-      case "ferry": return <Ship className="w-4 h-4" />;
-      case "shuttle": return <Plane className="w-4 h-4" />;
-      default: return <ChevronRight className="w-4 h-4" />;
-    }
   };
 
   // Get segment type label
@@ -2699,16 +2554,13 @@ export default function Step2Plan({
           <ProgressStepper currentStep={2} completedSteps={[1]} />
           <SaveBookOverview
             tripTitle={itinerary?.title}
-            totalEstimatedCost={totalEstimated}
-            currentSavings={currentSavingsNum}
-            aiMonthlySavings={aiRecommendedMonthlySavings}
-            earliestTravelDate={earliestTravelDate}
-            flightCost={estimatedFlightCost}
-            flightSavingsProgress={flightSavingsProgress}
+            destinations={displayedDestinationDetails || []}
+            tripDuration={displayedDuration}
+            numberOfTravelers={itinerary?.numberOfTravelers || numberOfTravelers}
+            travelSeason={itinerary?.travelSeason || travelSeason}
+            currentSavings={budgetData.currentSavings}
             savingsAccountLinked={savingsAccountLinked}
-            accommodationsFunded={tripBudget.categories.accommodations?.isFunded || false}
-            transportFunded={tripBudget.categories.transportation?.isFunded || false}
-            flightsFunded={tripBudget.categories.flights?.isFunded || false}
+            onViewItinerary={() => setLocation("/itinerary")}
             onContinue={handleOverviewContinue}
             onBack={handleBackToSavings}
           />
@@ -3082,74 +2934,41 @@ export default function Step2Plan({
             totalSavings={currentSavingsNum}
           />
 
-          {/* Save and Book Flights Section */}
+          {/* Flight Costs Section - Full Width */}
           <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <Plane className="w-6 h-6 text-primary" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Plane className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Flight Costs</CardTitle>
+                    <CardDescription>
+                      Track your flight savings and book when you're ready
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-xl">Save and Book Flights</CardTitle>
-                  <CardDescription>
-                    Step 1: Decide on points. Step 2: Save enough. Step 3: Book!
-                  </CardDescription>
-                </div>
+                
+                {/* Book Flights Button - Uses centralized budget calculations */}
+                <BookingButton
+                  category="flights"
+                  isFunded={tripBudget.categories.flights.isFunded}
+                  monthsToFund={tripBudget.categories.flights.monthsToFund}
+                  earliestDate={tripBudget.categories.flights.earliestBookingDate}
+                  label="Book the Flights"
+                  onClick={() => {
+                    toast({
+                      title: "Ready to Book!",
+                      description: "Opening flight booking options...",
+                    });
+                  }}
+                  testId="button-book-flights"
+                />
               </div>
             </CardHeader>
             
             <CardContent className="space-y-6">
-              {/* Your Flight Routes */}
-              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-flight-routes">
-                <div className="flex items-center gap-2 mb-3">
-                  <Plane className="w-4 h-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Your Flight Routes</h4>
-                </div>
-                <div className="space-y-2">
-                  {/* Outbound: Home to First City */}
-                  <div className="flex items-center gap-3 text-sm" data-testid="route-outbound">
-                    <Badge variant="outline" className="font-mono">Outbound</Badge>
-                    <span className="font-medium" data-testid="text-departure-city">{itinerary?.departureCity || "Your City"}</span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium" data-testid="text-first-destination">
-                      {displayedDestinationDetails?.[0]?.cityName || displayedDestinations?.[0] || "First Destination"}
-                    </span>
-                  </div>
-                  {/* Return: Last City to Home */}
-                  <div className="flex items-center gap-3 text-sm" data-testid="route-return">
-                    <Badge variant="outline" className="font-mono">Return</Badge>
-                    <span className="font-medium" data-testid="text-last-destination">
-                      {displayedDestinationDetails?.[displayedDestinationDetails.length - 1]?.cityName || 
-                       displayedDestinations?.[displayedDestinations.length - 1] || "Last Destination"}
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium" data-testid="text-return-city">{itinerary?.departureCity || "Your City"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 1: Points Decision - Moved to Top */}
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-primary text-primary-foreground">Step 1</Badge>
-                    <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-semibold text-sm">Will you use credit card points for flights?</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="use-points-toggle" className="text-sm text-muted-foreground">
-                      {budgetData.flights.usePoints ? "Yes, use points" : "No, pay cash"}
-                    </Label>
-                    <Switch
-                      id="use-points-toggle"
-                      checked={budgetData.flights.usePoints}
-                      onCheckedChange={handleToggleUsePoints}
-                      data-testid="switch-use-points"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Flight Metrics Grid */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Estimated Flight Cost */}
@@ -3251,15 +3070,27 @@ export default function Step2Plan({
                 <Progress value={flightSavingsProgress} className="h-3" />
               </div>
 
-              {/* Points Details Panel - Only shown when points are enabled */}
-              {budgetData.flights.usePoints && (
-                <div className="space-y-4">
-                  <Separator />
+              <Separator />
+
+              {/* Flight Points Subsection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">Points Details</h3>
+                    <h3 className="font-semibold">Flight Points</h3>
                   </div>
-                  
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="use-points" className="text-sm">Use points for flights?</Label>
+                    <Switch
+                      id="use-points"
+                      checked={budgetData.flights.usePoints}
+                      onCheckedChange={handleToggleUsePoints}
+                      data-testid="switch-use-points"
+                    />
+                  </div>
+                </div>
+
+                {budgetData.flights.usePoints && (
                   <div className="space-y-4 p-4 rounded-lg bg-muted/30 border">
                     {/* Points Balance & Input */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3380,8 +3211,10 @@ export default function Step2Plan({
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Credit Card Offers Panel */}
+                {/* Credit Card Offers Panel */}
+                {budgetData.flights.usePoints && (
                   <div className="p-4 rounded-lg border bg-gradient-to-br from-background to-muted/20">
                     <div className="flex items-center gap-2 mb-4">
                       <Star className="w-5 h-5 text-amber-500" />
@@ -3422,43 +3255,17 @@ export default function Step2Plan({
                       These are example offers for illustration purposes. Always research current offers before applying.
                     </p>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <Separator />
-
-              {/* Booking Tips */}
-              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-booking-tips">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Booking Tips</h4>
-                </div>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2" data-testid="tip-booking-advance">
-                    <span className="text-primary font-bold">1.</span>
-                    <span>Book 6-12 months in advance for the best international flight prices</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-compare-prices">
-                    <span className="text-primary font-bold">2.</span>
-                    <span>Compare prices on Google Flights, Skyscanner, and airline websites</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-midweek">
-                    <span className="text-primary font-bold">3.</span>
-                    <span>Consider flying mid-week (Tues-Thurs) for lower fares</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-price-alerts">
-                    <span className="text-primary font-bold">4.</span>
-                    <span>Set price alerts to catch drops before booking</span>
-                  </li>
-                </ul>
-              </div>
               
               {/* Helper Text */}
               {!canBookFlightsNow && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-flight-not-funded">
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
                   <div className="flex items-start gap-2">
                     <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-amber-700 dark:text-amber-400" data-testid="text-flight-warning">
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
                       <span className="font-medium">Why is booking disabled?</span> You still need ${flightSavingsGap.toLocaleString()} more for flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (after ${pointsToUse.toLocaleString()} points applied)` : ''}. 
                       At ${monthlySavingsNum.toLocaleString()}/month, you'll be ready to book in {monthsToFlights} month{monthsToFlights > 1 ? 's' : ''}. 
                       This helps you avoid going into debt for your trip.
@@ -3468,131 +3275,45 @@ export default function Step2Plan({
               )}
               
               {canBookFlightsNow && (
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900" data-testid="alert-flight-funded">
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-green-700 dark:text-green-400" data-testid="text-flight-ready">
+                    <p className="text-sm text-green-700 dark:text-green-400">
                       <span className="font-medium">You're ready!</span> You've saved enough to cover your flights{budgetData.flights.usePoints && pointsDollarValue > 0 ? ` (with ${pointsToUse.toLocaleString()} points reducing your cost by $${pointsDollarValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })})` : ''}. 
                       Book now to lock in prices 6-12 months before your trip for the best deals.
                     </p>
                   </div>
                 </div>
               )}
-
-              {/* Book Flights Button - Prominent CTA at bottom */}
-              <div className="pt-4 border-t" data-testid="container-flight-cta">
-                {budgetData.flights.booked ? (
-                  <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900" data-testid="alert-flights-booked">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-green-700 dark:text-green-400" data-testid="text-flights-booked">Flights Booked!</p>
-                          <p className="text-sm text-green-600 dark:text-green-500">
-                            Booked on {budgetData.flights.bookedDate ? new Date(budgetData.flights.bookedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'today'}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="default" className="bg-green-600">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Complete
-                      </Badge>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground" data-testid="text-flight-status">
-                        {canBookFlightsNow 
-                          ? "You've saved enough! Time to book your flights." 
-                          : `Save $${flightSavingsGap.toLocaleString()} more to unlock booking.`}
-                      </p>
-                    </div>
-                    <Button
-                      size="lg"
-                      className="gap-2"
-                      disabled={!canBookFlightsNow}
-                      onClick={handleBookFlights}
-                      data-testid="button-book-flights"
-                    >
-                      <Plane className="w-4 h-4" />
-                      {canBookFlightsNow ? "Mark Flights as Booked" : `Book the Flights`}
-                      {!canBookFlightsNow && (
-                        <Lock className="w-4 h-4 ml-1" />
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 
-          {/* Navigation to Accommodations (after flights booked) */}
-          {budgetData.flights.booked && (
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                className="gap-2"
-                onClick={() => {
-                  document.getElementById('accommodations-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                data-testid="button-continue-to-accommodations"
-              >
-                Continue to Book Accommodations
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Save and Book Accommodations Section */}
-          <Card id="accommodations-section" data-testid="card-accommodation-costs" className="border-2 border-purple-200 dark:border-purple-900/50">
-            <CardHeader className="pb-4">
+          {/* Accommodation Costs Section */}
+          <Card data-testid="card-accommodation-costs">
+            <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
                     <MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Save and Book Accommodations</CardTitle>
-                    <CardDescription>Book each stay when you have enough saved for it</CardDescription>
+                    <CardTitle className="text-xl">Accommodation Costs</CardTitle>
+                    <CardDescription>Select and compare stays for each destination</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {allAccommodationsBooked ? (
-                    <Badge variant="default" className="bg-green-600 gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      All Booked
-                    </Badge>
-                  ) : (
-                    <Badge variant={selectedAccommodationCost.allSelected ? "default" : "secondary"}>
-                      {Object.keys(budgetData.accommodationsBooked).filter(k => budgetData.accommodationsBooked[k]?.booked).length} of {displayedDestinationDetails?.length || 0} booked
-                    </Badge>
-                  )}
+                  <Badge variant={selectedAccommodationCost.allSelected ? "default" : "secondary"}>
+                    {Object.values(selectedAccommodations).filter(Boolean).length} of {displayedDestinationDetails?.length || 0} selected
+                  </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Savings Reminder */}
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-accommodation-reminder">
-                <div className="flex items-start gap-3">
-                  <PiggyBank className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-300">Book Only When You Have the Savings</p>
-                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                      Each accommodation should only be booked when you have enough in your savings account to cover it. 
-                      This keeps you on track for a debt-free trip!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Accommodation Summary Grid */}
+              {/* Estimated Accommodation Costs Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50 border">
                   <div className="flex items-center gap-1 mb-1">
-                    <p className="text-xs text-muted-foreground">Total Accommodation Cost</p>
+                    <p className="text-xs text-muted-foreground">Estimated Accommodation Costs</p>
                     <Tooltip>
                       <TooltipTrigger>
                         <HelpCircle className="w-3 h-3 text-muted-foreground" />
@@ -3646,37 +3367,20 @@ export default function Step2Plan({
                 </div>
               </div>
 
-              {/* Booking Tips */}
-              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-accommodation-tips">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-purple-600" />
-                  <h4 className="font-semibold text-sm">Booking Tips</h4>
+              {/* Accommodation Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Accommodation Savings Progress</span>
+                  <span className="font-medium">{accommodationSavingsProgress.toFixed(0)}% saved</span>
                 </div>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2" data-testid="tip-accommodation-refundable">
-                    <span className="text-purple-600 font-bold">1.</span>
-                    <span>Look for refundable or free cancellation options in case plans change</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-accommodation-reviews">
-                    <span className="text-purple-600 font-bold">2.</span>
-                    <span>Read recent reviews and check photos to verify the property matches the listing</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-accommodation-location">
-                    <span className="text-purple-600 font-bold">3.</span>
-                    <span>Consider location - staying near public transport can save on transportation costs</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-accommodation-amenities">
-                    <span className="text-purple-600 font-bold">4.</span>
-                    <span>Check for included breakfast or kitchen access to save on food expenses</span>
-                  </li>
-                </ul>
+                <Progress value={accommodationSavingsProgress} className="h-3" />
               </div>
 
               <Separator />
 
               {/* Itinerary Destinations with Accommodation Options */}
               <div className="space-y-6">
-                <h3 className="font-semibold text-lg">Book Your Stays</h3>
+                <h3 className="font-semibold text-lg">Choose Your Stays</h3>
                 
                 {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
                   displayedDestinationDetails.map((dest, idx) => {
@@ -3685,52 +3389,32 @@ export default function Step2Plan({
                     const selectedOption = selectedId && cityAccommodations
                       ? cityAccommodations.options.find(opt => opt.id === selectedId)
                       : null;
-                    const isBooked = budgetData.accommodationsBooked[dest.cityName]?.booked;
-                    
-                    const cityFromItinerary = itinerary?.cities?.find(c => c.cityName === dest.cityName);
-                    const arrivalDate = cityFromItinerary?.arrivalDate 
-                      ? new Date(cityFromItinerary.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                      : null;
-                    const departureDate = cityFromItinerary?.departureDate
-                      ? new Date(cityFromItinerary.departureDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : null;
                     
                     return (
                       <div 
                         key={dest.cityName} 
-                        className={`p-4 rounded-lg border ${isBooked ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' : 'bg-muted/20'}`}
+                        className="p-4 rounded-lg border bg-muted/20"
                         data-testid={`accommodation-location-${idx}`}
                       >
                         {/* Location Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${isBooked ? 'bg-green-600 text-white' : 'bg-primary text-primary-foreground'}`}>
-                              {isBooked ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                              {idx + 1}
                             </div>
                             <div>
                               <h4 className="font-semibold">{dest.cityName}, {dest.countryName}</h4>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <CalendarIcon className="w-3 h-3" />
-                                <span>
-                                  {arrivalDate && departureDate 
-                                    ? `${arrivalDate} - ${departureDate}` 
-                                    : `${dest.numberOfNights} night${dest.numberOfNights > 1 ? 's' : ''}`}
-                                </span>
-                                <span className="text-xs">({dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''})</span>
-                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
+                              </p>
                             </div>
                           </div>
-                          {isBooked ? (
-                            <Badge variant="default" className="bg-green-600 gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Booked
-                            </Badge>
-                          ) : selectedOption ? (
-                            <Badge variant="secondary" className="gap-1">
+                          {selectedOption && (
+                            <Badge variant="default" className="gap-1">
                               <CheckCircle2 className="w-3 h-3" />
                               Selected
                             </Badge>
-                          ) : null}
+                          )}
                         </div>
 
                         {/* Accommodation Options */}
@@ -3738,8 +3422,8 @@ export default function Step2Plan({
                           {cityAccommodations?.options.map((option) => {
                             const isSelected = selectedId === option.id;
                             const totalCost = option.nightlyCost * dest.numberOfNights;
-                            const canAffordThis = currentSavingsNum >= totalCost;
                             
+                            // If an option is selected, only show the selected one
                             if (selectedId && !isSelected) {
                               return null;
                             }
@@ -3748,13 +3432,11 @@ export default function Step2Plan({
                               <div
                                 key={option.id}
                                 className={`p-4 rounded-lg border transition-all ${
-                                  isBooked
-                                    ? 'border-green-300 dark:border-green-800 bg-white dark:bg-green-950/30'
-                                    : isSelected 
+                                  isSelected 
                                     ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                                     : 'bg-background hover-elevate cursor-pointer'
                                 }`}
-                                onClick={() => !isBooked && handleSelectAccommodation(dest.cityName, option.id)}
+                                onClick={() => handleSelectAccommodation(dest.cityName, option.id)}
                                 data-testid={`accommodation-option-${option.id}`}
                               >
                                 <div className="flex items-start justify-between mb-2">
@@ -3767,8 +3449,8 @@ export default function Step2Plan({
                                       <span className="text-xs font-medium">{option.rating.toFixed(1)}</span>
                                     </div>
                                   </div>
-                                  {(isSelected || isBooked) && (
-                                    <CheckCircle2 className={`w-5 h-5 ${isBooked ? 'text-green-600' : 'text-primary'}`} />
+                                  {isSelected && (
+                                    <CheckCircle2 className="w-5 h-5 text-primary" />
                                   )}
                                 </div>
                                 <h5 className="font-medium text-sm mb-1">{option.name}</h5>
@@ -3785,52 +3467,19 @@ export default function Step2Plan({
                                     <p className="text-xs text-muted-foreground">total for {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}</p>
                                   </div>
                                 </div>
-                                {isBooked ? (
-                                  <div className="mt-3 p-2 rounded bg-green-100 dark:bg-green-900/30 text-center">
-                                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">
-                                      Booked on {budgetData.accommodationsBooked[dest.cityName]?.bookedDate 
-                                        ? new Date(budgetData.accommodationsBooked[dest.cityName].bookedDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                        : 'today'}
-                                    </p>
-                                  </div>
-                                ) : isSelected ? (
-                                  <div className="space-y-2 mt-3">
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="w-full gap-1"
-                                      disabled={!canAffordThis}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleBookAccommodation(dest.cityName, option.id);
-                                      }}
-                                      data-testid={`button-book-${option.id}`}
-                                    >
-                                      {canAffordThis ? (
-                                        <>
-                                          <CheckCircle2 className="w-4 h-4" />
-                                          Book This Stay
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Lock className="w-4 h-4" />
-                                          Need ${(totalCost - currentSavingsNum).toLocaleString()} more
-                                        </>
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="w-full gap-1"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSelectAccommodation(dest.cityName, option.id);
-                                      }}
-                                      data-testid={`button-change-${option.id}`}
-                                    >
-                                      Change Selection
-                                    </Button>
-                                  </div>
+                                {isSelected ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectAccommodation(dest.cityName, option.id);
+                                    }}
+                                    data-testid={`button-change-${option.id}`}
+                                  >
+                                    Change Selection
+                                  </Button>
                                 ) : (
                                   <Button
                                     variant="default"
@@ -3845,21 +3494,19 @@ export default function Step2Plan({
                                     Select This Stay
                                   </Button>
                                 )}
-                                {!isBooked && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="w-full mt-2 gap-1 text-muted-foreground"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(option.url, '_blank');
-                                    }}
-                                    data-testid={`button-view-details-${option.id}`}
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                    View Details
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-2 gap-1 text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(option.url, '_blank');
+                                  }}
+                                  data-testid={`button-view-details-${option.id}`}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  View Details
+                                </Button>
                               </div>
                             );
                           })}
@@ -3875,68 +3522,99 @@ export default function Step2Plan({
                 )}
               </div>
 
-              </CardContent>
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Book */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Book Stays</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalFlightsAndAccommodation.toLocaleString()} total for flights + accommodations, with ${currentSavingsNum.toLocaleString()} saved and ${monthlySavingsNum.toLocaleString()}/month savings.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookAccommodationNow ? 'text-green-600' : ''}`} data-testid="text-earliest-accommodation-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookAccommodationNow 
+                      ? "Ready now!" 
+                      : earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookAccommodationNow && monthsToCombined > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToCombined} month{monthsToCombined > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Stays Button - Uses centralized budget calculations */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <BookingButton
+                    category="accommodations"
+                    isFunded={tripBudget.categories.accommodations.isFunded}
+                    monthsToFund={tripBudget.categories.accommodations.monthsToFund}
+                    earliestDate={tripBudget.categories.accommodations.earliestBookingDate}
+                    label="Book Your Stays"
+                    className="w-full"
+                    testId="button-book-stays"
+                  />
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canBookAccommodationNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestAccommodationBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book stays without going into debt. 
+                      At your current savings rate, you'll have enough for both flights and accommodations by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canBookAccommodationNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover both flights (${estimatedFlightCost.toLocaleString()}) and accommodations (${finalAccommodationCost.toLocaleString()}). 
+                      Book now to secure the best rates and availability.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
 
-          {/* Navigation to Transportation (after all accommodations booked) */}
-          {allAccommodationsBooked && (
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                className="gap-2"
-                onClick={() => {
-                  document.getElementById('transportation-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                data-testid="button-continue-to-transportation"
-              >
-                Continue to Book Major Transportation
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Save and Book Major Transportation Section */}
-          <Card id="transportation-section" data-testid="card-transportation-costs" className="border-2 border-blue-200 dark:border-blue-900/50">
-            <CardHeader className="pb-4">
+          {/* Transportation Costs Section */}
+          <Card data-testid="card-transportation-costs">
+            <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                    <Train className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <ChevronRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Save and Book Major Transportation</CardTitle>
-                    <CardDescription>Book car rentals, trains, buses, ferries, and regional flights</CardDescription>
+                    <CardTitle className="text-xl">Transportation Costs</CardTitle>
+                    <CardDescription>Plan how you'll get around during your trip</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {allTransportBooked ? (
-                    <Badge variant="default" className="bg-green-600 gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      All Booked
-                    </Badge>
-                  ) : (
-                    <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
-                      {Object.keys(budgetData.transportBooked).filter(k => budgetData.transportBooked[k]?.booked).length} of {transportSegments.length} booked
-                    </Badge>
-                  )}
+                  <Badge variant={selectedTransportCost.allSelected ? "default" : "secondary"}>
+                    {Object.values(selectedTransport).filter(Boolean).length} of {transportSegments.length} selected
+                  </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Savings Reminder */}
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" data-testid="alert-transport-reminder">
-                <div className="flex items-start gap-3">
-                  <PiggyBank className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-300">Book Only When You Have the Savings</p>
-                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                      Each transportation segment should only be booked when you have enough saved to cover it. 
-                      This keeps you on track for a debt-free trip!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Transportation Cost Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50 border">
@@ -4004,32 +3682,6 @@ export default function Step2Plan({
                 <Progress value={transportSavingsProgress} className="h-3" />
               </div>
 
-              {/* Booking Tips */}
-              <div className="p-4 rounded-lg bg-muted/30 border" data-testid="container-transport-tips">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <h4 className="font-semibold text-sm">Booking Tips</h4>
-                </div>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2" data-testid="tip-transport-flexibility">
-                    <span className="text-blue-600 font-bold">1.</span>
-                    <span>Look for flexible booking options that allow changes or refunds in case plans shift</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-transport-advance">
-                    <span className="text-blue-600 font-bold">2.</span>
-                    <span>Book trains and buses in advance for better prices and seat selection</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-transport-rental">
-                    <span className="text-blue-600 font-bold">3.</span>
-                    <span>For car rentals, compare total costs including insurance, fuel policy, and drop-off fees</span>
-                  </li>
-                  <li className="flex items-start gap-2" data-testid="tip-transport-passes">
-                    <span className="text-blue-600 font-bold">4.</span>
-                    <span>Consider regional rail passes if taking multiple train journeys in Europe or Japan</span>
-                  </li>
-                </ul>
-              </div>
-
               <Separator />
 
               {/* Transport Segments */}
@@ -4042,31 +3694,24 @@ export default function Step2Plan({
                     const selectedOption = selectedId
                       ? segment.options.find(opt => opt.id === selectedId)
                       : null;
-                    const bookingStatus = budgetData.transportBooked[segment.id];
-                    const isBooked = bookingStatus?.booked || false;
-                    const segmentCost = selectedOption?.cost || 0;
-                    const canAffordThisSegment = savingsAllocatedToTransport >= segmentCost;
-                    const amountNeededForSegment = Math.max(0, segmentCost - savingsAllocatedToTransport);
                     
                     return (
                       <div 
                         key={segment.id} 
-                        className={`p-4 rounded-lg border ${isBooked ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900' : 'bg-muted/20'}`}
+                        className="p-4 rounded-lg border bg-muted/20"
                         data-testid={`transport-segment-${idx}`}
                       >
                         {/* Segment Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                              isBooked
-                                ? "bg-green-500 text-white"
-                                : segment.segmentType === "airport-arrival" || segment.segmentType === "airport-departure"
+                              segment.segmentType === "airport-arrival" || segment.segmentType === "airport-departure"
                                 ? "bg-blue-500 text-white"
                                 : segment.segmentType === "city-to-city"
                                 ? "bg-purple-500 text-white"
                                 : "bg-green-500 text-white"
                             }`}>
-                              {isBooked ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                              {idx + 1}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
@@ -4079,146 +3724,99 @@ export default function Step2Plan({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {isBooked ? (
-                              <Badge variant="default" className="bg-green-600 gap-1" data-testid={`badge-transport-booked-${idx}`}>
-                                <CheckCircle2 className="w-3 h-3" />
-                                Booked {bookingStatus?.bookedDate ? `on ${new Date(bookingStatus.bookedDate).toLocaleDateString()}` : ''}
-                              </Badge>
-                            ) : selectedOption ? (
-                              <Badge variant="default" className="gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                ${selectedOption.cost}
-                              </Badge>
-                            ) : null}
-                          </div>
+                          {selectedOption && (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              ${selectedOption.cost}
+                            </Badge>
+                          )}
                         </div>
 
-                        {/* Transport Options - Only major transport types */}
+                        {/* Transport Options */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* If segment is booked, show booking confirmation only */}
-                          {isBooked ? (
-                            <div className="md:col-span-3 p-4 rounded-lg border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/30">
-                              <div className="flex items-center gap-3">
-                                <CheckCircle2 className="w-8 h-8 text-green-600" />
-                                <div>
-                                  <h5 className="font-semibold text-green-700 dark:text-green-400">
-                                    {selectedOption?.name || 'Transport'} Booked!
-                                  </h5>
-                                  <p className="text-sm text-green-600 dark:text-green-500">
-                                    ${selectedOption?.cost || 0} - {getTransportTypeName(selectedOption?.type || 'bus')}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            segment.options
-                              .filter(option => !isMinorTransport(option.type))
-                              .map((option) => {
-                              const isSelected = selectedId === option.id;
-                              
-                              // If an option is selected, only show the selected one
-                              if (selectedId && !isSelected) {
-                                return null;
-                              }
-                              
-                              return (
-                                <div
-                                  key={option.id}
-                                  className={`p-4 rounded-lg border transition-all ${
-                                    isSelected 
-                                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                      : 'bg-background hover-elevate cursor-pointer'
-                                  }`}
-                                  onClick={() => !isSelected && handleSelectTransport(segment.id, option.id)}
-                                  data-testid={`transport-option-${option.id}`}
-                                >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <Badge variant="secondary" className="text-xs">
-                                      {getTransportTypeName(option.type)}
-                                    </Badge>
-                                    {isSelected && (
-                                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    )}
-                                  </div>
-                                  <h5 className="font-medium text-sm mb-1">{option.name}</h5>
-                                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                    {option.description}
-                                  </p>
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      {option.duration}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-end justify-between">
-                                    <p className="text-lg font-bold">${option.cost}</p>
-                                  </div>
-                                  {isSelected ? (
-                                    <div className="mt-3 space-y-2">
-                                      {/* Book This Transport Button */}
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        className={`w-full gap-1 ${canAffordThisSegment ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                                        disabled={!canAffordThisSegment}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleBookTransport(segment.id, option.id);
-                                        }}
-                                        data-testid={`button-book-transport-${option.id}`}
-                                      >
-                                        <Train className="w-4 h-4" />
-                                        {canAffordThisSegment 
-                                          ? "Book This Transport" 
-                                          : `Need $${amountNeededForSegment.toLocaleString()} more`}
-                                        {!canAffordThisSegment && <Lock className="w-3 h-3 ml-1" />}
-                                      </Button>
-                                      {/* Change Selection Button */}
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full gap-1"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleSelectTransport(segment.id, option.id);
-                                        }}
-                                        data-testid={`button-change-transport-${option.id}`}
-                                      >
-                                        Change Selection
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="w-full mt-3 gap-1"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSelectTransport(segment.id, option.id);
-                                      }}
-                                      data-testid={`button-select-transport-${option.id}`}
-                                    >
-                                      Select This Option
-                                    </Button>
+                          {segment.options.map((option) => {
+                            const isSelected = selectedId === option.id;
+                            
+                            // If an option is selected, only show the selected one
+                            if (selectedId && !isSelected) {
+                              return null;
+                            }
+                            
+                            return (
+                              <div
+                                key={option.id}
+                                className={`p-4 rounded-lg border transition-all ${
+                                  isSelected 
+                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                    : 'bg-background hover-elevate cursor-pointer'
+                                }`}
+                                onClick={() => handleSelectTransport(segment.id, option.id)}
+                                data-testid={`transport-option-${option.id}`}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getTransportTypeName(option.type)}
+                                  </Badge>
+                                  {isSelected && (
+                                    <CheckCircle2 className="w-5 h-5 text-primary" />
                                   )}
+                                </div>
+                                <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                  {option.description}
+                                </p>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {option.duration}
+                                  </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                  <p className="text-lg font-bold">${option.cost}</p>
+                                </div>
+                                {isSelected ? (
                                   <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    className="w-full mt-2 gap-1 text-muted-foreground"
+                                    className="w-full mt-3 gap-1"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(option.url, '_blank');
+                                      handleSelectTransport(segment.id, option.id);
                                     }}
-                                    data-testid={`button-view-transport-${option.id}`}
+                                    data-testid={`button-change-transport-${option.id}`}
                                   >
-                                    <ExternalLink className="w-3 h-3" />
-                                    View Details
+                                    Change Selection
                                   </Button>
-                                </div>
-                              );
-                            })
-                          )}
+                                ) : (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="w-full mt-3 gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectTransport(segment.id, option.id);
+                                    }}
+                                    data-testid={`button-select-transport-${option.id}`}
+                                  >
+                                    Select This Option
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full mt-2 gap-1 text-muted-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(option.url, '_blank');
+                                  }}
+                                  data-testid={`button-view-transport-${option.id}`}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  View Details
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -4303,88 +3901,8 @@ export default function Step2Plan({
             </CardContent>
           </Card>
 
-          {/* Save & Book Overview Section - Shows after transport is funded */}
-          <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent" data-testid="card-flexible-booking-overview">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <PartyPopper className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Save & Book: Flexible Categories</CardTitle>
-                  <CardDescription>Book these in any order as your savings allow</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/50 border">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">Why book in any order?</span> Unlike flights and accommodations which need to be secured first for your travel dates, 
-                  these categories are more flexible. You can book activities, make dinner reservations, purchase trip insurance, 
-                  or buy travel gear in whatever order works best for your budget and timeline.
-                </p>
-              </div>
-
-              {/* Quick Navigation Links */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 flex flex-col items-center gap-2"
-                  onClick={() => document.getElementById('activities-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  data-testid="nav-link-activities"
-                >
-                  <Sparkles className="w-5 h-5 text-purple-600" />
-                  <span className="text-xs">Fun & Activities</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 flex flex-col items-center gap-2"
-                  onClick={() => document.getElementById('dinner-reservations-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  data-testid="nav-link-dinner"
-                >
-                  <Utensils className="w-5 h-5 text-orange-600" />
-                  <span className="text-xs">Dinner Reservations</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 flex flex-col items-center gap-2"
-                  onClick={() => document.getElementById('trip-insurance-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  data-testid="nav-link-insurance"
-                >
-                  <Shield className="w-5 h-5 text-blue-600" />
-                  <span className="text-xs">Trip Insurance</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 flex flex-col items-center gap-2"
-                  onClick={() => document.getElementById('trip-preparation-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  data-testid="nav-link-preparation"
-                >
-                  <Briefcase className="w-5 h-5 text-teal-600" />
-                  <span className="text-xs">Trip Preparation</span>
-                </Button>
-              </div>
-
-              {/* Savings Summary for Flexible Categories */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-background border">
-                  <p className="text-xs text-muted-foreground mb-1">Est. Cost for Remaining Categories</p>
-                  <p className="text-2xl font-bold" data-testid="text-flexible-total-cost">
-                    ${(finalActivityCost + finalFoodCost + prepStats.totalCost).toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-background border">
-                  <p className="text-xs text-muted-foreground mb-1">Available from Savings</p>
-                  <p className={`text-2xl font-bold ${savingsAllocatedToActivities >= 0 ? 'text-green-600' : ''}`} data-testid="text-flexible-savings-available">
-                    ${savingsAllocatedToActivities.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save and Book Fun & Activities Section */}
-          <Card id="activities-section" data-testid="card-activities-costs">
+          {/* Fun & Activities Section */}
+          <Card data-testid="card-activities-costs">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -4392,7 +3910,7 @@ export default function Step2Plan({
                     <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Save and Book Fun & Activities</CardTitle>
+                    <CardTitle className="text-xl">Fun & Activities</CardTitle>
                     <CardDescription>{getActivityPaceDescription(activityPace)}</CardDescription>
                   </div>
                 </div>
@@ -4471,283 +3989,25 @@ export default function Step2Plan({
                 <Progress value={activitySavingsProgress} className="h-3" />
               </div>
 
-              {/* Booking Tips */}
-              <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/30">
-                <h4 className="font-medium text-purple-800 dark:text-purple-200 mb-2">Activity Booking Tips</h4>
-                <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Book popular attractions (like the Eiffel Tower, Colosseum, etc.) 2-3 months in advance - they sell out!</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Many museums offer free admission on certain days - check their websites</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Consider city passes for multiple attractions - they often save money</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Outdoor activities and walking tours often don't need advance booking</span>
-                  </li>
-                </ul>
-              </div>
-
               <Separator />
 
               {/* Activities by City and Day */}
               <div className="space-y-8">
-                <h3 className="font-semibold text-lg">Your Itinerary Activities</h3>
-                
-                {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
-                  (() => {
-                    // Calculate cumulative days for date display
-                    let cumulativeDays = 0;
-                    const tripStartDate = itinerary?.startDate ? new Date(itinerary.startDate) : new Date();
-                    
-                    return displayedDestinationDetails.map((dest, destIdx) => {
-                      const cityActivities = activitiesByCity[dest.cityName] || [];
-                      const cityStartDay = cumulativeDays;
-                      cumulativeDays += dest.numberOfNights;
-                      
-                      return (
-                        <div 
-                          key={dest.cityName} 
-                          className="space-y-4"
-                          data-testid={`activity-city-${destIdx}`}
-                        >
-                          {/* City Header */}
-                          <div className="flex items-center gap-3 pb-2 border-b">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600 text-white text-lg font-bold">
-                              {destIdx + 1}
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-lg">{dest.cityName}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {dest.countryName} • {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Days in this city */}
-                          {cityActivities.map((day, dayIdx) => {
-                            const selectedCount = day.activities.filter(a => 
-                              selectedActivities[`${dest.cityName}-${day.dayNumber}-${a.id}`]
-                            ).length;
-                            
-                            // Calculate the actual date for this day
-                            const dayDate = new Date(tripStartDate);
-                            dayDate.setDate(dayDate.getDate() + cityStartDay + dayIdx);
-                            const formattedDate = dayDate.toLocaleDateString('en-US', { 
-                              weekday: 'short', 
-                              month: 'short', 
-                              day: 'numeric' 
-                            });
-                            
-                            return (
-                              <div 
-                                key={`${dest.cityName}-day-${day.dayNumber}`}
-                                className="p-4 rounded-lg border bg-muted/20"
-                                data-testid={`activity-day-${destIdx}-${day.dayNumber}`}
-                              >
-                                {/* Day Header with Date */}
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-2">
-                                    <CalendarIcon className="w-4 h-4 text-purple-600" />
-                                    <span className="font-medium">Day {day.dayNumber} - {formattedDate}</span>
-                                    <span className="text-sm text-muted-foreground">({dest.cityName})</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {selectedCount > 0 && (
-                                      <Badge variant="default" className="gap-1">
-                                        <CheckCircle2 className="w-3 h-3" />
-                                        {selectedCount} selected
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Activities for this day */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-                                  {day.activities.map((activity) => {
-                                    const activityKey = `${dest.cityName}-${day.dayNumber}-${activity.id}`;
-                                    const isSelected = selectedActivities[activityKey] || false;
-                                    
-                                    // Determine if this activity requires advance booking
-                                    const requiresAdvanceBooking = activity.type === "main-attraction" || activity.cost > 50;
-                                    const isUrgent = requiresAdvanceBooking && activity.name.toLowerCase().includes("tower") || 
-                                                     activity.name.toLowerCase().includes("museum") ||
-                                                     activity.name.toLowerCase().includes("palace");
-                                    
-                                    return (
-                                      <div
-                                        key={activity.id}
-                                        className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                                          isSelected 
-                                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                                            : 'bg-background hover-elevate'
-                                        }`}
-                                        onClick={() => handleToggleActivity(dest.cityName, day.dayNumber, activity.id)}
-                                        data-testid={`activity-option-${activity.id}`}
-                                      >
-                                        <div className="flex items-start justify-between mb-2 gap-1">
-                                          <div className="flex flex-wrap gap-1">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${getActivityTypeColor(activity.type)}`}>
-                                              {getActivityTypeLabel(activity.type)}
-                                            </span>
-                                            {isUrgent && (
-                                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1">
-                                                <CircleAlert className="w-3 h-3" />
-                                                Book Early!
-                                              </span>
-                                            )}
-                                            {!requiresAdvanceBooking && (
-                                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                No Booking Needed
-                                              </span>
-                                            )}
-                                          </div>
-                                          {isSelected ? (
-                                            <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                                          ) : (
-                                            <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
-                                          )}
-                                        </div>
-                                        <h5 className="font-medium text-sm mb-1">{activity.name}</h5>
-                                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                          {activity.description}
-                                        </p>
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                                          <div className="flex items-center gap-1">
-                                            <Clock className="w-3 h-3" />
-                                            {activity.duration}
-                                          </div>
-                                          <span className="font-bold text-sm text-foreground">
-                                            {activity.cost === 0 ? 'Free' : `$${activity.cost}`}
-                                          </span>
-                                        </div>
-                                        {isSelected && requiresAdvanceBooking && (
-                                          <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="w-full mt-1 gap-1 text-xs h-7"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              window.open(activity.url, '_blank');
-                                              toast({
-                                                title: "Opening Booking Page",
-                                                description: `Book for ${formattedDate}`,
-                                              });
-                                            }}
-                                            data-testid={`button-book-activity-${activity.id}`}
-                                          >
-                                            <ExternalLink className="w-3 h-3" />
-                                            Book for {formattedDate}
-                                          </Button>
-                                        )}
-                                        {isSelected && !requiresAdvanceBooking && (
-                                          <div className="mt-1 p-2 rounded bg-green-50 dark:bg-green-950/30 text-xs text-green-700 dark:text-green-400">
-                                            Just show up on {formattedDate}!
-                                          </div>
-                                        )}
-                                        {!isSelected && (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="w-full mt-1 gap-1 text-muted-foreground text-xs h-7"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              window.open(activity.url, '_blank');
-                                            }}
-                                            data-testid={`button-view-activity-${activity.id}`}
-                                          >
-                                            <ExternalLink className="w-3 h-3" />
-                                            Learn More
-                                          </Button>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-
-                                {/* Add Add-ons Button */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full gap-2 border-dashed"
-                                  onClick={() => {
-                                    toast({
-                                      title: "Add-on Activities",
-                                      description: `Browse more activities for ${formattedDate} in ${dest.cityName}. Feature coming soon!`,
-                                    });
-                                  }}
-                                  data-testid={`button-add-addon-${destIdx}-${day.dayNumber}`}
-                                >
-                                  <Plus className="w-4 h-4" />
-                                  View Add-on Activities for {formattedDate}
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    });
-                  })()
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No destinations added yet. Add destinations to see activity options.</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dinner Reservations Section */}
-          <Card id="dinner-reservations-section" data-testid="card-dinner-reservations">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                    <Utensils className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Dinner Reservations</CardTitle>
-                    <CardDescription>Book special dinner experiences in each city</CardDescription>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Intro Text */}
-              <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30">
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  We recommend making dinner reservations at 1-2 special restaurants per city. 
-                  Most regular meals don't require reservations - just walk in and enjoy the local cuisine!
-                </p>
-              </div>
-
-              {/* Recommended Restaurants by City */}
-              <div className="space-y-6">
-                <h3 className="font-semibold text-lg">Recommended Dinner Spots</h3>
+                <h3 className="font-semibold text-lg">Choose Your Adventures</h3>
                 
                 {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
                   displayedDestinationDetails.map((dest, destIdx) => {
-                    const cityFoodOptions = foodOptionsByCity[dest.cityName] || [];
-                    const topRestaurants = cityFoodOptions
-                      .flatMap(day => day.options.filter(opt => opt.type === "restaurant"))
-                      .slice(0, 2);
+                    const cityActivities = activitiesByCity[dest.cityName] || [];
                     
                     return (
                       <div 
                         key={dest.cityName} 
-                        className="p-4 rounded-lg border bg-muted/20"
-                        data-testid={`dinner-city-${destIdx}`}
+                        className="space-y-4"
+                        data-testid={`activity-city-${destIdx}`}
                       >
                         {/* City Header */}
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500 text-white text-lg font-bold">
+                        <div className="flex items-center gap-3 pb-2 border-b">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground text-lg font-bold">
                             {destIdx + 1}
                           </div>
                           <div>
@@ -4758,220 +4018,632 @@ export default function Step2Plan({
                           </div>
                         </div>
 
-                        {/* Top 2 Restaurant Recommendations */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {topRestaurants.length > 0 ? topRestaurants.map((restaurant, idx) => (
-                            <div
-                              key={restaurant.id}
-                              className="p-4 rounded-lg border bg-background"
-                              data-testid={`dinner-restaurant-${destIdx}-${idx}`}
+                        {/* Days in this city */}
+                        {cityActivities.map((day) => {
+                          const selectedCount = day.activities.filter(a => 
+                            selectedActivities[`${dest.cityName}-${day.dayNumber}-${a.id}`]
+                          ).length;
+                          
+                          return (
+                            <div 
+                              key={`${dest.cityName}-day-${day.dayNumber}`}
+                              className="p-4 rounded-lg border bg-muted/20"
+                              data-testid={`activity-day-${destIdx}-${day.dayNumber}`}
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <Badge variant="secondary" className="text-xs">
-                                  {restaurant.cuisine || "Local Cuisine"}
-                                </Badge>
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  {restaurant.priceRange}
-                                </span>
+                              {/* Day Header */}
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                                  <span className="font-medium">Day {day.dayNumber} in {dest.cityName}</span>
+                                </div>
+                                {selectedCount > 0 && (
+                                  <Badge variant="default" className="gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {selectedCount} selected
+                                  </Badge>
+                                )}
                               </div>
-                              <h5 className="font-medium mb-1">{restaurant.name}</h5>
-                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                                {restaurant.description}
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-sm">
-                                  ~${restaurant.estimatedCost}/person
-                                </span>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="gap-1"
-                                  onClick={() => window.open(restaurant.url, '_blank')}
-                                  data-testid={`button-book-dinner-${restaurant.id}`}
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  Book / View Menu
-                                </Button>
+
+                              {/* Activities for this day */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {day.activities.map((activity) => {
+                                  const activityKey = `${dest.cityName}-${day.dayNumber}-${activity.id}`;
+                                  const isSelected = selectedActivities[activityKey] || false;
+                                  
+                                  return (
+                                    <div
+                                      key={activity.id}
+                                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                        isSelected 
+                                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                          : 'bg-background hover-elevate'
+                                      }`}
+                                      onClick={() => handleToggleActivity(dest.cityName, day.dayNumber, activity.id)}
+                                      data-testid={`activity-option-${activity.id}`}
+                                    >
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${getActivityTypeColor(activity.type)}`}>
+                                          {getActivityTypeLabel(activity.type)}
+                                        </span>
+                                        {isSelected ? (
+                                          <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                        ) : (
+                                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                        )}
+                                      </div>
+                                      <h5 className="font-medium text-sm mb-1">{activity.name}</h5>
+                                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                        {activity.description}
+                                      </p>
+                                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          {activity.duration}
+                                        </div>
+                                        <span className="font-bold text-sm text-foreground">
+                                          {activity.cost === 0 ? 'Free' : `$${activity.cost}`}
+                                        </span>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full mt-1 gap-1 text-muted-foreground text-xs h-7"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(activity.url, '_blank');
+                                        }}
+                                        data-testid={`button-view-activity-${activity.id}`}
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Learn More
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
-                          )) : (
-                            <div className="col-span-2 text-center py-4 text-muted-foreground">
-                              <p>Restaurant recommendations will appear once itinerary is finalized.</p>
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
                     );
                   })
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Utensils className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No destinations added yet. Add destinations to see dinner recommendations.</p>
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No destinations added yet. Add destinations to see activity options.</p>
                   </div>
                 )}
               </div>
 
-              {/* Booking Tips */}
-              <div className="p-4 rounded-lg bg-muted/30 border">
-                <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-500" />
-                  Dining Tips
-                </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Book popular restaurants 2-4 weeks in advance, especially for weekend dinners</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Look for prix fixe menus for better value at upscale restaurants</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Ask your hotel concierge for local favorites and reservations help</span>
-                  </li>
-                </ul>
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Book */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Book Activities</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalFlightsAccomTransportActivities.toLocaleString()} total for flights, accommodations, transport, and activities.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canBookActivitiesNow ? 'text-green-600' : ''}`} data-testid="text-earliest-activity-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canBookActivitiesNow 
+                      ? "Ready now!" 
+                      : earliestActivityBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canBookActivitiesNow && monthsToAllIncludingActivities > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToAllIncludingActivities} month{monthsToAllIncludingActivities > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Activities Button - Uses centralized budget calculations */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <BookingButton
+                    category="activities"
+                    isFunded={tripBudget.categories.activities.isFunded}
+                    monthsToFund={tripBudget.categories.activities.monthsToFund}
+                    earliestDate={tripBudget.categories.activities.earliestBookingDate}
+                    label="Book Activities"
+                    className="w-full"
+                    testId="button-book-activities"
+                  />
+                </div>
               </div>
+
+              {/* Helper Text */}
+              {!canBookActivitiesNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestActivityBookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can book activities without going into debt. 
+                      At your current savings rate, you'll have enough for all travel expenses by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canBookActivitiesNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to book!</span> You have enough saved to cover flights, accommodations, transportation, and ${finalActivityCost.toLocaleString()} in activities. 
+                      Start reserving your adventures now!
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Trip Insurance Section */}
-          <Card id="trip-insurance-section" data-testid="card-trip-insurance">
+          {/* Food Costs Section */}
+          <Card data-testid="card-food-costs">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                    <Shield className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Utensils className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Trip Insurance</CardTitle>
-                    <CardDescription>Protect your investment for peace of mind</CardDescription>
+                    <CardTitle className="text-xl">Food Costs</CardTitle>
+                    <CardDescription>Plan your dining experiences and budget</CardDescription>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {foodBudgetMode === "selections" && selectedFoodStats.totalCount > 0 && (
+                    <Badge variant="default">
+                      {selectedFoodStats.restaurantCount} restaurants, {selectedFoodStats.experienceCount} experiences
+                    </Badge>
+                  )}
+                  {foodBudgetMode === "daily" && (
+                    <Badge variant="secondary">
+                      ${dailyFoodBudget}/day/person
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Intro Text */}
-              <div className="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/30">
-                <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                  Trip insurance can reimburse you if you need to cancel, cover medical emergencies abroad, 
-                  and protect against lost luggage. Consider getting coverage especially for international trips.
-                </p>
-              </div>
-
-              {/* Insurance Recommendations */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Recommended Insurance Options</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Option 1: Comprehensive */}
-                  <div className="p-4 rounded-lg border bg-background" data-testid="insurance-option-comprehensive">
-                    <div className="flex items-start justify-between mb-2">
-                      <Badge className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                        Most Popular
-                      </Badge>
-                      <span className="text-sm font-medium text-muted-foreground">
-                        ~5-8% of trip cost
-                      </span>
-                    </div>
-                    <h4 className="font-medium mb-1">Comprehensive Coverage</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Full protection including trip cancellation, medical emergencies, baggage loss, and travel delays.
-                    </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 mb-3">
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Trip cancellation/interruption
-                      </li>
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Emergency medical coverage
-                      </li>
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Lost/delayed baggage
-                      </li>
-                    </ul>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-1"
-                      onClick={() => window.open('https://www.squaremouth.com/', '_blank')}
-                      data-testid="button-compare-insurance"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Compare Plans on Squaremouth
-                    </Button>
-                  </div>
-
-                  {/* Option 2: Medical Only */}
-                  <div className="p-4 rounded-lg border bg-background" data-testid="insurance-option-medical">
-                    <div className="flex items-start justify-between mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        Budget-Friendly
-                      </Badge>
-                      <span className="text-sm font-medium text-muted-foreground">
-                        ~2-4% of trip cost
-                      </span>
-                    </div>
-                    <h4 className="font-medium mb-1">Medical-Only Coverage</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Essential medical protection for emergencies abroad. Good if you don't need cancellation coverage.
-                    </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 mb-3">
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Emergency medical coverage
-                      </li>
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Medical evacuation
-                      </li>
-                      <li className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        24/7 travel assistance
-                      </li>
-                    </ul>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-1"
-                      onClick={() => window.open('https://www.worldnomads.com/', '_blank')}
-                      data-testid="button-worldnomads"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      View World Nomads
-                    </Button>
-                  </div>
+              {/* Budget Mode Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                <div>
+                  <p className="font-medium">How would you like to budget for food?</p>
+                  <p className="text-sm text-muted-foreground">
+                    {foodBudgetMode === "selections" 
+                      ? "Pick specific restaurants and experiences for accurate costs"
+                      : "Set a daily budget for a quick estimate"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={foodBudgetMode === "selections" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFoodBudgetMode("selections")}
+                    data-testid="button-food-mode-selections"
+                  >
+                    Pick Restaurants
+                  </Button>
+                  <Button
+                    variant={foodBudgetMode === "daily" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFoodBudgetMode("daily")}
+                    data-testid="button-food-mode-daily"
+                  >
+                    Daily Budget
+                  </Button>
                 </div>
               </div>
 
-              {/* Tips */}
-              <div className="p-4 rounded-lg bg-muted/30 border">
-                <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-500" />
-                  Insurance Tips
-                </h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Check if your credit card already offers trip protection - many premium cards include basic coverage</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Buy insurance within 14-21 days of booking to qualify for pre-existing condition coverage</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Compare multiple quotes - prices vary significantly between providers</span>
-                  </li>
-                </ul>
+              {/* Daily Budget Slider (when in daily mode) */}
+              {foodBudgetMode === "daily" && (
+                <div className="p-4 rounded-lg border bg-background space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Daily Food Budget</p>
+                      <p className="text-sm text-muted-foreground">Per person, per day (meals + snacks)</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold" data-testid="text-daily-food-budget">${dailyFoodBudget}</p>
+                      <p className="text-xs text-muted-foreground">per person/day</p>
+                    </div>
+                  </div>
+                  <Slider
+                    value={[dailyFoodBudget]}
+                    onValueChange={(value) => setDailyFoodBudget(value[0])}
+                    min={25}
+                    max={200}
+                    step={5}
+                    className="py-2"
+                    data-testid="slider-daily-food-budget"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>$25 (Budget)</span>
+                    <span>$75 (Moderate)</span>
+                    <span>$125 (Upscale)</span>
+                    <span>$200 (Luxury)</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 mt-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Total food estimate: </span>
+                      ${finalFoodCost.toLocaleString()} 
+                      <span className="text-muted-foreground ml-1">
+                        ({tripDuration} days × {numberOfTravelers} traveler{numberOfTravelers > 1 ? 's' : ''} × ${dailyFoodBudget}/day)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Food Cost Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Total Food Costs</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {foodBudgetMode === "daily" 
+                            ? "Calculated from your daily budget setting."
+                            : selectedFoodStats.totalCount > 0 
+                              ? "Sum of your selected restaurants and experiences."
+                              : "AI estimate based on typical food costs. Select options below for exact pricing."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold" data-testid="text-food-cost">
+                    ${finalFoodCost.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {foodBudgetMode === "daily" 
+                      ? "from daily budget" 
+                      : selectedFoodStats.totalCount > 0 
+                        ? "from your selections" 
+                        : "AI estimated"}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Savings Allocated</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${savingsAllocatedToFood >= finalFoodCost ? 'text-green-600' : ''}`} data-testid="text-food-savings">
+                    ${savingsAllocatedToFood.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (after other expenses)
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-background border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Amount Still Needed</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${foodSavingsGap === 0 ? 'text-green-600' : 'text-amber-600'}`} data-testid="text-food-gap">
+                    {foodSavingsGap === 0 ? (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-5 h-5" />
+                        $0
+                      </span>
+                    ) : (
+                      `$${foodSavingsGap.toLocaleString()}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {foodSavingsGap === 0 ? 'Food budget covered!' : 'to save for dining'}
+                  </p>
+                </div>
               </div>
+
+              {/* Food Savings Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Food Budget Progress</span>
+                  <span className="font-medium">{foodSavingsProgress.toFixed(0)}% saved</span>
+                </div>
+                <Progress value={foodSavingsProgress} className="h-3" />
+              </div>
+
+              {foodBudgetMode === "selections" && (
+                <>
+                  <Separator />
+
+                  {/* Food Options by City and Day */}
+                  <div className="space-y-8">
+                    <h3 className="font-semibold text-lg">Plan Your Dining</h3>
+                    
+                    {displayedDestinationDetails && displayedDestinationDetails.length > 0 ? (
+                      displayedDestinationDetails.map((dest, destIdx) => {
+                        const cityFoodOptions = foodOptionsByCity[dest.cityName] || [];
+                        
+                        return (
+                          <div 
+                            key={dest.cityName} 
+                            className="space-y-4"
+                            data-testid={`food-city-${destIdx}`}
+                          >
+                            {/* City Header */}
+                            <div className="flex items-center gap-3 pb-2 border-b">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500 text-white text-lg font-bold">
+                                {destIdx + 1}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-lg">{dest.cityName}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {dest.countryName} • {dest.numberOfNights} night{dest.numberOfNights > 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Days in this city */}
+                            {cityFoodOptions.map((day) => {
+                              const selectedCount = day.options.filter(opt => 
+                                selectedFoodOptions[`${dest.cityName}-${day.dayNumber}-${opt.id}`]
+                              ).length;
+                              
+                              // Separate restaurants from experiences
+                              const restaurants = day.options.filter(opt => opt.type === "restaurant");
+                              const experiences = day.options.filter(opt => opt.type !== "restaurant");
+                              
+                              return (
+                                <div 
+                                  key={`${dest.cityName}-day-${day.dayNumber}`}
+                                  className="p-4 rounded-lg border bg-muted/20"
+                                  data-testid={`food-day-${destIdx}-${day.dayNumber}`}
+                                >
+                                  {/* Day Header */}
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                      <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                                      <span className="font-medium">Day {day.dayNumber} in {dest.cityName}</span>
+                                    </div>
+                                    {selectedCount > 0 && (
+                                      <Badge variant="default" className="gap-1">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        {selectedCount} selected
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Restaurants Section */}
+                                  <div className="mb-4">
+                                    <h5 className="text-sm font-medium text-muted-foreground mb-3">Restaurants</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {restaurants.map((option) => {
+                                        const optionKey = `${dest.cityName}-${day.dayNumber}-${option.id}`;
+                                        const isSelected = selectedFoodOptions[optionKey] || false;
+                                        
+                                        return (
+                                          <div
+                                            key={option.id}
+                                            className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                              isSelected 
+                                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                                : 'bg-background hover-elevate'
+                                            }`}
+                                            onClick={() => handleToggleFoodOption(dest.cityName, day.dayNumber, option.id)}
+                                            data-testid={`food-option-${option.id}`}
+                                          >
+                                            <div className="flex items-start justify-between mb-2">
+                                              <div className="flex items-center gap-2">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getFoodTypeColor(option.type)}`}>
+                                                  {getFoodTypeLabel(option.type)}
+                                                </span>
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                  {option.priceRange}
+                                                </span>
+                                              </div>
+                                              {isSelected ? (
+                                                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                              ) : (
+                                                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                              )}
+                                            </div>
+                                            <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                            <p className="text-xs text-muted-foreground mb-2">
+                                              {option.cuisine}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                              {option.description}
+                                            </p>
+                                            {option.reservationRequired && (
+                                              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                                <Clock className="w-3 h-3" />
+                                                <span>Reserve {option.reservationAdvance}</span>
+                                              </div>
+                                            )}
+                                            <div className="flex items-end justify-between">
+                                              <span className="font-bold text-sm">
+                                                ${option.estimatedCost}/person
+                                              </span>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-xs gap-1 text-muted-foreground"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  window.open(option.url, '_blank');
+                                                }}
+                                                data-testid={`button-view-food-${option.id}`}
+                                              >
+                                                <ExternalLink className="w-3 h-3" />
+                                                View
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Food Experiences Section */}
+                                  {experiences.length > 0 && (
+                                    <div>
+                                      <h5 className="text-sm font-medium text-muted-foreground mb-3">Food Experiences</h5>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {experiences.map((option) => {
+                                          const optionKey = `${dest.cityName}-${day.dayNumber}-${option.id}`;
+                                          const isSelected = selectedFoodOptions[optionKey] || false;
+                                          
+                                          return (
+                                            <div
+                                              key={option.id}
+                                              className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                                isSelected 
+                                                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                                  : 'bg-background hover-elevate'
+                                              }`}
+                                              onClick={() => handleToggleFoodOption(dest.cityName, day.dayNumber, option.id)}
+                                              data-testid={`food-option-${option.id}`}
+                                            >
+                                              <div className="flex items-start justify-between mb-2">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${getFoodTypeColor(option.type)}`}>
+                                                  {getFoodTypeLabel(option.type)}
+                                                </span>
+                                                {isSelected ? (
+                                                  <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                                                ) : (
+                                                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                                                )}
+                                              </div>
+                                              <h5 className="font-medium text-sm mb-1">{option.name}</h5>
+                                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                                {option.description}
+                                              </p>
+                                              {option.reservationRequired && (
+                                                <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                                  <Clock className="w-3 h-3" />
+                                                  <span>Reserve {option.reservationAdvance}</span>
+                                                </div>
+                                              )}
+                                              <div className="flex items-end justify-between">
+                                                <span className="font-bold text-sm">
+                                                  ${option.estimatedCost}/person
+                                                </span>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 text-xs gap-1 text-muted-foreground"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(option.url, '_blank');
+                                                  }}
+                                                  data-testid={`button-view-experience-${option.id}`}
+                                                >
+                                                  <ExternalLink className="w-3 h-3" />
+                                                  View
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Utensils className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No destinations added yet. Add destinations to see dining options.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Booking Info Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Earliest Date to Plan */}
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <p className="text-xs text-muted-foreground">Earliest Date to Plan Dining</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Based on needing ${totalAllCategories.toLocaleString()} total for all trip expenses including food.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className={`text-lg font-bold flex items-center gap-1 ${canPlanFoodNow ? 'text-green-600' : ''}`} data-testid="text-earliest-food-date">
+                    <CalendarIcon className="w-4 h-4" />
+                    {canPlanFoodNow 
+                      ? "Ready now!" 
+                      : earliestFoodPlanningDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </p>
+                  {!canPlanFoodNow && monthsToAllIncludingFood > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {monthsToAllIncludingFood} month{monthsToAllIncludingFood > 1 ? 's' : ''} away
+                    </p>
+                  )}
+                </div>
+
+                {/* Plan Dining Button - Uses centralized budget calculations */}
+                <div className="p-4 rounded-lg bg-muted/50 border flex flex-col justify-center">
+                  <BookingButton
+                    category="food"
+                    isFunded={tripBudget.categories.food.isFunded}
+                    monthsToFund={tripBudget.categories.food.monthsToFund}
+                    earliestDate={tripBudget.categories.food.earliestBookingDate}
+                    label="Plan Dining"
+                    className="w-full"
+                    testId="button-plan-dining"
+                  />
+                </div>
+              </div>
+
+              {/* Helper Text */}
+              {!canPlanFoodNow && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      <span className="font-medium">We recommend waiting until {earliestFoodPlanningDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> so you can plan dining without going into debt. 
+                      At your current savings rate, you'll have enough for all trip expenses by then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {canPlanFoodNow && (
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      <span className="font-medium">You're ready to plan!</span> You have enough saved to cover all travel expenses including ${finalFoodCost.toLocaleString()} for dining. 
+                      Start making reservations at your favorite spots!
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Trip Preparation Purchases Section */}
-          <Card id="trip-preparation-section" data-testid="card-trip-preparation">
+          {/* Trip Preparation Section */}
+          <Card data-testid="card-trip-preparation">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -4979,7 +4651,7 @@ export default function Step2Plan({
                     <Briefcase className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Trip Preparation Purchases</CardTitle>
+                    <CardTitle className="text-xl">Trip Preparation</CardTitle>
                     <CardDescription>Gear, supplies, and travel essentials</CardDescription>
                   </div>
                 </div>
@@ -5000,18 +4672,16 @@ export default function Step2Plan({
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Smart Shopping Tips Banner */}
-              <div className="p-4 rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900">
+              {/* Warning Banner */}
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
                 <div className="flex items-start gap-3">
-                  <PiggyBank className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-teal-800 dark:text-teal-200">Smart Shopping Tips</p>
-                    <ul className="text-sm text-teal-700 dark:text-teal-400 mt-2 space-y-1">
-                      <li>• Only buy what you truly need - you can often find things at your destination</li>
-                      <li>• Check thrift stores, Facebook Marketplace, and Buy Nothing groups for gently used items</li>
-                      <li>• Borrow from friends and family for one-time use items like luggage or adapters</li>
-                      <li>• Wait until you have savings set aside before purchasing to stay debt-free</li>
-                    </ul>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">Wait Before Buying</p>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      We recommend waiting to buy gear until you have enough money saved for your trip, to avoid going into debt. 
+                      Use this checklist to plan ahead and mark items you already own.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -5245,6 +4915,226 @@ export default function Step2Plan({
               )}
             </CardContent>
           </Card>
+
+          {/* Books & Movies Section */}
+          <Card data-testid="card-books-movies">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                    <BookOpen className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Books & Movies to Get Ready</CardTitle>
+                    <CardDescription>Discover stories, history, and culture from your destinations</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary" className="gap-1">
+                    <BookOpen className="w-3 h-3" />
+                    {mediaRecommendations.filter(m => m.type === "book" || m.type === "travel-guide").length} books
+                  </Badge>
+                  <Badge variant="secondary" className="gap-1">
+                    <Film className="w-3 h-3" />
+                    {mediaRecommendations.filter(m => m.type === "movie" || m.type === "documentary" || m.type === "tv-series").length} films
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Intro Text */}
+              <div className="p-4 rounded-lg bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900/30">
+                <p className="text-sm text-violet-700 dark:text-violet-300">
+                  Get excited for your trip with books and movies that bring your destinations to life. 
+                  Learn about the history, culture, and stories of the places you'll visit—perfect for the whole family!
+                </p>
+              </div>
+
+              {/* Age Groups */}
+              {["kids", "teens", "adults", "all-ages"].map((ageGroup) => {
+                const items = mediaByAgeGroup[ageGroup as keyof typeof mediaByAgeGroup];
+                if (items.length === 0) return null;
+                
+                return (
+                  <div key={ageGroup} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Badge className={getAgeGroupColor(ageGroup as MediaRecommendation["ageGroup"])}>
+                        {getAgeGroupLabel(ageGroup as MediaRecommendation["ageGroup"])}
+                      </Badge>
+                      <Separator className="flex-1" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {items.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="p-4 rounded-lg border hover-elevate transition-all"
+                          data-testid={`media-item-${item.id}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${getMediaTypeColor(item.type)}`}>
+                              {item.type === "book" && <BookOpen className="w-4 h-4" />}
+                              {item.type === "movie" && <Film className="w-4 h-4" />}
+                              {item.type === "documentary" && <Play className="w-4 h-4" />}
+                              {item.type === "tv-series" && <Tv className="w-4 h-4" />}
+                              {item.type === "travel-guide" && <Map className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="font-medium text-sm leading-tight">
+                                    {item.title}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {item.creator} {item.year && `(${item.year})`}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="text-xs flex-shrink-0">
+                                  {getMediaTypeLabel(item.type)}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                {item.description}
+                              </p>
+                              <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed">
+                                <span className="text-xs text-muted-foreground italic">
+                                  {item.relevance}
+                                </span>
+                                <a 
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                  data-testid={`link-media-${item.id}`}
+                                >
+                                  {item.type === "book" || item.type === "travel-guide" ? "Buy" : "Watch"}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {mediaRecommendations.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No destinations added yet. Add destinations to see book and movie recommendations.</p>
+                </div>
+              )}
+
+              {/* Summary Box */}
+              {mediaRecommendations.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="p-4 rounded-lg bg-muted/50 border">
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-violet-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Get Inspired Before You Go</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          These {mediaRecommendations.length} recommendations include history, travel guides, and cultural stories 
+                          to help your whole family connect with your destinations before you arrive. 
+                          Consider borrowing from your local library or streaming services you already have!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Budget Breakdown */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Budget Breakdown</h2>
+            <p className="text-muted-foreground">Estimate costs for each category to build your complete trip budget</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <BudgetCategoryCard
+                category="flights"
+                estimatedCost={budgetData.flights.cost}
+                notes={budgetData.flights.notes}
+                usePoints={budgetData.flights.usePoints}
+                onEstimatedCostChange={(value) => updateCategoryField("flights", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("flights", "notes", value)}
+                onUsePointsChange={(value) => updateCategoryField("flights", "usePoints", value)}
+                tips={budgetTips.flights}
+                onGetAIGuidance={() => handleGetAIGuidance("flights")}
+                isLoadingAI={loadingCategories["flights"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="housing"
+                estimatedCost={budgetData.housing.cost}
+                notes={budgetData.housing.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("housing", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("housing", "notes", value)}
+                tips={budgetTips.housing}
+                onGetAIGuidance={() => handleGetAIGuidance("housing")}
+                isLoadingAI={loadingCategories["housing"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="food"
+                estimatedCost={budgetData.food.cost}
+                notes={budgetData.food.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("food", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("food", "notes", value)}
+                tips={budgetTips.food}
+                onGetAIGuidance={() => handleGetAIGuidance("food")}
+                isLoadingAI={loadingCategories["food"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="transportation"
+                estimatedCost={budgetData.transportation.cost}
+                notes={budgetData.transportation.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("transportation", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("transportation", "notes", value)}
+                tips={budgetTips.transportation}
+                onGetAIGuidance={() => handleGetAIGuidance("transportation")}
+                isLoadingAI={loadingCategories["transportation"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="fun"
+                estimatedCost={budgetData.fun.cost}
+                notes={budgetData.fun.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("fun", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("fun", "notes", value)}
+                tips={budgetTips.fun}
+                onGetAIGuidance={() => handleGetAIGuidance("fun")}
+                isLoadingAI={loadingCategories["fun"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="preparation"
+                estimatedCost={budgetData.preparation.cost}
+                notes={budgetData.preparation.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("preparation", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("preparation", "notes", value)}
+                tips={budgetTips.preparation}
+                onGetAIGuidance={() => handleGetAIGuidance("preparation")}
+                isLoadingAI={loadingCategories["preparation"] || false}
+              />
+
+              <BudgetCategoryCard
+                category="booksMovies"
+                estimatedCost={budgetData.booksMovies.cost}
+                notes={budgetData.booksMovies.notes}
+                onEstimatedCostChange={(value) => updateCategoryField("booksMovies", "cost", value)}
+                onNotesChange={(value) => updateCategoryField("booksMovies", "notes", value)}
+                tips={budgetTips.booksMovies}
+                onGetAIGuidance={() => handleGetAIGuidance("booksMovies")}
+                isLoadingAI={loadingCategories["booksMovies"] || false}
+              />
+            </div>
+          </div>
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-8">

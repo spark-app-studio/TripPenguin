@@ -6,13 +6,11 @@ import {
   insertDestinationSchema,
   insertBudgetCategorySchema,
   insertBookingSchema,
-  insertTripMemorySchema,
   registerUserSchema,
   loginUserSchema,
   passwordResetRequestSchema,
   passwordResetSchema,
   resendVerificationSchema,
-  updateProfileSchema,
   quizResponseSchema,
   extendedQuizResponseSchema,
   adjustItineraryDurationRequestSchema,
@@ -33,86 +31,6 @@ import {
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
 import passport from "passport";
-
-// Input sanitization utilities
-// Strategy: Store canonical (unescaped) text, let output contexts handle encoding
-// - React JSX automatically escapes HTML entities
-// - Email templates should use proper escaping libraries
-// - We only strip dangerous control characters that could cause issues
-
-function sanitizeText(text: string | null | undefined): string | null {
-  if (text === null || text === undefined) return null;
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  // Remove control characters (ASCII 0-31 and 127) that could cause issues
-  // Keep only printable characters and standard whitespace
-  return trimmed.replace(/[\x00-\x1F\x7F]/g, '');
-}
-
-function sanitizeUrl(url: string | null | undefined): string | null {
-  if (url === null || url === undefined) return null;
-  const trimmed = url.trim();
-  if (!trimmed) return null;
-  
-  try {
-    const parsed = new URL(trimmed);
-    
-    // Only allow http and https protocols
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return null;
-    }
-    
-    // Reject URLs with authentication (username:password@)
-    if (parsed.username || parsed.password) {
-      return null;
-    }
-    
-    // Decode URL and check for control characters that could cause issues
-    const decoded = decodeURIComponent(parsed.href);
-    if (/[\x00-\x1F\x7F]/.test(decoded)) {
-      return null;
-    }
-    
-    // Return the normalized URL
-    return parsed.href;
-  } catch {
-    return null;
-  }
-}
-
-interface SanitizedProfileData {
-  firstName?: string | null;
-  lastName?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zipCode?: string | null;
-  profileImageUrl?: string | null;
-}
-
-function sanitizeProfileData(data: SanitizedProfileData): SanitizedProfileData {
-  const sanitized: SanitizedProfileData = {};
-  
-  if (data.firstName !== undefined) {
-    sanitized.firstName = sanitizeText(data.firstName);
-  }
-  if (data.lastName !== undefined) {
-    sanitized.lastName = sanitizeText(data.lastName);
-  }
-  if (data.city !== undefined) {
-    sanitized.city = sanitizeText(data.city);
-  }
-  if (data.state !== undefined) {
-    sanitized.state = sanitizeText(data.state);
-  }
-  if (data.zipCode !== undefined) {
-    sanitized.zipCode = sanitizeText(data.zipCode);
-  }
-  if (data.profileImageUrl !== undefined) {
-    sanitized.profileImageUrl = sanitizeUrl(data.profileImageUrl);
-  }
-  
-  return sanitized;
-}
 
 // Helper function to verify trip ownership
 async function verifyTripOwnership(tripId: string, userId: string): Promise<boolean> {
@@ -141,13 +59,6 @@ async function verifyBookingOwnership(bookingId: string, userId: string): Promis
   return verifyTripOwnership(booking.tripId, userId);
 }
 
-// Helper function to verify trip memory ownership
-async function verifyTripMemoryOwnership(memoryId: string, userId: string): Promise<boolean> {
-  const memory = await storage.getTripMemory(memoryId);
-  if (!memory) return false;
-  return verifyTripOwnership(memory.tripId, userId);
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
@@ -162,13 +73,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
-        // Clear any stale session cookies on registration error
-        res.clearCookie('connect.sid', {
-          path: '/',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-        });
         res.status(400).json({ error: "Email already registered" });
         return;
       }
@@ -279,74 +183,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.status(500).json({ error: "Logout failed" });
           return;
         }
-        // Clear the session cookie with all options
-        res.clearCookie('connect.sid', {
-          path: '/',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-        });
+        // Clear the session cookie
+        res.clearCookie('connect.sid');
         res.status(200).json({ message: "Logged out successfully" });
       });
     });
   });
 
-  app.get("/api/auth/user", async (req, res) => {
-    // Check authentication without the middleware to handle stale sessions gracefully
-    if (!req.isAuthenticated() || !req.user) {
-      // Clear any stale cookies
-      res.clearCookie('connect.sid', {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      });
-      res.status(401).json({ error: "Unauthorized", staleSession: true });
-      return;
-    }
-    
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
     res.json(req.user);
-  });
-
-  // Profile update route (email cannot be changed as it's the unique identifier)
-  app.patch("/api/auth/profile", isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req.user as PublicUser).id;
-      const profileData = updateProfileSchema.parse(req.body);
-      
-      // Sanitize all profile fields to prevent XSS attacks
-      const sanitizedData = sanitizeProfileData(profileData);
-      
-      const updatedUser = await storage.updateUser(userId, sanitizedData);
-      
-      if (!updatedUser) {
-        res.status(404).json({ error: "User not found" });
-        return;
-      }
-
-      const publicUser: PublicUser = {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        city: updatedUser.city,
-        state: updatedUser.state,
-        zipCode: updatedUser.zipCode,
-        profileImageUrl: updatedUser.profileImageUrl,
-        acceptedTermsAt: updatedUser.acceptedTermsAt,
-        emailVerified: updatedUser.emailVerified,
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      };
-
-      res.json(publicUser);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid profile data", details: error.errors });
-        return;
-      }
-      res.status(500).json({ error: "Failed to update profile" });
-    }
   });
 
   // Email verification routes
@@ -883,65 +728,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("AI add-on application error:", error);
         res.status(500).json({ error: "Failed to apply add-on" });
       }
-    }
-  });
-
-  // Trip Memory routes (Go stage photo sharing)
-  app.post("/api/trip-memories", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as PublicUser;
-      const memoryData = insertTripMemorySchema.parse(req.body);
-      
-      // Verify trip ownership
-      const hasAccess = await verifyTripOwnership(memoryData.tripId, user.id);
-      if (!hasAccess) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
-      
-      const memory = await storage.createTripMemory({
-        ...memoryData,
-        sharedBy: user.id,
-      });
-      res.json(memory);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid trip memory data", details: error.errors });
-      } else {
-        res.status(500).json({ error: "Failed to create trip memory" });
-      }
-    }
-  });
-
-  app.get("/api/trip-memories/trip/:tripId", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as PublicUser;
-      // Verify trip ownership
-      const hasAccess = await verifyTripOwnership(req.params.tripId, user.id);
-      if (!hasAccess) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
-      const memories = await storage.getTripMemoriesByTrip(req.params.tripId);
-      res.json(memories);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch trip memories" });
-    }
-  });
-
-  app.delete("/api/trip-memories/:id", isAuthenticated, async (req, res) => {
-    try {
-      const user = req.user as PublicUser;
-      // Verify memory ownership
-      const hasAccess = await verifyTripMemoryOwnership(req.params.id, user.id);
-      if (!hasAccess) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
-      await storage.deleteTripMemory(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete trip memory" });
     }
   });
 

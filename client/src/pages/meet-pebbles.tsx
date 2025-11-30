@@ -18,12 +18,10 @@ import {
 } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation, Link } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
 import penguinImage from "@assets/generated_images/cute_penguin_travel_mascot_logo.png";
 
 export default function MeetPebbles() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,37 +42,20 @@ export default function MeetPebbles() {
             </nav>
 
             <div className="flex items-center gap-3">
-              {isAuthenticated ? (
-                <>
-                  <Link href="/trips" className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors" data-testid="link-my-trips">
-                    My Trips
-                  </Link>
-                  <Button
-                    variant="default"
-                    onClick={() => setLocation("/trips")}
-                    data-testid="button-go-to-trips"
-                  >
-                    Go to My Trips
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setLocation("/login")}
-                    data-testid="button-signin"
-                  >
-                    Sign In
-                  </Button>
-                  <Button
-                    variant="default"
-                    onClick={() => setLocation("/register")}
-                    data-testid="button-get-started"
-                  >
-                    Get Started
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="ghost"
+                onClick={() => setLocation("/login")}
+                data-testid="button-signin"
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => setLocation("/register")}
+                data-testid="button-get-started"
+              >
+                Get Started
+              </Button>
             </div>
           </div>
         </div>
@@ -93,11 +74,11 @@ export default function MeetPebbles() {
           
           {/* Large Pebbles Image */}
           <div className="relative inline-block">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-125" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-110" />
             <img 
               src={penguinImage} 
               alt="Pebbles the Penguin" 
-              className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem] object-contain mx-auto drop-shadow-2xl"
+              className="relative w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 object-contain mx-auto drop-shadow-xl"
               data-testid="img-pebbles-hero"
             />
           </div>

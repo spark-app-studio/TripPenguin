@@ -41,85 +41,6 @@ tsx scripts/delete-user.ts user@example.com
 
 ---
 
-### Delete All Users
-
-⚠️ **DANGER**: Delete ALL users and ALL data from the database.
-
-**Usage:**
-```bash
-npm run delete-all-users -- --confirm
-```
-
-**Important:** Note the extra `--` before `--confirm` when using npm. This tells npm to pass the flag to the script.
-
-**Safety Requirements:**
-- Requires `--confirm` flag to execute
-- Shows list of all users before deletion
-- Warns if running in production environment
-- Should only be used in development/testing
-
-**What it deletes:**
-- ALL user accounts
-- ALL trips (cascade)
-- ALL destinations (cascade)
-- ALL budget categories (cascade)
-- ALL bookings (cascade)
-- ALL email verification tokens (cascade)
-- ALL password reset tokens (cascade)
-- ALL sessions (cascade)
-
-**Example:**
-```bash
-# Development/testing cleanup (using npm)
-npm run delete-all-users -- --confirm
-
-# Direct execution (alternative, no extra -- needed)
-tsx scripts/delete-all-users.ts --confirm
-```
-
-**⚠️ Important Warnings:**
-- This is a DESTRUCTIVE operation
-- Cannot be undone
-- Resets the entire application database
-- Always backup before running in production
-- Best used for development/testing environment resets
-
----
-
-### Delete All Sessions
-
-🧹 Clear all session data from the database.
-
-**Usage:**
-```bash
-npm run delete-all-sessions -- --confirm
-```
-
-**Important:** Note the extra `--` before `--confirm` when using npm.
-
-**What it deletes:**
-- ALL session records
-- Logs out all currently authenticated users
-
-**When to use:**
-- Clean up stale sessions during development
-- Clear sessions after deleting users
-- Fix authentication-related issues
-- Reset session state completely
-
-**Example:**
-```bash
-# Clear all sessions (using npm)
-npm run delete-all-sessions -- --confirm
-
-# Direct execution (alternative, no extra -- needed)
-tsx scripts/delete-all-sessions.ts --confirm
-```
-
-**Note:** The `delete-all-users` script now automatically clears sessions, so you typically won't need to run this separately. However, it's useful for clearing sessions without deleting users.
-
----
-
 ## Adding New Scripts
 
 When adding new utility scripts:
@@ -150,6 +71,5 @@ main().catch(error => {
   process.exit(1);
 });
 ```
-
 
 

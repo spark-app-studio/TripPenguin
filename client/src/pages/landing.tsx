@@ -29,12 +29,10 @@ import {
 } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import { useLocation, Link } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
 import heroImage from "@assets/generated_images/Family_travel_hero_image_ae06478c.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
 
   const valueProps = [
     { icon: Sparkles, title: "Personalized AI itineraries" },
@@ -129,40 +127,22 @@ export default function Landing() {
             </nav>
 
             <div className="flex items-center gap-3">
-              {isAuthenticated ? (
-                <>
-                  <Link href="/trips" className="text-white/80 hover:text-white text-sm font-medium transition-colors" data-testid="link-my-trips">
-                    My Trips
-                  </Link>
-                  <Button
-                    variant="default"
-                    className="bg-primary border-2 border-primary-border"
-                    onClick={() => setLocation("/trips")}
-                    data-testid="button-go-to-trips"
-                  >
-                    Go to My Trips
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:bg-white/20"
-                    onClick={() => setLocation("/login")}
-                    data-testid="button-signin"
-                  >
-                    Sign In
-                  </Button>
-                  <Button
-                    variant="default"
-                    className="bg-primary border-2 border-primary-border"
-                    onClick={() => setLocation("/getting-started")}
-                    data-testid="button-get-started"
-                  >
-                    Get Started
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20"
+                onClick={() => setLocation("/login")}
+                data-testid="button-signin"
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="default"
+                className="bg-primary border-2 border-primary-border"
+                onClick={() => setLocation("/getting-started")}
+                data-testid="button-get-started"
+              >
+                Get Started
+              </Button>
             </div>
           </div>
         </div>

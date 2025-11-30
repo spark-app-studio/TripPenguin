@@ -147,16 +147,6 @@ export const bookings = pgTable("bookings", {
   order: integer("order").notNull().default(0),
 });
 
-// Trip memories for photo sharing (Go stage)
-export const tripMemories = pgTable("trip_memories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tripId: varchar("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
-  imageUrl: text("image_url").notNull(),
-  caption: text("caption"),
-  sharedBy: varchar("shared_by").references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -176,9 +166,9 @@ export const passwordSchema = z.string()
 export const registerUserSchema = insertUserSchema.extend({
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
-  city: z.string().optional().default(""),
-  state: z.string().optional().default(""),
-  zipCode: z.string().optional().default(""),
+  city: z.string().min(1, "City is required"),
+  state: z.string().length(2, "State must be 2 characters (e.g., CA)"),
+  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
   acceptedTerms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms of service",
   }),
@@ -213,36 +203,6 @@ export const resendVerificationSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
-// Profile update schema (email is excluded as it's the unique identifier)
-// Only fields that are explicitly provided in the request will be updated
-export const updateProfileSchema = z.object({
-  firstName: z.string().max(100, "First name must be 100 characters or less").optional().nullable()
-    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
-  lastName: z.string().max(100, "Last name must be 100 characters or less").optional().nullable()
-    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
-  city: z.string().max(100, "City must be 100 characters or less").optional().nullable()
-    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
-  state: z.string().max(2, "State must be 2 characters").optional().nullable()
-    .transform(val => val === undefined ? undefined : (val?.trim().toUpperCase() || null)),
-  zipCode: z.string().max(10, "Zip code must be 10 characters or less").optional().nullable()
-    .transform(val => val === undefined ? undefined : (val?.trim() || null)),
-  profileImageUrl: z.string().max(500, "URL must be 500 characters or less").optional().nullable()
-    .transform(val => {
-      if (val === undefined) return undefined;
-      const trimmed = val?.trim();
-      if (!trimmed) return null;
-      // Validate URL format
-      try {
-        new URL(trimmed);
-        return trimmed;
-      } catch {
-        return null; // Invalid URL becomes null
-      }
-    }),
-});
-
-export type UpdateProfile = z.infer<typeof updateProfileSchema>;
-
 export const insertTripSchema = createInsertSchema(trips).omit({
   id: true,
   userId: true, // userId is added from authenticated session
@@ -265,11 +225,6 @@ export const insertBudgetCategorySchema = createInsertSchema(budgetCategories).o
 export const insertBookingSchema = createInsertSchema(bookings).omit({
   id: true,
   bookedAt: true,
-});
-
-export const insertTripMemorySchema = createInsertSchema(tripMemories).omit({
-  id: true,
-  createdAt: true,
 });
 
 // Types
@@ -299,9 +254,6 @@ export type BudgetCategory = typeof budgetCategories.$inferSelect;
 
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
-
-export type InsertTripMemory = z.infer<typeof insertTripMemorySchema>;
-export type TripMemory = typeof tripMemories.$inferSelect;
 
 // Complete trip data type (trip with all related data)
 export type TripWithDetails = Trip & {

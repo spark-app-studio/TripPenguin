@@ -102,7 +102,7 @@ export default function Home() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="hover-elevate cursor-pointer" onClick={() => setLocation("/getting-started")} data-testid="card-new-trip">
+          <Card className="hover-elevate cursor-pointer" onClick={() => setLocation("/quiz")} data-testid="card-new-trip">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default function Home() {
                 <p className="text-muted-foreground mb-6">
                   Start planning your first adventure today!
                 </p>
-                <Button onClick={() => setLocation("/getting-started")} data-testid="button-start-planning">
+                <Button onClick={() => setLocation("/planner")} data-testid="button-start-planning">
                   <Plus className="h-4 w-4 mr-2" />
                   Plan Your First Trip
                 </Button>

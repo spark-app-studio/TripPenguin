@@ -175,7 +175,7 @@ export default function ItineraryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setLocation("/getting-started")} data-testid="button-start-planning">
+            <Button onClick={() => setLocation("/trip/new")} data-testid="button-start-planning">
               Start Planning
             </Button>
           </CardContent>
@@ -192,7 +192,7 @@ export default function ItineraryPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/recommendations")}
+            onClick={() => setLocation("/trip/new")}
             data-testid="button-back-to-plan"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -488,24 +488,15 @@ export default function ItineraryPage() {
           )}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+        {/* Back to Plan Button */}
+        <div className="mt-8 flex justify-center">
           <Button
             size="lg"
-            variant="outline"
-            onClick={() => setLocation("/recommendations")}
-            data-testid="button-back-to-recommendations"
+            onClick={() => setLocation("/trip/new")}
+            data-testid="button-back-to-plan-bottom"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Choose Different Itinerary
-          </Button>
-          <Button
-            size="lg"
-            onClick={() => setLocation("/planner")}
-            data-testid="button-continue-to-planning"
-          >
-            Continue to Planning
-            <ChevronLeft className="w-4 h-4 ml-2 rotate-180" />
+            Back to Plan your Trip and Save
           </Button>
         </div>
       </div>

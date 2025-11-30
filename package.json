@@ -9,11 +9,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "delete-user": "tsx scripts/delete-user.ts",
-    "delete-all-users": "tsx scripts/delete-all-users.ts",
-    "delete-all-sessions": "tsx scripts/delete-all-sessions.ts",
-    "verify-db": "tsx scripts/verify-db-state.ts",
-    "test-registration": "tsx scripts/test-registration.ts"
+    "delete-user": "tsx scripts/delete-user.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -81,7 +77,6 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",
-    "validator": "^13.15.23",
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",

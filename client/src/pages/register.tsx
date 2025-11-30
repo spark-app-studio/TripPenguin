@@ -6,7 +6,6 @@ import { useLocation, Link } from "wouter";
 import { z } from "zod";
 import { registerUserSchema, type PublicUser } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { handleRegistrationError } from "@/lib/cacheUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -118,11 +117,6 @@ export default function Register() {
       }
     },
     onError: (error: Error) => {
-      // Handle stale session on registration error
-      if (error.message.includes("Email already registered")) {
-        handleRegistrationError();
-      }
-      
       toast({
         title: "Registration failed",
         description: error.message || "Please try again",
