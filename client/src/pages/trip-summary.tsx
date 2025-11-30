@@ -13,6 +13,7 @@ import {
   Luggage,
 } from "lucide-react";
 import { PenguinLogo } from "@/components/PenguinLogo";
+import { NavBar } from "@/components/NavBar";
 import { useLocation } from "wouter";
 
 interface TripSummaryProps {
@@ -43,6 +44,7 @@ export default function TripSummary({ tripData }: TripSummaryProps) {
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      <NavBar />
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">

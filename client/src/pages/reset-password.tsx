@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PenguinLogo } from "@/components/PenguinLogo";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { NavBar } from "@/components/NavBar";
 
 const resetPasswordSchema = z.object({
   password: passwordSchema,
@@ -88,43 +89,48 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">Invalid Reset Link</CardTitle>
-            <CardDescription className="text-center">
-              This password reset link is invalid or has expired.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <Link href="/forgot-password">
-                <a className="text-primary underline hover:no-underline">
-                  Request a new reset link
-                </a>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+        <NavBar showAuthButtons={false} />
+        <div className="flex items-center justify-center p-4 py-12">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-center">Invalid Reset Link</CardTitle>
+              <CardDescription className="text-center">
+                This password reset link is invalid or has expired.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <Link href="/forgot-password">
+                  <a className="text-primary underline hover:no-underline">
+                    Request a new reset link
+                  </a>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-2">
-              <PenguinLogo size="lg" />
-              <span className="text-2xl font-bold">TripPenguin</span>
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+      <NavBar showAuthButtons={false} />
+      <div className="flex items-center justify-center p-4 py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center gap-2">
+                <PenguinLogo size="lg" />
+                <span className="text-2xl font-bold">TripPenguin</span>
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
-          <CardDescription className="text-center">
-            Enter your new password below
-          </CardDescription>
-        </CardHeader>
+            <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
+            <CardDescription className="text-center">
+              Enter your new password below
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -187,6 +193,7 @@ export default function ResetPassword() {
           </Form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

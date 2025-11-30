@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { PenguinLogo } from "@/components/PenguinLogo";
+import { NavBar } from "@/components/NavBar";
 import { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginUserSchema>;
@@ -77,12 +78,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-2">
-              <PenguinLogo size="lg" />
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+      <NavBar showAuthButtons={false} />
+      <div className="flex items-center justify-center p-4 py-12">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center gap-2">
+                <PenguinLogo size="lg" />
               <span className="text-2xl font-bold">TripPenguin</span>
             </div>
           </div>
@@ -165,6 +168,7 @@ export default function Login() {
           </Form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

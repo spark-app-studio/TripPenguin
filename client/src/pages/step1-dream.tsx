@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { DestinationCard } from "@/components/DestinationCard";
+import { NavBar } from "@/components/NavBar";
 import { ChevronRight, Users, Calendar, Clock, MapPin } from "lucide-react";
 import parisImage from "@assets/generated_images/Paris_destination_card_2651b3b8.png";
 import londonImage from "@assets/generated_images/London_destination_card_29eadc15.png";
@@ -105,6 +106,7 @@ export default function Step1Dream({ initialData, onComplete }: Step1DreamProps)
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      <NavBar />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <ProgressStepper currentStep={1} completedSteps={[]} />
 

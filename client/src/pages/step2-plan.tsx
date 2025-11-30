@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
+import { NavBar } from "@/components/NavBar";
 import { BudgetCategoryCard } from "@/components/BudgetCategoryCard";
 import { BudgetAlert } from "@/components/BudgetAlert";
 import { BookingButton, BookingStatusBadge, SavingsProgressIndicator } from "@/components/BookingButton";
@@ -2532,6 +2533,7 @@ export default function Step2Plan({
   if (subStep === "savings") {
     return (
       <div className="min-h-screen bg-background pb-12">
+        <NavBar />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <ProgressStepper currentStep={2} completedSteps={[1]} />
           <SavingsConnection
@@ -2550,6 +2552,7 @@ export default function Step2Plan({
   if (subStep === "overview") {
     return (
       <div className="min-h-screen bg-background pb-12">
+        <NavBar />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <ProgressStepper currentStep={2} completedSteps={[1]} />
           <SaveBookOverview
@@ -2572,6 +2575,7 @@ export default function Step2Plan({
   // Render budget sub-step (existing content)
   return (
     <div className="min-h-screen bg-background pb-12">
+      <NavBar />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <ProgressStepper currentStep={2} completedSteps={[1]} />
 

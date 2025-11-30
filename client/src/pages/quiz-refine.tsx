@@ -14,6 +14,8 @@ import type {
   ItineraryAddonsRequest,
   ApplyAddonRequest,
 } from "@shared/schema";
+import { NavBar } from "@/components/NavBar";
+import { ProgressStepper } from "@/components/ProgressStepper";
 
 export default function QuizRefine() {
   const [, setLocation] = useLocation();
@@ -201,8 +203,12 @@ export default function QuizRefine() {
 
   if (!currentItinerary) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <ProgressStepper currentStep={1} completedSteps={[]} />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
@@ -210,13 +216,16 @@ export default function QuizRefine() {
   const totalNightsMatch = desiredNights === currentItinerary.totalNights;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Customize Your Itinerary</h1>
-        <p className="text-muted-foreground">
-          Adjust your trip duration, remove cities, or add extensions before finalizing
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <NavBar />
+      <ProgressStepper currentStep={1} completedSteps={[]} />
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Customize Your Itinerary</h1>
+          <p className="text-muted-foreground">
+            Adjust your trip duration, remove cities, or add extensions before finalizing
+          </p>
+        </div>
 
       <div className="space-y-6">
         <Card>
@@ -428,6 +437,7 @@ export default function QuizRefine() {
             Finalize & Plan Trip
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );

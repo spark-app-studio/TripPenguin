@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ProgressStepper } from "@/components/ProgressStepper";
+import { NavBar } from "@/components/NavBar";
 import { BookingItem } from "@/components/BookingItem";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronRight, Sparkles, CheckCircle, Loader2, ExternalLink, DollarSign, ThumbsUp, ThumbsDown, Lightbulb } from "lucide-react";
@@ -130,6 +131,7 @@ export default function Step3Book({ budgetCategories, tripContext, onComplete, o
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      <NavBar />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <ProgressStepper currentStep={3} completedSteps={[1, 2]} />
 

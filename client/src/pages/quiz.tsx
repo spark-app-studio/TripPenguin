@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import type { QuizResponse } from "@shared/schema";
+import { NavBar } from "@/components/NavBar";
 
 type QuizAnswers = Partial<QuizResponse>;
 
@@ -186,6 +187,7 @@ export default function Quiz() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NavBar />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">

@@ -26,6 +26,7 @@ import {
   Star,
   Home
 } from "lucide-react";
+import { NavBar } from "@/components/NavBar";
 
 export default function ItineraryPage() {
   const [, setLocation] = useLocation();
@@ -166,26 +167,30 @@ export default function ItineraryPage() {
 
   if (!itinerary) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md mx-auto text-center">
-          <CardHeader>
-            <CardTitle>No Itinerary Found</CardTitle>
-            <CardDescription>
-              Start planning your trip to create an itinerary.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => setLocation("/trip/new")} data-testid="button-start-planning">
-              Start Planning
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <div className="flex items-center justify-center py-20">
+          <Card className="max-w-md mx-auto text-center">
+            <CardHeader>
+              <CardTitle>No Itinerary Found</CardTitle>
+              <CardDescription>
+                Start planning your trip to create an itinerary.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => setLocation("/trip/new")} data-testid="button-start-planning">
+                Start Planning
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      <NavBar />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
