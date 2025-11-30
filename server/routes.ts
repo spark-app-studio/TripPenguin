@@ -26,7 +26,9 @@ import {
   getStaycationRecommendations,
   adjustItineraryDuration,
   generateItineraryAddons,
-  applyAddon
+  applyAddon,
+  getActivitySuggestions,
+  type ActivitySuggestionRequest
 } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
@@ -727,6 +729,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI add-on application error:", error);
         res.status(500).json({ error: "Failed to apply add-on" });
+      }
+    }
+  });
+
+  const activitySuggestionRequestSchema = z.object({
+    cityName: z.string().min(1),
+    countryName: z.string().min(1),
+    dayNumber: z.number().int().positive(),
+    dayInCity: z.number().int().positive(),
+    totalDaysInCity: z.number().int().positive(),
+    isArrivalDay: z.boolean(),
+    isDepartureDay: z.boolean(),
+    existingActivities: z.array(z.string()),
+    numberOfTravelers: z.number().int().positive(),
+    tripType: z.enum(["international", "domestic", "staycation"]),
+  });
+
+  app.post("/api/ai/activity-suggestions", isAuthenticated, async (req, res) => {
+    try {
+      const request = activitySuggestionRequestSchema.parse(req.body);
+      const suggestions = await getActivitySuggestions(request as ActivitySuggestionRequest);
+      res.json({ suggestions });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid activity suggestion request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI activity suggestion service is not configured" });
+      } else {
+        console.error("AI activity suggestion error:", error);
+        res.status(500).json({ error: "Failed to get activity suggestions" });
       }
     }
   });
