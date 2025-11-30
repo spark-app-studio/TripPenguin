@@ -201,7 +201,7 @@ export default function QuizRefine() {
   const [editingTravelers, setEditingTravelers] = useState(false);
   const [editingCity, setEditingCity] = useState<number | null>(null);
   const [editingActivity, setEditingActivity] = useState<{ cityOrder: number; activityIndex: number } | null>(null);
-  const [newActivityCity, setNewActivityCity] = useState<number | null>(null);
+  const [newActivityDay, setNewActivityDay] = useState<number | null>(null);
   const [newActivityText, setNewActivityText] = useState("");
   const [addingCity, setAddingCity] = useState(false);
   const [newCity, setNewCity] = useState({ cityName: "", countryName: "", nights: 2 });
@@ -302,7 +302,7 @@ export default function QuizRefine() {
     });
 
     setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
-    setNewActivityCity(null);
+    setNewActivityDay(null);
     setNewActivityText("");
   };
 
@@ -909,7 +909,7 @@ export default function QuizRefine() {
                             size="sm"
                             className="h-7 text-xs"
                             onClick={() => {
-                              setNewActivityCity(day.city.order);
+                              setNewActivityDay(day.dayNumber);
                               setNewActivityText("");
                             }}
                             data-testid={`button-add-activity-day-${day.dayNumber}`}
@@ -919,8 +919,8 @@ export default function QuizRefine() {
                           </Button>
                         </div>
 
-                        {/* Add Activity Form */}
-                        {newActivityCity === day.city.order && (
+                        {/* Add Activity Form - Only shows for this specific day */}
+                        {newActivityDay === day.dayNumber && (
                           <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 mb-2">
                             <Input
                               placeholder="Enter new activity..."
@@ -928,14 +928,14 @@ export default function QuizRefine() {
                               onChange={(e) => setNewActivityText(e.target.value)}
                               className="flex-1 h-8 text-sm"
                               autoFocus
-                              data-testid={`input-new-activity-${day.city.order}`}
+                              data-testid={`input-new-activity-day-${day.dayNumber}`}
                             />
                             <Button
                               size="icon"
                               className="h-7 w-7"
                               onClick={() => handleAddActivity(day.city.order)}
                               disabled={!newActivityText.trim()}
-                              data-testid={`button-save-new-activity-${day.city.order}`}
+                              data-testid={`button-save-new-activity-day-${day.dayNumber}`}
                             >
                               <Check className="w-3 h-3" />
                             </Button>
@@ -944,10 +944,10 @@ export default function QuizRefine() {
                               variant="ghost"
                               className="h-7 w-7"
                               onClick={() => {
-                                setNewActivityCity(null);
+                                setNewActivityDay(null);
                                 setNewActivityText("");
                               }}
-                              data-testid={`button-cancel-new-activity-${day.city.order}`}
+                              data-testid={`button-cancel-new-activity-day-${day.dayNumber}`}
                             >
                               <X className="w-3 h-3" />
                             </Button>
