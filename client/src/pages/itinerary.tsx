@@ -175,7 +175,7 @@ export default function ItineraryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setLocation("/trip/new")} data-testid="button-start-planning">
+            <Button onClick={() => setLocation("/getting-started")} data-testid="button-start-planning">
               Start Planning
             </Button>
           </CardContent>
@@ -192,7 +192,7 @@ export default function ItineraryPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/trip/new")}
+            onClick={() => setLocation("/recommendations")}
             data-testid="button-back-to-plan"
           >
             <ChevronLeft className="w-5 h-5" />
