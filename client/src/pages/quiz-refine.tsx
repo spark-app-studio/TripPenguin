@@ -69,21 +69,95 @@ function getActivityIcon(activity: string) {
   return <Camera className="w-4 h-4 text-primary" />;
 }
 
+function generateSupplementaryActivities(
+  city: ItineraryCitySegment,
+  dayInCity: number,
+  totalDaysInCity: number,
+  isArrival: boolean,
+  isDeparture: boolean,
+  isFirstCity: boolean
+): string[] {
+  const supplementary: string[] = [];
+  const cityName = city.cityName;
+
+  if (isArrival && isFirstCity) {
+    supplementary.push(`Arrive in ${cityName} and check into your accommodation`);
+    supplementary.push(`Take a leisurely walk to get oriented with the neighborhood`);
+    supplementary.push(`Enjoy a welcome dinner at a local restaurant`);
+  } else if (isArrival) {
+    supplementary.push(`Travel to ${cityName} and settle into your new accommodation`);
+    supplementary.push(`Explore the area around your hotel or rental`);
+    supplementary.push(`Find a cozy spot for dinner and plan tomorrow's adventures`);
+  } else if (isDeparture) {
+    supplementary.push(`Morning: Last-minute exploration or revisit a favorite spot`);
+    supplementary.push(`Pick up any souvenirs or local specialties to take home`);
+    supplementary.push(`Afternoon: Pack up and prepare for travel to your next destination`);
+  } else if (dayInCity === totalDaysInCity && !isDeparture) {
+    supplementary.push(`Morning: Sleep in or enjoy a relaxed breakfast`);
+    supplementary.push(`Revisit a favorite spot or discover a hidden gem`);
+    supplementary.push(`Evening: Farewell dinner celebrating your time in ${cityName}`);
+  } else {
+    const dayActivities = [
+      [`Morning coffee at a local cafe in ${cityName}`, `Explore the historic center and main squares`, `Lunch at a highly-rated local eatery`],
+      [`Visit a local market or artisan shops`, `Afternoon stroll through scenic neighborhoods`, `Sunset drinks with a view`],
+      [`Take a day trip to nearby attractions`, `Sample regional cuisine at a traditional restaurant`, `Evening walk along the waterfront or park`],
+      [`Morning yoga or jog in a local park`, `Visit lesser-known museums or galleries`, `Try street food or a food hall for dinner`],
+      [`Cooking class featuring local dishes`, `Explore the nightlife scene or evening entertainment`, `Late-night dessert or gelato walk`],
+    ];
+    const activitySet = dayActivities[(dayInCity - 1) % dayActivities.length];
+    supplementary.push(...activitySet);
+  }
+
+  return supplementary;
+}
+
 function generateDayByDayPlan(itinerary: ItineraryRecommendation): DayPlan[] {
   const dayPlans: DayPlan[] = [];
   let currentDay = 1;
+  const usedActivities = new Set<string>();
 
   for (const city of itinerary.cities) {
-    const totalDaysInCity = city.stayLengthNights + (city.order === itinerary.cities.length ? 1 : 0);
-    const activitiesPerDay = Math.ceil(city.activities.length / city.stayLengthNights);
+    const uniqueCityActivities = city.activities.filter(a => !usedActivities.has(a));
+    
+    const activitiesPerDay = Math.max(2, Math.ceil(uniqueCityActivities.length / city.stayLengthNights));
+    let activityIndex = 0;
 
     for (let dayInCity = 1; dayInCity <= city.stayLengthNights; dayInCity++) {
-      const startIdx = (dayInCity - 1) * activitiesPerDay;
-      const endIdx = Math.min(startIdx + activitiesPerDay, city.activities.length);
-      const dayActivities = city.activities.slice(startIdx, endIdx);
+      const isArrivalDay = dayInCity === 1;
+      const isDepartureDay = dayInCity === city.stayLengthNights && city.order < itinerary.cities.length;
+      const isFirstCity = city.order === 1;
+      
+      const dayActivities: string[] = [];
+      
+      for (let i = 0; i < activitiesPerDay && activityIndex < uniqueCityActivities.length; i++) {
+        const activity = uniqueCityActivities[activityIndex];
+        if (!usedActivities.has(activity)) {
+          dayActivities.push(activity);
+          usedActivities.add(activity);
+        }
+        activityIndex++;
+      }
 
-      if (dayActivities.length === 0 && city.activities.length > 0) {
-        dayActivities.push(city.activities[city.activities.length - 1]);
+      if (dayActivities.length < 2) {
+        const supplementary = generateSupplementaryActivities(
+          city,
+          dayInCity,
+          city.stayLengthNights,
+          isArrivalDay,
+          isDepartureDay,
+          isFirstCity
+        );
+        
+        for (const supp of supplementary) {
+          if (dayActivities.length < 3 && !usedActivities.has(supp)) {
+            dayActivities.push(supp);
+            usedActivities.add(supp);
+          }
+        }
+      }
+
+      if (dayActivities.length === 0) {
+        dayActivities.push(`Free time to explore ${city.cityName} at your own pace`);
       }
 
       dayPlans.push({
@@ -91,8 +165,8 @@ function generateDayByDayPlan(itinerary: ItineraryRecommendation): DayPlan[] {
         city,
         dayInCity,
         totalDaysInCity: city.stayLengthNights,
-        isArrivalDay: dayInCity === 1,
-        isDepartureDay: dayInCity === city.stayLengthNights && city.order < itinerary.cities.length,
+        isArrivalDay,
+        isDepartureDay,
         activities: dayActivities,
       });
       currentDay++;
