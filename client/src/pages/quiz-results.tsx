@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Loader2, Sparkles, MapPin, DollarSign, Calendar, Shuffle, Plane, Trendi
 import type { QuizResponse, ItineraryRecommendation, StaycationRecommendation, ExtendedQuizResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { PenguinLogo } from "@/components/PenguinLogo";
+import { ProgressStepper } from "@/components/ProgressStepper";
 
 type TripType = "international" | "domestic" | "staycation" | null;
 
@@ -222,18 +224,29 @@ export default function QuizResults() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-          <div>
-            <h2 className="text-2xl font-bold font-inter mb-2">
-              {tripType === "staycation" 
-                ? "Finding Local Adventures..." 
-                : "Crafting Your Perfect Itineraries..."}
-            </h2>
-            <p className="text-muted-foreground font-lora">
-              Our AI is analyzing your preferences to create personalized adventures
-            </p>
+      <div className="min-h-screen bg-background">
+        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <PenguinLogo size="md" />
+              <span className="text-xl font-bold">TripPenguin</span>
+            </Link>
+          </div>
+        </header>
+        <ProgressStepper currentStep={1} completedSteps={[]} />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+            <div>
+              <h2 className="text-2xl font-bold font-inter mb-2">
+                {tripType === "staycation" 
+                  ? "Finding Local Adventures..." 
+                  : "Crafting Your Perfect Itineraries..."}
+              </h2>
+              <p className="text-muted-foreground font-lora">
+                Our AI is analyzing your preferences to create personalized adventures
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -242,28 +255,39 @@ export default function QuizResults() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Unable to Generate Recommendations</CardTitle>
-            <CardDescription>
-              We encountered an issue generating your personalized {tripType === "staycation" ? "staycations" : "itineraries"}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button onClick={() => setLocation("/getting-started")} className="w-full" data-testid="button-try-again">
-              Try Again
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/")}
-              className="w-full"
-              data-testid="button-back-home-error"
-            >
-              Back to Home
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <PenguinLogo size="md" />
+              <span className="text-xl font-bold">TripPenguin</span>
+            </Link>
+          </div>
+        </header>
+        <ProgressStepper currentStep={1} completedSteps={[]} />
+        <div className="flex items-center justify-center px-4 py-12">
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle>Unable to Generate Recommendations</CardTitle>
+              <CardDescription>
+                We encountered an issue generating your personalized {tripType === "staycation" ? "staycations" : "itineraries"}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button onClick={() => setLocation("/getting-started")} className="w-full" data-testid="button-try-again">
+                Try Again
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/")}
+                className="w-full"
+                data-testid="button-back-home-error"
+              >
+                Back to Home
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -275,6 +299,15 @@ export default function QuizResults() {
 
     return (
       <div className="min-h-screen bg-background">
+        <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <PenguinLogo size="md" />
+              <span className="text-xl font-bold">TripPenguin</span>
+            </Link>
+          </div>
+        </header>
+        <ProgressStepper currentStep={1} completedSteps={[]} />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-12 text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -507,10 +540,19 @@ export default function QuizResults() {
 
   // Render Itinerary Results (International/Domestic)
   const recommendations = itineraryMutation.data || [];
-  const numberOfTravelers = quizData?.numberOfTravelers || 1;
+  const numberOfTravelers = quizData?.numberOfTravelers || (gettingStartedData ? gettingStartedData.adults + gettingStartedData.kids : 1);
 
   return (
     <div className="min-h-screen bg-background">
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <PenguinLogo size="md" />
+            <span className="text-xl font-bold">TripPenguin</span>
+          </Link>
+        </div>
+      </header>
+      <ProgressStepper currentStep={1} completedSteps={[]} />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-12 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
