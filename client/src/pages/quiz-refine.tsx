@@ -5,17 +5,102 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Sparkles, MapPin, DollarSign } from "lucide-react";
+import { 
+  Loader2, 
+  Trash2, 
+  Sparkles, 
+  MapPin, 
+  DollarSign, 
+  Calendar, 
+  Plane, 
+  Sunrise, 
+  Sunset,
+  Camera,
+  Utensils,
+  Mountain,
+  Building,
+  Music,
+  ShoppingBag
+} from "lucide-react";
 import type {
   ItineraryRecommendation,
   ItineraryAddon,
+  ItineraryCitySegment,
   AdjustItineraryDurationRequest,
   ItineraryAddonsRequest,
   ApplyAddonRequest,
 } from "@shared/schema";
 import { NavBar } from "@/components/NavBar";
 import { ProgressStepper } from "@/components/ProgressStepper";
+
+interface DayPlan {
+  dayNumber: number;
+  city: ItineraryCitySegment;
+  dayInCity: number;
+  totalDaysInCity: number;
+  isArrivalDay: boolean;
+  isDepartureDay: boolean;
+  activities: string[];
+}
+
+function getActivityIcon(activity: string) {
+  const lowerActivity = activity.toLowerCase();
+  if (lowerActivity.includes("museum") || lowerActivity.includes("gallery") || lowerActivity.includes("art")) {
+    return <Building className="w-4 h-4 text-purple-500" />;
+  }
+  if (lowerActivity.includes("food") || lowerActivity.includes("restaurant") || lowerActivity.includes("cuisine") || lowerActivity.includes("eat") || lowerActivity.includes("dining")) {
+    return <Utensils className="w-4 h-4 text-orange-500" />;
+  }
+  if (lowerActivity.includes("hike") || lowerActivity.includes("nature") || lowerActivity.includes("mountain") || lowerActivity.includes("beach") || lowerActivity.includes("park")) {
+    return <Mountain className="w-4 h-4 text-green-500" />;
+  }
+  if (lowerActivity.includes("tour") || lowerActivity.includes("visit") || lowerActivity.includes("explore") || lowerActivity.includes("see")) {
+    return <Camera className="w-4 h-4 text-blue-500" />;
+  }
+  if (lowerActivity.includes("show") || lowerActivity.includes("concert") || lowerActivity.includes("music") || lowerActivity.includes("entertainment")) {
+    return <Music className="w-4 h-4 text-pink-500" />;
+  }
+  if (lowerActivity.includes("shop") || lowerActivity.includes("market") || lowerActivity.includes("bazaar")) {
+    return <ShoppingBag className="w-4 h-4 text-amber-500" />;
+  }
+  return <Camera className="w-4 h-4 text-primary" />;
+}
+
+function generateDayByDayPlan(itinerary: ItineraryRecommendation): DayPlan[] {
+  const dayPlans: DayPlan[] = [];
+  let currentDay = 1;
+
+  for (const city of itinerary.cities) {
+    const totalDaysInCity = city.stayLengthNights + (city.order === itinerary.cities.length ? 1 : 0);
+    const activitiesPerDay = Math.ceil(city.activities.length / city.stayLengthNights);
+
+    for (let dayInCity = 1; dayInCity <= city.stayLengthNights; dayInCity++) {
+      const startIdx = (dayInCity - 1) * activitiesPerDay;
+      const endIdx = Math.min(startIdx + activitiesPerDay, city.activities.length);
+      const dayActivities = city.activities.slice(startIdx, endIdx);
+
+      if (dayActivities.length === 0 && city.activities.length > 0) {
+        dayActivities.push(city.activities[city.activities.length - 1]);
+      }
+
+      dayPlans.push({
+        dayNumber: currentDay,
+        city,
+        dayInCity,
+        totalDaysInCity: city.stayLengthNights,
+        isArrivalDay: dayInCity === 1,
+        isDepartureDay: dayInCity === city.stayLengthNights && city.order < itinerary.cities.length,
+        activities: dayActivities,
+      });
+      currentDay++;
+    }
+  }
+
+  return dayPlans;
+}
 
 export default function QuizRefine() {
   const [, setLocation] = useLocation();
@@ -256,41 +341,146 @@ export default function QuizRefine() {
               </div>
             </div>
 
+            {/* Cities Overview */}
             <div className="space-y-3 mt-6">
               <h3 className="font-semibold flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                Cities ({currentItinerary.cities.length})
+                Destinations ({currentItinerary.cities.length} cities)
               </h3>
-              {currentItinerary.cities.map((city) => (
-                <div
-                  key={city.order}
-                  className="flex items-start justify-between p-3 rounded-lg border"
-                  data-testid={`city-${city.order}`}
-                >
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {city.order}. {city.cityName}, {city.countryName}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {city.stayLengthNights} night{city.stayLengthNights !== 1 ? "s" : ""} •{" "}
-                      {city.arrivalAirport || city.departureAirport || "Airport TBD"}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {city.activities.join(" • ")}
+              <div className="flex flex-wrap gap-2">
+                {currentItinerary.cities.map((city) => (
+                  <div
+                    key={city.order}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30"
+                    data-testid={`city-chip-${city.order}`}
+                  >
+                    <span className="font-medium text-sm">
+                      {city.cityName}, {city.countryName}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {city.stayLengthNights} night{city.stayLengthNights !== 1 ? "s" : ""}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleDeleteCity(city.order)}
+                      disabled={currentItinerary.cities.length <= 1 || isBusy}
+                      data-testid={`button-delete-city-${city.order}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Day-by-Day Itinerary Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Day-by-Day Itinerary
+            </CardTitle>
+            <CardDescription>
+              Your complete trip broken down by day with recommended activities
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(() => {
+              const dayPlans = generateDayByDayPlan(currentItinerary);
+              let currentCityOrder = 0;
+
+              return dayPlans.map((day, index) => {
+                const isNewCity = day.city.order !== currentCityOrder;
+                currentCityOrder = day.city.order;
+
+                return (
+                  <div key={day.dayNumber}>
+                    {isNewCity && index > 0 && (
+                      <div className="flex items-center gap-2 my-4 text-muted-foreground">
+                        <Plane className="w-4 h-4" />
+                        <Separator className="flex-1" />
+                        <span className="text-xs uppercase tracking-wide">
+                          Travel to {day.city.cityName}
+                        </span>
+                        <Separator className="flex-1" />
+                        <Plane className="w-4 h-4 rotate-90" />
+                      </div>
+                    )}
+                    
+                    <div 
+                      className="p-4 rounded-lg border bg-card"
+                      data-testid={`day-${day.dayNumber}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                            {day.dayNumber}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-primary" />
+                              {day.city.cityName}, {day.city.countryName}
+                            </h4>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>
+                                Day {day.dayInCity} of {day.totalDaysInCity} in this city
+                              </span>
+                              {day.isArrivalDay && day.city.order === 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Sunrise className="w-3 h-3 mr-1" />
+                                  Trip Start
+                                </Badge>
+                              )}
+                              {day.isArrivalDay && day.city.order > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Plane className="w-3 h-3 mr-1" />
+                                  Arrival
+                                </Badge>
+                              )}
+                              {day.isDepartureDay && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Sunset className="w-3 h-3 mr-1" />
+                                  Departure
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Activities for this day */}
+                      <div className="ml-13 space-y-2">
+                        <h5 className="text-sm font-medium text-muted-foreground mb-2">
+                          Recommended Activities:
+                        </h5>
+                        <div className="grid gap-2">
+                          {day.activities.length > 0 ? (
+                            day.activities.map((activity, actIndex) => (
+                              <div
+                                key={actIndex}
+                                className="flex items-start gap-3 p-3 rounded-md bg-muted/30"
+                                data-testid={`day-${day.dayNumber}-activity-${actIndex}`}
+                              >
+                                {getActivityIcon(activity)}
+                                <span className="text-sm">{activity}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-muted-foreground italic p-3 rounded-md bg-muted/30">
+                              Free time to explore at your own pace
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteCity(city.order)}
-                    disabled={currentItinerary.cities.length <= 1 || isBusy}
-                    data-testid={`button-delete-city-${city.order}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                );
+              });
+            })()}
           </CardContent>
         </Card>
 
