@@ -191,6 +191,11 @@ export default function TripsList() {
 
   // Get trip status badge
   const getTripStatus = (trip: TripWithDestinations) => {
+    // Check for draft status first
+    if (trip.status === "draft") {
+      return { label: "Draft", variant: "outline" as const, isDraft: true };
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -198,7 +203,7 @@ export default function TripsList() {
     
     if (trip.startDate && effectiveEnd) {
       const startDate = parseValidDate(trip.startDate);
-      if (!startDate) return { label: "Planning", variant: "outline" as const };
+      if (!startDate) return { label: "Planning", variant: "outline" as const, isDraft: false };
       
       // Clone dates to avoid mutating cached values
       const startForCompare = new Date(startDate.getTime());
@@ -207,16 +212,16 @@ export default function TripsList() {
       endForCompare.setHours(23, 59, 59, 999);
       
       if (today >= startForCompare && today <= endForCompare) {
-        return { label: "In Progress", variant: "default" as const };
+        return { label: "In Progress", variant: "default" as const, isDraft: false };
       } else if (today < startForCompare) {
         const daysUntil = Math.ceil((startForCompare.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (daysUntil <= 30) {
-          return { label: `${daysUntil} days away`, variant: "secondary" as const };
+          return { label: `${daysUntil} days away`, variant: "secondary" as const, isDraft: false };
         }
-        return { label: "Upcoming", variant: "outline" as const };
+        return { label: "Upcoming", variant: "outline" as const, isDraft: false };
       }
     }
-    return { label: "Planning", variant: "outline" as const };
+    return { label: "Planning", variant: "outline" as const, isDraft: false };
   };
 
   if (isLoading) {
@@ -338,7 +343,10 @@ export default function TripsList() {
                       <Card
                         key={trip.id}
                         className="hover-elevate cursor-pointer transition-all"
-                        onClick={() => setLocation(`/trip/${trip.id}`)}
+                        onClick={() => status.isDraft 
+                          ? setLocation(`/quiz/refine?draft=${trip.id}`)
+                          : setLocation(`/trip/${trip.id}`)
+                        }
                         data-testid={`card-trip-${trip.id}`}
                       >
                         <CardHeader className="pb-3">
@@ -429,15 +437,30 @@ export default function TripsList() {
                               </div>
                             )}
 
-                            {/* View Button */}
-                            <Button
-                              variant="secondary"
-                              className="w-full gap-2"
-                              data-testid={`button-view-${trip.id}`}
-                            >
-                              View Trip
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
+                            {/* View/Continue Button */}
+                            {status.isDraft ? (
+                              <Button
+                                variant="default"
+                                className="w-full gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocation(`/quiz/refine?draft=${trip.id}`);
+                                }}
+                                data-testid={`button-continue-${trip.id}`}
+                              >
+                                Continue Refining
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                className="w-full gap-2"
+                                data-testid={`button-view-${trip.id}`}
+                              >
+                                View Trip
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import type {
   QuizResponse,
   InsertTrip,
   Trip,
+  TripWithDestinations,
 } from "@shared/schema";
 
 type TripType = "international" | "domestic" | "staycation";
@@ -215,7 +216,15 @@ function generateDayByDayPlan(itinerary: ItineraryRecommendation): DayPlan[] {
 
 export default function QuizRefine() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
+
+  // Parse draft ID from URL params
+  const draftId = new URLSearchParams(searchString).get("draft");
+  
+  // Track if we're loading a draft
+  const [isLoadingDraft, setIsLoadingDraft] = useState(!!draftId);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(draftId);
 
   const [currentItinerary, setCurrentItinerary] = useState<ItineraryRecommendation | null>(null);
   const [numberOfTravelers, setNumberOfTravelers] = useState<number>(1);
@@ -488,64 +497,154 @@ export default function QuizRefine() {
     setNewCity({ cityName: "", countryName: "", nights: 2 });
   };
 
+  // Load draft from API if draft ID is present
   useEffect(() => {
-    try {
-      const storedItinerary = sessionStorage.getItem("selectedItinerary");
-      const storedTravelers = sessionStorage.getItem("quizNumberOfTravelers");
-      const storedQuizData = sessionStorage.getItem("quizData");
-      const storedGettingStartedData = sessionStorage.getItem("gettingStartedData");
-      const storedTripType = sessionStorage.getItem("tripType");
+    const loadDraft = async () => {
+      if (draftId) {
+        try {
+          const response = await fetch(`/api/trips/${draftId}`);
+          if (!response.ok) throw new Error("Failed to load draft");
+          const trip = await response.json() as TripWithDestinations & { 
+            draftItineraryData?: ItineraryRecommendation;
+            draftQuizData?: QuizResponse;
+          };
+          
+          if (trip.status !== "draft") {
+            toast({
+              title: "This trip is not a draft",
+              description: "Redirecting to trip planner",
+            });
+            setLocation(`/trip/${draftId}`);
+            return;
+          }
+          
+          // Use draft itinerary data if available
+          if (trip.draftItineraryData) {
+            const itinerary = trip.draftItineraryData;
+            setCurrentItinerary(itinerary);
+            setDesiredNights(itinerary.totalNights);
+            const initialDayPlans = generateDayByDayPlan(itinerary);
+            setDayPlans(initialDayPlans);
+          } else if (trip.destinations?.length > 0) {
+            // Build itinerary from destinations
+            const cities: ItineraryCitySegment[] = trip.destinations
+              .sort((a, b) => a.order - b.order)
+              .map((dest, idx) => ({
+                cityName: dest.cityName,
+                countryName: dest.countryName,
+                stayLengthNights: dest.numberOfNights,
+                order: idx + 1,
+                arrivalAirport: dest.arrivalAirport || undefined,
+                departureAirport: dest.departureAirport || undefined,
+                activities: dest.activities || [],
+                imageQuery: `${dest.cityName} ${dest.countryName} travel`,
+              }));
+            
+            const totalNights = cities.reduce((sum, c) => sum + c.stayLengthNights, 0);
+            const itinerary: ItineraryRecommendation = {
+              title: trip.title || "Your Trip",
+              vibeTagline: "Continue planning your adventure",
+              cities,
+              totalNights,
+              totalEstimatedCost: 0,
+              costBreakdown: { flights: 0, accommodation: 0, food: 0, activities: 0, transport: 0 },
+            };
+            setCurrentItinerary(itinerary);
+            setDesiredNights(totalNights);
+            const initialDayPlans = generateDayByDayPlan(itinerary);
+            setDayPlans(initialDayPlans);
+          }
+          
+          setNumberOfTravelers(trip.numberOfTravelers || 1);
+          
+          // Load quiz data if available
+          if (trip.draftQuizData) {
+            setQuizData(trip.draftQuizData);
+          }
+          
+          setCurrentDraftId(draftId);
+          setIsLoadingDraft(false);
+          
+          toast({
+            title: "Draft loaded",
+            description: "Continue refining your itinerary",
+          });
+        } catch (error) {
+          console.error("Failed to load draft:", error);
+          toast({
+            title: "Failed to load draft",
+            description: "Loading from session instead",
+            variant: "destructive",
+          });
+          setIsLoadingDraft(false);
+          loadFromSession();
+        }
+      } else {
+        loadFromSession();
+      }
+    };
+    
+    const loadFromSession = () => {
+      try {
+        const storedItinerary = sessionStorage.getItem("selectedItinerary");
+        const storedTravelers = sessionStorage.getItem("quizNumberOfTravelers");
+        const storedQuizData = sessionStorage.getItem("quizData");
+        const storedGettingStartedData = sessionStorage.getItem("gettingStartedData");
+        const storedTripType = sessionStorage.getItem("tripType");
 
-      if (!storedItinerary) {
+        if (!storedItinerary) {
+          toast({
+            title: "No itinerary found",
+            description: "Please complete the quiz first",
+            variant: "destructive",
+          });
+          setLocation("/quiz");
+          return;
+        }
+
+        const itinerary = JSON.parse(storedItinerary) as ItineraryRecommendation;
+        const travelers = storedTravelers ? parseInt(storedTravelers, 10) : 1;
+
+        setCurrentItinerary(itinerary);
+        setNumberOfTravelers(travelers);
+        setDesiredNights(itinerary.totalNights);
+        
+        // Load quiz preferences from quizData (both legacy and new flows store this)
+        if (storedQuizData) {
+          const quiz = JSON.parse(storedQuizData) as QuizResponse;
+          setQuizData(quiz);
+        }
+        
+        // Load trip type - check multiple sources in order of priority:
+        // 1. Direct tripType key (set by quiz-results for staycation)
+        // 2. Getting started data (new flow)
+        // 3. Default to international (legacy quiz fallback)
+        if (storedTripType && (storedTripType === "international" || storedTripType === "domestic" || storedTripType === "staycation")) {
+          setTripType(storedTripType as TripType);
+        } else if (storedGettingStartedData) {
+          const gsData = JSON.parse(storedGettingStartedData) as GettingStartedData;
+          if (gsData.tripType) {
+            setTripType(gsData.tripType);
+          }
+        }
+        // Otherwise, keep default "international"
+        
+        // Initialize day plans from the itinerary
+        const initialDayPlans = generateDayByDayPlan(itinerary);
+        setDayPlans(initialDayPlans);
+      } catch (error) {
+        console.error("Failed to load itinerary:", error);
         toast({
-          title: "No itinerary found",
-          description: "Please complete the quiz first",
+          title: "Error loading itinerary",
+          description: "Please try again",
           variant: "destructive",
         });
         setLocation("/quiz");
-        return;
       }
-
-      const itinerary = JSON.parse(storedItinerary) as ItineraryRecommendation;
-      const travelers = storedTravelers ? parseInt(storedTravelers, 10) : 1;
-
-      setCurrentItinerary(itinerary);
-      setNumberOfTravelers(travelers);
-      setDesiredNights(itinerary.totalNights);
-      
-      // Load quiz preferences from quizData (both legacy and new flows store this)
-      if (storedQuizData) {
-        const quiz = JSON.parse(storedQuizData) as QuizResponse;
-        setQuizData(quiz);
-      }
-      
-      // Load trip type - check multiple sources in order of priority:
-      // 1. Direct tripType key (set by quiz-results for staycation)
-      // 2. Getting started data (new flow)
-      // 3. Default to international (legacy quiz fallback)
-      if (storedTripType && (storedTripType === "international" || storedTripType === "domestic" || storedTripType === "staycation")) {
-        setTripType(storedTripType as TripType);
-      } else if (storedGettingStartedData) {
-        const gsData = JSON.parse(storedGettingStartedData) as GettingStartedData;
-        if (gsData.tripType) {
-          setTripType(gsData.tripType);
-        }
-      }
-      // Otherwise, keep default "international"
-      
-      // Initialize day plans from the itinerary
-      const initialDayPlans = generateDayByDayPlan(itinerary);
-      setDayPlans(initialDayPlans);
-    } catch (error) {
-      console.error("Failed to load itinerary:", error);
-      toast({
-        title: "Error loading itinerary",
-        description: "Please try again",
-        variant: "destructive",
-      });
-      setLocation("/quiz");
-    }
-  }, [setLocation, toast]);
+    };
+    
+    loadDraft();
+  }, [draftId, setLocation, toast]);
   
   // Regenerate day plans when cities change (e.g., add/edit/delete city)
   useEffect(() => {
@@ -650,11 +749,23 @@ export default function QuizRefine() {
     },
   });
 
+  // Save draft mutation
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: InsertTrip & { draftItineraryData: unknown; draftQuizData: unknown }) => {
+      const response = await apiRequest("POST", "/api/trips", data);
+      return response.json() as Promise<Trip>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+    },
+  });
+
   const isBusy =
     adjustDurationMutation.isPending ||
     fetchAddonsMutation.isPending ||
     applyAddonMutation.isPending ||
-    createTripMutation.isPending;
+    createTripMutation.isPending ||
+    saveDraftMutation.isPending;
 
   const handleDeleteCity = (cityOrder: number) => {
     if (!currentItinerary) return;
@@ -713,6 +824,112 @@ export default function QuizRefine() {
     });
   };
 
+  const handleSaveDraft = async () => {
+    if (!currentItinerary) return;
+    
+    // Sync dayPlans activities back to the itinerary cities
+    const syncedCities = currentItinerary.cities.map(city => {
+      const cityActivities: string[] = [];
+      dayPlans.forEach(day => {
+        if (day.city.order === city.order) {
+          cityActivities.push(...day.activities);
+        }
+      });
+      return { ...city, activities: cityActivities.length > 0 ? cityActivities : city.activities };
+    });
+    
+    const syncedItinerary = { ...currentItinerary, cities: syncedCities };
+    
+    try {
+      const travelSeason = quizData?.travelSeason || "summer";
+      
+      if (currentDraftId) {
+        // Update existing draft
+        await apiRequest("PATCH", `/api/trips/${currentDraftId}`, {
+          title: currentItinerary.title,
+          numberOfTravelers,
+          tripDuration: currentItinerary.totalNights,
+          draftItineraryData: syncedItinerary,
+          draftQuizData: quizData,
+        });
+        
+        // Delete existing destinations and recreate
+        const existingDestinations = await fetch(`/api/destinations/trip/${currentDraftId}`).then(r => r.json());
+        for (const dest of existingDestinations) {
+          await apiRequest("DELETE", `/api/destinations/${dest.id}`);
+        }
+        
+        // Create new destinations
+        for (let i = 0; i < syncedCities.length; i++) {
+          const city = syncedCities[i];
+          await apiRequest("POST", "/api/destinations", {
+            tripId: currentDraftId,
+            cityName: city.cityName,
+            countryName: city.countryName,
+            numberOfNights: city.stayLengthNights,
+            imageUrl: "",
+            order: i,
+            arrivalAirport: city.arrivalAirport,
+            departureAirport: city.departureAirport,
+            activities: city.activities || [],
+          });
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+        
+        toast({
+          title: "Draft updated",
+          description: "Your changes have been saved.",
+        });
+      } else {
+        // Create new draft trip
+        const draftPayload = {
+          title: currentItinerary.title,
+          travelers: numberOfTravelers > 1 ? "family_friends" : "just_me",
+          numberOfTravelers,
+          travelSeason,
+          tripDuration: currentItinerary.totalNights,
+          status: "draft" as const,
+          draftItineraryData: syncedItinerary,
+          draftQuizData: quizData,
+        };
+        
+        const newDraft = await saveDraftMutation.mutateAsync(draftPayload);
+        
+        // Create destinations for the draft trip
+        for (let i = 0; i < syncedCities.length; i++) {
+          const city = syncedCities[i];
+          await apiRequest("POST", "/api/destinations", {
+            tripId: newDraft.id,
+            cityName: city.cityName,
+            countryName: city.countryName,
+            numberOfNights: city.stayLengthNights,
+            imageUrl: "",
+            order: i,
+            arrivalAirport: city.arrivalAirport,
+            departureAirport: city.departureAirport,
+            activities: city.activities || [],
+          });
+        }
+        
+        toast({
+          title: "Draft saved",
+          description: "You can continue refining this itinerary later from My Trips.",
+        });
+      }
+      
+      // Navigate to trips list
+      setLocation("/trips");
+    } catch (error) {
+      console.error("Failed to save draft:", error);
+      toast({
+        title: "Failed to save draft",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFinalize = async () => {
     if (!currentItinerary) return;
     
@@ -731,31 +948,71 @@ export default function QuizRefine() {
       // Get travel season from quiz data or default
       const travelSeason = quizData?.travelSeason || "summer";
       
-      // Create trip in database
-      const tripPayload: InsertTrip = {
-        title: currentItinerary.title,
-        travelers: numberOfTravelers > 1 ? "family_friends" : "just_me",
-        numberOfTravelers,
-        travelSeason,
-        tripDuration: currentItinerary.totalNights,
-      };
+      let tripId: string;
       
-      const newTrip = await createTripMutation.mutateAsync(tripPayload);
-      
-      // Create destinations for the trip
-      for (let i = 0; i < syncedCities.length; i++) {
-        const city = syncedCities[i];
-        await apiRequest("POST", "/api/destinations", {
-          tripId: newTrip.id,
-          cityName: city.cityName,
-          countryName: city.countryName,
-          numberOfNights: city.stayLengthNights,
-          imageUrl: "",
-          order: i,
-          arrivalAirport: city.arrivalAirport,
-          departureAirport: city.departureAirport,
-          activities: city.activities || [],
+      if (currentDraftId) {
+        // Convert draft to active trip
+        await apiRequest("PATCH", `/api/trips/${currentDraftId}`, {
+          title: currentItinerary.title,
+          numberOfTravelers,
+          tripDuration: currentItinerary.totalNights,
+          status: "active",
+          draftItineraryData: null,
+          draftQuizData: null,
         });
+        
+        // Delete existing destinations and recreate
+        const existingDestinations = await fetch(`/api/destinations/trip/${currentDraftId}`).then(r => r.json());
+        for (const dest of existingDestinations) {
+          await apiRequest("DELETE", `/api/destinations/${dest.id}`);
+        }
+        
+        // Create new destinations
+        for (let i = 0; i < syncedCities.length; i++) {
+          const city = syncedCities[i];
+          await apiRequest("POST", "/api/destinations", {
+            tripId: currentDraftId,
+            cityName: city.cityName,
+            countryName: city.countryName,
+            numberOfNights: city.stayLengthNights,
+            imageUrl: "",
+            order: i,
+            arrivalAirport: city.arrivalAirport,
+            departureAirport: city.departureAirport,
+            activities: city.activities || [],
+          });
+        }
+        
+        tripId = currentDraftId;
+        queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      } else {
+        // Create new trip in database
+        const tripPayload: InsertTrip = {
+          title: currentItinerary.title,
+          travelers: numberOfTravelers > 1 ? "family_friends" : "just_me",
+          numberOfTravelers,
+          travelSeason,
+          tripDuration: currentItinerary.totalNights,
+        };
+        
+        const newTrip = await createTripMutation.mutateAsync(tripPayload);
+        tripId = newTrip.id;
+        
+        // Create destinations for the trip
+        for (let i = 0; i < syncedCities.length; i++) {
+          const city = syncedCities[i];
+          await apiRequest("POST", "/api/destinations", {
+            tripId: newTrip.id,
+            cityName: city.cityName,
+            countryName: city.countryName,
+            numberOfNights: city.stayLengthNights,
+            imageUrl: "",
+            order: i,
+            arrivalAirport: city.arrivalAirport,
+            departureAirport: city.departureAirport,
+            activities: city.activities || [],
+          });
+        }
       }
       
       // Store synced itinerary in session for step 2 to use
@@ -769,8 +1026,8 @@ export default function QuizRefine() {
         description: "Your trip has been created. Now let's plan your budget!",
       });
       
-      // Navigate to step 2 (Save & Book) with the new trip
-      setLocation(`/trip/${newTrip.id}`);
+      // Navigate to step 2 (Save & Book) with the trip
+      setLocation(`/trip/${tripId}`);
     } catch (error) {
       console.error("Failed to save itinerary:", error);
       toast({
@@ -1515,6 +1772,21 @@ export default function QuizRefine() {
             data-testid="button-back"
           >
             Back to Results
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleSaveDraft}
+            disabled={isBusy}
+            data-testid="button-save-draft"
+          >
+            {saveDraftMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving Draft...
+              </>
+            ) : (
+              "Save Draft"
+            )}
           </Button>
           <Button onClick={handleFinalize} disabled={isBusy} data-testid="button-finalize">
             {createTripMutation.isPending ? (
