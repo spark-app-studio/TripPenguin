@@ -63,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **AI Booking Integration**: Live OpenAI-powered booking recommendations (GPT-4o-mini) in Step 3, providing personalized options with pricing, pros/cons, and tips.
 - **Per-Category AI Budget Guidance**: In Step 2, GPT-4o-mini provides personalized recommendations, estimated price ranges, and money-saving tips for each budget category.
 - **AI-Recommended Monthly Savings**: Calculates recommended monthly savings based on trip cost with adaptive payoff timeframes (6-15 months).
+- **Itinerary-Wide AI Assistant**: Auto-generates day-by-day activities on the quiz-refine page using all quiz responses (trip goal, pace, spending priority, kids' ages, etc.). Provides conversational interface for Q&A about the itinerary and suggests refinements. Backend endpoints: `/api/ai/itinerary-plan` (batch activity generation) and `/api/ai/itinerary-assistant` (conversational refinement). Frontend component: `ItineraryAssistant.tsx`.
 
 **Itinerary Management**:
 - **Shared Itinerary State**: `useItinerary` hook provides reactive shared state across components via sessionStorage.

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import ItineraryAssistant from "@/components/ItineraryAssistant";
 import { 
   Loader2, 
   Trash2, 
@@ -68,7 +69,6 @@ interface GettingStartedData {
 }
 import { NavBar } from "@/components/NavBar";
 import { ProgressStepper } from "@/components/ProgressStepper";
-import AIDayPlanner from "@/components/AIDayPlanner";
 
 interface DayPlan {
   dayNumber: number;
@@ -246,23 +246,134 @@ export default function QuizRefine() {
   const [tempCity, setTempCity] = useState({ cityName: "", countryName: "", nights: 1 });
   const [tempActivity, setTempActivity] = useState("");
 
-  // AI Day Planner state
-  const [dayPlannerOpen, setDayPlannerOpen] = useState(false);
-  const [dayPlannerDay, setDayPlannerDay] = useState<DayPlan | null>(null);
+  // AI generation state
+  const [aiGenerationComplete, setAiGenerationComplete] = useState(false);
+  const aiGenerationTriggeredRef = useRef(false);
 
-  const handleOpenDayPlanner = (day: DayPlan) => {
-    setDayPlannerDay(day);
-    setDayPlannerOpen(true);
+  // AI itinerary plan generation mutation
+  const aiPlanMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentItinerary) throw new Error("No itinerary");
+      const response = await apiRequest("POST", "/api/ai/itinerary-plan", {
+        itinerary: currentItinerary,
+        numberOfTravelers,
+        tripType,
+        quizPreferences: {
+          tripGoal: quizData?.tripGoal,
+          placeType: quizData?.placeType,
+          dayPace: quizData?.dayPace,
+          spendingPriority: quizData?.spendingPriority,
+          travelersType: quizData?.travelersType,
+          kidsAges: quizData?.kidsAges,
+          accommodationType: quizData?.accommodationType,
+          mustHave: quizData?.mustHave,
+        },
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.dayPlans && data.dayPlans.length > 0) {
+        setDayPlans(prev => {
+          const updatedPlans = [...prev];
+          for (const aiDay of data.dayPlans) {
+            const existingIndex = updatedPlans.findIndex(p => p.dayNumber === aiDay.dayNumber);
+            if (existingIndex >= 0) {
+              updatedPlans[existingIndex] = {
+                ...updatedPlans[existingIndex],
+                activities: aiDay.activities,
+              };
+            }
+          }
+          return updatedPlans;
+        });
+        setAiGenerationComplete(true);
+        toast({
+          title: "Itinerary activities generated",
+          description: "Your day-by-day activities have been planned based on your preferences.",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      console.error("AI plan generation error:", error);
+      toast({
+        title: "Could not generate activities",
+        description: "Using default activities. You can still refine your itinerary manually.",
+        variant: "destructive",
+      });
+      setAiGenerationComplete(true);
+    },
+  });
+
+  // Normalize activity text for matching - strips punctuation and extra whitespace
+  const normalizeActivity = (text: string): string => {
+    return text.toLowerCase().trim().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
   };
 
-  const handleConfirmDayPlan = (activities: string[]) => {
-    if (!dayPlannerDay) return;
-    setDayPlans(prev => prev.map(day => {
-      if (day.dayNumber === dayPlannerDay.dayNumber) {
-        return { ...day, activities };
+  // Match activity using normalized comparison
+  const matchesActivity = (existing: string, target: string): boolean => {
+    const existingNorm = normalizeActivity(existing);
+    const targetNorm = normalizeActivity(target);
+    
+    // Exact normalized match
+    if (existingNorm === targetNorm) return true;
+    
+    // One contains the other completely (handles "Visit museum" matching "Visit the museum")
+    if (existingNorm.includes(targetNorm) && targetNorm.length > existingNorm.length * 0.5) return true;
+    if (targetNorm.includes(existingNorm) && existingNorm.length > targetNorm.length * 0.5) return true;
+    
+    return false;
+  };
+
+  // Handle applying changes from the assistant
+  const handleApplyAssistantChanges = (changes: { dayNumber: number; action: "add" | "remove" | "replace"; activities: string[] }[]) => {
+    let hasUnknownAction = false;
+    
+    setDayPlans(prev => {
+      const updatedPlans = [...prev];
+      for (const change of changes) {
+        const dayIndex = updatedPlans.findIndex(p => p.dayNumber === change.dayNumber);
+        if (dayIndex >= 0) {
+          if (change.action === "replace") {
+            updatedPlans[dayIndex] = {
+              ...updatedPlans[dayIndex],
+              activities: change.activities.length > 0 ? change.activities : [`Explore ${updatedPlans[dayIndex].city.cityName}`],
+            };
+          } else if (change.action === "add") {
+            updatedPlans[dayIndex] = {
+              ...updatedPlans[dayIndex],
+              activities: [...updatedPlans[dayIndex].activities, ...change.activities],
+            };
+          } else if (change.action === "remove") {
+            // Remove activities using fuzzy matching
+            const remainingActivities = updatedPlans[dayIndex].activities.filter(
+              activity => !change.activities.some(removeTarget => matchesActivity(activity, removeTarget))
+            );
+            // Keep at least one activity with a day-specific default
+            const defaultActivity = updatedPlans[dayIndex].isArrivalDay 
+              ? `Arrive and settle in ${updatedPlans[dayIndex].city.cityName}`
+              : updatedPlans[dayIndex].isDepartureDay
+                ? `Final morning in ${updatedPlans[dayIndex].city.cityName}`
+                : `Explore ${updatedPlans[dayIndex].city.cityName}`;
+            updatedPlans[dayIndex] = {
+              ...updatedPlans[dayIndex],
+              activities: remainingActivities.length > 0 ? remainingActivities : [defaultActivity],
+            };
+          } else {
+            console.warn(`Unknown action type: ${change.action}`);
+            hasUnknownAction = true;
+          }
+        }
       }
-      return day;
-    }));
+      return updatedPlans;
+    });
+
+    if (hasUnknownAction) {
+      toast({
+        title: "Some changes could not be applied",
+        description: "The assistant suggested a change type that isn't supported yet.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Update handlers
@@ -445,6 +556,14 @@ export default function QuizRefine() {
       }
     }
   }, [currentItinerary?.totalNights, currentItinerary?.cities.length]);
+
+  // Auto-generate AI activities on page load (once)
+  useEffect(() => {
+    if (currentItinerary && dayPlans.length > 0 && !aiGenerationTriggeredRef.current) {
+      aiGenerationTriggeredRef.current = true;
+      aiPlanMutation.mutate();
+    }
+  }, [currentItinerary, dayPlans.length]);
 
   const adjustDurationMutation = useMutation({
     mutationFn: async (request: AdjustItineraryDurationRequest) => {
@@ -921,6 +1040,51 @@ export default function QuizRefine() {
           </CardContent>
         </Card>
 
+        {/* AI Itinerary Assistant */}
+        {currentItinerary && (
+          <ItineraryAssistant
+            itinerary={currentItinerary}
+            numberOfTravelers={numberOfTravelers}
+            tripType={tripType}
+            quizPreferences={{
+              tripGoal: quizData?.tripGoal,
+              placeType: quizData?.placeType,
+              dayPace: quizData?.dayPace,
+              spendingPriority: quizData?.spendingPriority,
+              travelersType: quizData?.travelersType,
+              kidsAges: quizData?.kidsAges,
+              accommodationType: quizData?.accommodationType,
+              mustHave: quizData?.mustHave,
+            }}
+            currentDayPlans={dayPlans.map(day => ({
+              dayNumber: day.dayNumber,
+              cityName: day.city.cityName,
+              countryName: day.city.countryName,
+              isArrivalDay: day.isArrivalDay,
+              isDepartureDay: day.isDepartureDay,
+              activities: day.activities,
+            }))}
+            onApplyChanges={handleApplyAssistantChanges}
+          />
+        )}
+
+        {/* AI Generation Status */}
+        {aiPlanMutation.isPending && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <div>
+                  <p className="font-medium">Planning your activities...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pebbles is creating personalized activities based on your preferences
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Day-by-Day Itinerary Breakdown */}
         <Card>
           <CardHeader>
@@ -999,19 +1163,9 @@ export default function QuizRefine() {
                       <div className="ml-13 space-y-2">
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                           <h5 className="text-sm font-medium text-muted-foreground">
-                            Recommended Activities:
+                            {aiPlanMutation.isPending ? "Generating activities..." : "Recommended Activities:"}
                           </h5>
                           <div className="flex items-center gap-1">
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => handleOpenDayPlanner(day)}
-                              data-testid={`button-plan-day-${day.dayNumber}`}
-                            >
-                              <Sparkles className="w-3 h-3 mr-1" />
-                              Plan My Day
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1309,34 +1463,6 @@ export default function QuizRefine() {
         </div>
       </div>
       </div>
-
-      {dayPlannerDay && (
-        <AIDayPlanner
-          open={dayPlannerOpen}
-          onOpenChange={setDayPlannerOpen}
-          cityName={dayPlannerDay.city.cityName}
-          countryName={dayPlannerDay.city.countryName}
-          dayNumber={dayPlannerDay.dayNumber}
-          dayInCity={dayPlannerDay.dayInCity}
-          totalDaysInCity={dayPlannerDay.totalDaysInCity}
-          isArrivalDay={dayPlannerDay.isArrivalDay}
-          isDepartureDay={dayPlannerDay.isDepartureDay}
-          existingActivities={dayPlannerDay.activities}
-          numberOfTravelers={numberOfTravelers}
-          tripType={tripType as "international" | "domestic" | "staycation"}
-          quizPreferences={{
-            tripGoal: quizData?.tripGoal,
-            placeType: quizData?.placeType,
-            dayPace: quizData?.dayPace,
-            spendingPriority: quizData?.spendingPriority,
-            travelersType: quizData?.travelersType,
-            kidsAges: quizData?.kidsAges,
-            accommodationType: quizData?.accommodationType,
-            mustHave: quizData?.mustHave,
-          }}
-          onConfirmPlan={handleConfirmDayPlan}
-        />
-      )}
     </div>
   );
 }

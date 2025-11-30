@@ -1109,6 +1109,69 @@ export interface ActivitySuggestionRequest {
   tripType: "international" | "domestic" | "staycation";
 }
 
+export interface FullItineraryPlanRequest {
+  itinerary: ItineraryRecommendation;
+  numberOfTravelers: number;
+  tripType: "international" | "domestic" | "staycation";
+  quizPreferences: {
+    tripGoal?: string;
+    placeType?: string;
+    dayPace?: string;
+    spendingPriority?: string;
+    travelersType?: string;
+    kidsAges?: string[];
+    accommodationType?: string;
+    mustHave?: string;
+  };
+}
+
+export interface DayActivities {
+  dayNumber: number;
+  cityName: string;
+  countryName: string;
+  isArrivalDay: boolean;
+  isDepartureDay: boolean;
+  activities: string[];
+}
+
+export interface FullItineraryPlanResponse {
+  dayPlans: DayActivities[];
+}
+
+export interface ItineraryAssistantMessage {
+  role: "assistant" | "user";
+  content: string;
+}
+
+export interface ItineraryAssistantRequest {
+  itinerary: ItineraryRecommendation;
+  numberOfTravelers: number;
+  tripType: "international" | "domestic" | "staycation";
+  quizPreferences: {
+    tripGoal?: string;
+    placeType?: string;
+    dayPace?: string;
+    spendingPriority?: string;
+    travelersType?: string;
+    kidsAges?: string[];
+    accommodationType?: string;
+    mustHave?: string;
+  };
+  conversationHistory: ItineraryAssistantMessage[];
+  userMessage: string;
+  currentDayPlans?: DayActivities[];
+}
+
+export interface ItineraryAssistantResponse {
+  message: string;
+  updatedDayPlans?: DayActivities[];
+  suggestedChanges?: {
+    dayNumber: number;
+    action: "add" | "remove" | "replace";
+    activities: string[];
+  }[];
+}
+
 export interface ActivitySuggestion {
   activity: string;
   category: "must-see" | "hidden-gem" | "food" | "outdoor" | "cultural" | "relaxation";
@@ -1426,5 +1489,200 @@ Return JSON in this exact format:
   } catch (error) {
     console.error("Error getting activity suggestions:", error);
     throw new Error("Failed to generate activity suggestions");
+  }
+}
+
+export async function generateFullItineraryPlan(request: FullItineraryPlanRequest): Promise<FullItineraryPlanResponse> {
+  const preferencesContext = buildPreferencesContext(request.quizPreferences);
+  
+  const citiesOverview = request.itinerary.cities.map(city => 
+    `${city.cityName}, ${city.countryName} (${city.stayLengthNights} nights)`
+  ).join(" -> ");
+
+  let currentDay = 1;
+  const dayStructure: { dayNumber: number; city: typeof request.itinerary.cities[0]; dayInCity: number; totalDaysInCity: number; isArrival: boolean; isDeparture: boolean }[] = [];
+  
+  for (let i = 0; i < request.itinerary.cities.length; i++) {
+    const city = request.itinerary.cities[i];
+    for (let d = 0; d < city.stayLengthNights; d++) {
+      dayStructure.push({
+        dayNumber: currentDay,
+        city,
+        dayInCity: d + 1,
+        totalDaysInCity: city.stayLengthNights,
+        isArrival: d === 0,
+        isDeparture: d === city.stayLengthNights - 1 && i < request.itinerary.cities.length - 1,
+      });
+      currentDay++;
+    }
+  }
+
+  const systemPrompt = `You are Pebbles, a knowledgeable travel planning assistant creating a complete day-by-day itinerary for a ${request.tripType} trip.
+
+TRIP OVERVIEW:
+- Route: ${citiesOverview}
+- Total nights: ${request.itinerary.totalNights}
+- ${request.numberOfTravelers} traveler(s)
+- ${preferencesContext}
+
+CRITICAL RULES:
+- NEVER use emojis in any activity descriptions
+- You MUST incorporate ALL traveler preferences into every day's activities
+- Create realistic, achievable daily plans with 3-5 activities per day
+- Include a mix of: meals, sightseeing, cultural experiences, relaxation
+- For arrival days: lighter afternoon/evening activities
+- For departure/travel days: morning activities only before travel
+- Consider logical geographic flow within each city
+- Every activity MUST align with the traveler's stated preferences
+
+For each day, provide 3-5 concise, specific activities. Each activity should be a single line describing what to do, where, and approximate timing.
+
+Return JSON in this exact format:
+{
+  "dayPlans": [
+    {
+      "dayNumber": 1,
+      "cityName": "City Name",
+      "countryName": "Country Name",
+      "isArrivalDay": true/false,
+      "isDepartureDay": true/false,
+      "activities": [
+        "Morning: Specific activity description",
+        "Afternoon: Another specific activity",
+        "Evening: Dinner at recommended restaurant type"
+      ]
+    }
+  ]
+}`;
+
+  const daysDescription = dayStructure.map(d => 
+    `Day ${d.dayNumber}: ${d.city.cityName}, ${d.city.countryName} (Day ${d.dayInCity}/${d.totalDaysInCity}${d.isArrival ? ", ARRIVAL" : ""}${d.isDeparture ? ", DEPARTURE" : ""})`
+  ).join("\n");
+
+  const userPrompt = `Create a complete day-by-day activity plan for this ${request.itinerary.totalNights}-night trip:
+
+${daysDescription}
+
+Generate specific, actionable activities for each day that match the traveler's preferences. Include meal recommendations and consider timing/logistics.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 4000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    return { dayPlans: parsed.dayPlans || [] };
+  } catch (error) {
+    console.error("Error generating full itinerary plan:", error);
+    throw new Error("Failed to generate itinerary plan");
+  }
+}
+
+export async function chatWithItineraryAssistant(request: ItineraryAssistantRequest): Promise<ItineraryAssistantResponse> {
+  const preferencesContext = buildPreferencesContext(request.quizPreferences);
+  
+  const citiesOverview = request.itinerary.cities.map(city => 
+    `${city.cityName}, ${city.countryName} (${city.stayLengthNights} nights)`
+  ).join(" -> ");
+
+  const currentPlanSummary = request.currentDayPlans && request.currentDayPlans.length > 0
+    ? request.currentDayPlans.map(day => 
+        `Day ${day.dayNumber} (${day.cityName}): ${day.activities.join("; ")}`
+      ).join("\n")
+    : "No activities planned yet.";
+
+  const systemPrompt = `You are Pebbles, a friendly and knowledgeable travel planning assistant for TripPenguin. You're helping a family refine their ${request.tripType} trip itinerary.
+
+TRIP DETAILS:
+- Title: ${request.itinerary.title}
+- Route: ${citiesOverview}
+- Total nights: ${request.itinerary.totalNights}
+- ${request.numberOfTravelers} traveler(s)
+- ${preferencesContext}
+
+CURRENT ITINERARY:
+${currentPlanSummary}
+
+YOUR ROLE:
+1. Answer questions about the itinerary, destinations, activities, or travel logistics
+2. Suggest improvements or alternatives based on their preferences
+3. Help them refine specific days or activities
+4. Provide practical tips about the destinations
+5. Be warm, encouraging, and family-friendly
+
+CRITICAL RULES:
+- NEVER use emojis in any response
+- Stay focused ONLY on this specific itinerary and its destinations
+- Reference their actual preferences when making suggestions
+- Be concise but helpful
+- If suggesting changes, be specific about which day and what to change
+
+When suggesting activity changes, include them in the suggestedChanges array. Otherwise, just provide a helpful message.
+
+IMPORTANT FOR REMOVE ACTIONS:
+When using "remove" action, you MUST copy the EXACT activity text from the current itinerary.
+For example, if the current itinerary has "Visit the Louvre Museum" and you want to remove it,
+use exactly "Visit the Louvre Museum" in the activities array, not a paraphrase like "Louvre visit".
+
+Return JSON in this format:
+{
+  "message": "Your helpful response to the user",
+  "suggestedChanges": [
+    {
+      "dayNumber": 1,
+      "action": "add" | "remove" | "replace",
+      "activities": ["Exact activity text from itinerary for remove, or new text for add/replace"]
+    }
+  ]
+}
+
+Only include suggestedChanges if you're recommending specific changes to the itinerary. For general questions or info, just provide the message.`;
+
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: systemPrompt },
+  ];
+
+  for (const msg of request.conversationHistory) {
+    messages.push({
+      role: msg.role,
+      content: msg.content,
+    });
+  }
+
+  messages.push({ role: "user", content: request.userMessage });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    return {
+      message: parsed.message || "I'm sorry, I couldn't process that request.",
+      suggestedChanges: parsed.suggestedChanges,
+    };
+  } catch (error) {
+    console.error("Error chatting with itinerary assistant:", error);
+    throw new Error("Failed to get assistant response");
   }
 }

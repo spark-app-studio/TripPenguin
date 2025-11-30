@@ -29,8 +29,12 @@ import {
   applyAddon,
   getActivitySuggestions,
   planDayWithAI,
+  generateFullItineraryPlan,
+  chatWithItineraryAssistant,
   type ActivitySuggestionRequest,
-  type DayPlannerRequest
+  type DayPlannerRequest,
+  type FullItineraryPlanRequest,
+  type ItineraryAssistantRequest
 } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
@@ -814,6 +818,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI day planner error:", error);
         res.status(500).json({ error: "Failed to get day planning assistance" });
+      }
+    }
+  });
+
+  const fullItineraryPlanRequestSchema = z.object({
+    itinerary: z.object({
+      title: z.string(),
+      vibeTagline: z.string().optional(),
+      totalNights: z.number(),
+      cities: z.array(z.object({
+        order: z.number(),
+        cityName: z.string(),
+        countryName: z.string(),
+        stayLengthNights: z.number(),
+        activities: z.array(z.string()).optional(),
+        imageQuery: z.string().optional(),
+      })),
+      totalEstimatedCost: z.number().optional(),
+      costBreakdown: z.any().optional(),
+    }),
+    numberOfTravelers: z.number(),
+    tripType: z.enum(["international", "domestic", "staycation"]),
+    quizPreferences: z.object({
+      tripGoal: z.string().optional(),
+      placeType: z.string().optional(),
+      dayPace: z.string().optional(),
+      spendingPriority: z.string().optional(),
+      travelersType: z.string().optional(),
+      kidsAges: z.array(z.string()).optional(),
+      accommodationType: z.string().optional(),
+      mustHave: z.string().optional(),
+    }),
+  });
+
+  app.post("/api/ai/itinerary-plan", isAuthenticated, async (req, res) => {
+    try {
+      const request = fullItineraryPlanRequestSchema.parse(req.body);
+      const response = await generateFullItineraryPlan(request as FullItineraryPlanRequest);
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid itinerary plan request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI itinerary planning service is not configured" });
+      } else {
+        console.error("AI itinerary plan error:", error);
+        res.status(500).json({ error: "Failed to generate itinerary plan" });
+      }
+    }
+  });
+
+  const itineraryAssistantRequestSchema = z.object({
+    itinerary: z.object({
+      title: z.string(),
+      vibeTagline: z.string().optional(),
+      totalNights: z.number(),
+      cities: z.array(z.object({
+        order: z.number(),
+        cityName: z.string(),
+        countryName: z.string(),
+        stayLengthNights: z.number(),
+        activities: z.array(z.string()).optional(),
+        imageQuery: z.string().optional(),
+      })),
+      totalEstimatedCost: z.number().optional(),
+      costBreakdown: z.any().optional(),
+    }),
+    numberOfTravelers: z.number(),
+    tripType: z.enum(["international", "domestic", "staycation"]),
+    quizPreferences: z.object({
+      tripGoal: z.string().optional(),
+      placeType: z.string().optional(),
+      dayPace: z.string().optional(),
+      spendingPriority: z.string().optional(),
+      travelersType: z.string().optional(),
+      kidsAges: z.array(z.string()).optional(),
+      accommodationType: z.string().optional(),
+      mustHave: z.string().optional(),
+    }),
+    conversationHistory: z.array(z.object({
+      role: z.enum(["assistant", "user"]),
+      content: z.string(),
+    })),
+    userMessage: z.string(),
+    currentDayPlans: z.array(z.object({
+      dayNumber: z.number(),
+      cityName: z.string(),
+      countryName: z.string(),
+      isArrivalDay: z.boolean(),
+      isDepartureDay: z.boolean(),
+      activities: z.array(z.string()),
+    })).optional(),
+  });
+
+  app.post("/api/ai/itinerary-assistant", isAuthenticated, async (req, res) => {
+    try {
+      const request = itineraryAssistantRequestSchema.parse(req.body);
+      const response = await chatWithItineraryAssistant(request as ItineraryAssistantRequest);
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid assistant request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI assistant service is not configured" });
+      } else {
+        console.error("AI itinerary assistant error:", error);
+        res.status(500).json({ error: "Failed to get assistant response" });
       }
     }
   });
