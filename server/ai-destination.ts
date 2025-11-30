@@ -1115,6 +1115,254 @@ export interface ActivitySuggestion {
   reason: string;
 }
 
+export interface DayPlannerMessage {
+  role: "assistant" | "user";
+  content: string;
+}
+
+export interface PlannedActivity {
+  id: string;
+  time: string;
+  activity: string;
+  duration: string;
+  category: "must-see" | "hidden-gem" | "food" | "outdoor" | "cultural" | "relaxation" | "transport";
+  notes?: string;
+}
+
+export interface DayPlannerRequest {
+  cityName: string;
+  countryName: string;
+  dayNumber: number;
+  dayInCity: number;
+  totalDaysInCity: number;
+  isArrivalDay: boolean;
+  isDepartureDay: boolean;
+  existingActivities: string[];
+  numberOfTravelers: number;
+  tripType: "international" | "domestic" | "staycation";
+  quizPreferences: {
+    tripGoal?: string;
+    placeType?: string;
+    dayPace?: string;
+    spendingPriority?: string;
+    travelersType?: string;
+    kidsAges?: string[];
+    accommodationType?: string;
+    mustHave?: string;
+  };
+  conversationHistory: DayPlannerMessage[];
+  userMessage?: string;
+  currentPlan?: PlannedActivity[];
+}
+
+export interface DayPlannerResponse {
+  message: string;
+  suggestedPlan?: PlannedActivity[];
+  needsMoreInfo: boolean;
+  followUpQuestion?: string;
+  isComplete: boolean;
+}
+
+export async function planDayWithAI(request: DayPlannerRequest): Promise<DayPlannerResponse> {
+  const sanitizedCity = sanitizeInput(request.cityName);
+  const sanitizedCountry = sanitizeInput(request.countryName);
+
+  const dayContext = request.isArrivalDay 
+    ? "This is an ARRIVAL day - the traveler will be arriving and may have jet lag or travel fatigue. Plan accordingly with lighter afternoon/evening activities."
+    : request.isDepartureDay 
+    ? "This is a DEPARTURE day - the traveler needs to leave for the airport/station. Plan morning activities only and ensure time for checkout and travel."
+    : `This is a full day (day ${request.dayInCity} of ${request.totalDaysInCity}) in the city with no travel constraints.`;
+
+  const preferencesContext = buildPreferencesContext(request.quizPreferences);
+  
+  const existingList = request.existingActivities.length > 0 
+    ? `Already planned activities for this day: ${request.existingActivities.join(", ")}`
+    : "No activities planned yet for this day.";
+
+  const currentPlanContext = request.currentPlan && request.currentPlan.length > 0
+    ? `Current day plan being built:\n${request.currentPlan.map(a => `- ${a.time}: ${a.activity} (${a.duration})`).join("\n")}`
+    : "No activities added to the plan yet.";
+
+  const systemPrompt = `You are Pebbles, a friendly and knowledgeable travel planning assistant helping families plan memorable, debt-free trips. You're helping plan Day ${request.dayNumber} in ${sanitizedCity}, ${sanitizedCountry}.
+
+CONTEXT:
+- ${request.numberOfTravelers} traveler(s)
+- Trip type: ${request.tripType}
+- ${dayContext}
+- ${preferencesContext}
+- ${existingList}
+- ${currentPlanContext}
+
+CRITICAL RULES:
+- NEVER use emojis in any response. Use descriptive words instead.
+- You MUST incorporate ALL traveler preferences listed above into your suggestions.
+- Every activity suggestion must align with the traveler's stated trip goal, pace preference, and spending priorities.
+
+YOUR ROLE:
+1. Help create a complete, realistic day itinerary with specific times, activities, and durations
+2. Ask clarifying questions when needed (max 1-2 questions at a time) to personalize the plan
+3. Consider logistics like travel time between locations, meal times, and energy levels
+4. Be warm, encouraging, and family-friendly in tone
+5. Focus on creating memorable experiences within budget
+6. ALWAYS reference and use the traveler preferences when making suggestions
+
+GOOD QUESTIONS TO ASK (if not already answered):
+- What time do they typically wake up / want to start the day?
+- Are there any must-see attractions for this day?
+- Do they prefer sit-down restaurants or quick bites?
+- Any dietary restrictions or food preferences?
+- How much walking/physical activity is comfortable?
+- Any specific interests (art, history, nature, food, shopping)?
+
+RESPONSE FORMAT:
+Return JSON with this structure:
+{
+  "message": "Your friendly response to the user (NO emojis allowed)",
+  "suggestedPlan": [
+    {
+      "id": "unique-id",
+      "time": "9:00 AM",
+      "activity": "Activity name and brief description",
+      "duration": "2 hours",
+      "category": "must-see|hidden-gem|food|outdoor|cultural|relaxation|transport",
+      "notes": "Optional tips or details"
+    }
+  ],
+  "needsMoreInfo": true/false,
+  "followUpQuestion": "Optional question if you need more information",
+  "isComplete": true/false (true when the day plan is finalized)
+}
+
+GUIDELINES:
+- If this is the first message, introduce yourself briefly and ask 1-2 key questions to personalize the plan
+- After gathering enough info, suggest a complete day plan with 4-8 activities
+- Include meal times (breakfast, lunch, dinner if applicable)
+- Add realistic time buffers for transport between locations
+- The plan should flow logically geographically to minimize travel
+- For arrival days: start activities in late afternoon
+- For departure days: morning activities only, end by checkout time
+- Reference specific traveler preferences (trip goal, pace, spending priorities) when explaining activity choices`;
+
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: systemPrompt },
+  ];
+
+  // Add conversation history
+  for (const msg of request.conversationHistory) {
+    messages.push({ role: msg.role, content: msg.content });
+  }
+
+  // Add current user message if provided
+  if (request.userMessage) {
+    messages.push({ role: "user", content: request.userMessage });
+  } else if (request.conversationHistory.length === 0) {
+    messages.push({ role: "user", content: `Please help me plan Day ${request.dayNumber} in ${sanitizedCity}. I'm excited to explore!` });
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    return {
+      message: parsed.message || "I'm here to help you plan your day!",
+      suggestedPlan: parsed.suggestedPlan || [],
+      needsMoreInfo: parsed.needsMoreInfo ?? false,
+      followUpQuestion: parsed.followUpQuestion,
+      isComplete: parsed.isComplete ?? false,
+    };
+  } catch (error) {
+    console.error("Error in day planner:", error);
+    throw new Error("Failed to get day planning assistance");
+  }
+}
+
+function buildPreferencesContext(prefs: DayPlannerRequest["quizPreferences"]): string {
+  const parts: string[] = [];
+  
+  if (prefs.tripGoal) {
+    const goalMap: Record<string, string> = {
+      rest: "seeking relaxation and peaceful experiences - prioritize spas, scenic viewpoints, leisurely strolls, and peaceful cafes",
+      culture: "interested in culture, history, and learning - include museums, historical sites, local traditions, and cultural experiences",
+      thrill: "looking for adventure and excitement - suggest active experiences, unique adventures, and energetic activities",
+      magic: "wanting magical, once-in-a-lifetime moments - focus on iconic experiences, bucket-list items, and unforgettable moments",
+    };
+    parts.push(`Trip goal: ${goalMap[prefs.tripGoal] || prefs.tripGoal}`);
+  }
+  
+  if (prefs.placeType) {
+    const placeMap: Record<string, string> = {
+      ocean: "loves beaches and ocean views - include waterfront activities, coastal walks, and ocean-related experiences",
+      mountains: "drawn to mountains and nature - prioritize hiking, scenic overlooks, and outdoor activities",
+      ancientCities: "fascinated by historic places - focus on old town areas, historical landmarks, and heritage sites",
+      modernSkyline: "enjoys modern urban environments - include observation decks, contemporary architecture, and city experiences",
+    };
+    parts.push(`Environment preference: ${placeMap[prefs.placeType] || prefs.placeType}`);
+  }
+  
+  if (prefs.dayPace) {
+    const paceMap: Record<string, string> = {
+      relaxed: "prefers a RELAXED pace - plan only 3-4 activities with long breaks, late starts, and extended meal times",
+      balanced: "likes a BALANCED mix - plan 5-6 activities with reasonable breaks between each",
+      packed: "wants a PACKED schedule - plan 7-8 activities to maximize the day, shorter breaks",
+    };
+    parts.push(`Day pace: ${paceMap[prefs.dayPace] || prefs.dayPace}`);
+  }
+  
+  if (prefs.spendingPriority) {
+    const spendMap: Record<string, string> = {
+      food: "prioritizes food experiences - include excellent restaurants, food tours, local specialties, and culinary highlights",
+      experiences: "values unique experiences - focus on tours, activities, and memorable excursions over dining",
+      comfort: "values comfort - suggest quality venues, comfortable transport options, and premium experiences",
+      souvenirs: "enjoys shopping and souvenirs - include markets, artisan shops, and local shopping areas",
+    };
+    parts.push(`Spending priority: ${spendMap[prefs.spendingPriority] || prefs.spendingPriority}`);
+  }
+  
+  if (prefs.travelersType) {
+    const travelersMap: Record<string, string> = {
+      solo: "traveling solo - suggest safe, social-friendly activities",
+      couple: "traveling as a couple - include romantic spots and couple-friendly experiences",
+      "family-young": "traveling with young kids - ALL activities must be kid-friendly with age-appropriate options",
+      "family-teens": "traveling with teenagers - include activities that appeal to teens",
+      friends: "traveling with friends - suggest group-friendly and social activities",
+      multigenerational: "multigenerational family trip - balance activities for all age groups",
+    };
+    parts.push(`Traveler type: ${travelersMap[prefs.travelersType] || prefs.travelersType}`);
+  }
+  
+  if (prefs.kidsAges && prefs.kidsAges.length > 0) {
+    const ageGroups = prefs.kidsAges.map(age => {
+      if (age === "0-2") return "infant/toddler (0-2 years) - need stroller-friendly venues, nap time consideration";
+      if (age === "3-5") return "preschooler (3-5 years) - short attention spans, need playgrounds and interactive activities";
+      if (age === "6-9") return "elementary age (6-9 years) - can handle longer activities, enjoy hands-on experiences";
+      if (age === "10-12") return "preteen (10-12 years) - interested in more complex activities and some independence";
+      if (age === "13-17") return "teenager (13-17 years) - want cool experiences, may prefer more freedom";
+      return age;
+    });
+    parts.push(`Children traveling: ${ageGroups.join("; ")} - CRITICAL: Every activity must accommodate these age groups`);
+  }
+  
+  if (prefs.mustHave) {
+    parts.push(`MUST-HAVE experience (prioritize this): ${prefs.mustHave}`);
+  }
+  
+  if (prefs.accommodationType) {
+    parts.push(`Accommodation preference: ${prefs.accommodationType}`);
+  }
+  
+  return parts.length > 0 ? `TRAVELER PREFERENCES (you MUST incorporate ALL of these into your plan):\n- ${parts.join("\n- ")}` : "No specific preferences provided.";
+}
+
 export async function getActivitySuggestions(request: ActivitySuggestionRequest): Promise<ActivitySuggestion[]> {
   const sanitizedCity = sanitizeInput(request.cityName);
   const sanitizedCountry = sanitizeInput(request.countryName);

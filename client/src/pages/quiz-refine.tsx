@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Loader2, 
@@ -33,13 +32,7 @@ import {
   X,
   Users,
   GripVertical,
-  Clock,
-  Wand2,
-  Star,
-  Gem,
-  Leaf,
-  Palette,
-  Coffee
+  Clock
 } from "lucide-react";
 import type {
   ItineraryRecommendation,
@@ -51,6 +44,7 @@ import type {
 } from "@shared/schema";
 import { NavBar } from "@/components/NavBar";
 import { ProgressStepper } from "@/components/ProgressStepper";
+import AIDayPlanner from "@/components/AIDayPlanner";
 
 interface DayPlan {
   dayNumber: number;
@@ -62,30 +56,6 @@ interface DayPlan {
   activities: string[];
 }
 
-interface ActivitySuggestion {
-  activity: string;
-  category: "must-see" | "hidden-gem" | "food" | "outdoor" | "cultural" | "relaxation";
-  reason: string;
-}
-
-function getCategoryIcon(category: ActivitySuggestion["category"]) {
-  switch (category) {
-    case "must-see":
-      return <Star className="w-3.5 h-3.5 text-yellow-500" />;
-    case "hidden-gem":
-      return <Gem className="w-3.5 h-3.5 text-purple-500" />;
-    case "food":
-      return <Coffee className="w-3.5 h-3.5 text-orange-500" />;
-    case "outdoor":
-      return <Leaf className="w-3.5 h-3.5 text-green-500" />;
-    case "cultural":
-      return <Palette className="w-3.5 h-3.5 text-blue-500" />;
-    case "relaxation":
-      return <Sunset className="w-3.5 h-3.5 text-pink-500" />;
-    default:
-      return <Star className="w-3.5 h-3.5 text-primary" />;
-  }
-}
 
 function getActivityIcon(activity: string) {
   const lowerActivity = activity.toLowerCase();
@@ -248,70 +218,23 @@ export default function QuizRefine() {
   const [tempCity, setTempCity] = useState({ cityName: "", countryName: "", nights: 1 });
   const [tempActivity, setTempActivity] = useState("");
 
-  // AI Suggestions state
-  const [aiSuggestionsDay, setAiSuggestionsDay] = useState<number | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<ActivitySuggestion[]>([]);
-  const [aiSuggestionsOpen, setAiSuggestionsOpen] = useState(false);
+  // AI Day Planner state
+  const [dayPlannerOpen, setDayPlannerOpen] = useState(false);
+  const [dayPlannerDay, setDayPlannerDay] = useState<DayPlan | null>(null);
 
-  // AI Suggestions mutation
-  const aiSuggestionsMutation = useMutation({
-    mutationFn: async (params: {
-      cityName: string;
-      countryName: string;
-      dayNumber: number;
-      dayInCity: number;
-      totalDaysInCity: number;
-      isArrivalDay: boolean;
-      isDepartureDay: boolean;
-      existingActivities: string[];
-    }) => {
-      const tripType = sessionStorage.getItem("quizTripType") || "international";
-      const response = await apiRequest("POST", "/api/ai/activity-suggestions", {
-        ...params,
-        numberOfTravelers,
-        tripType: tripType as "international" | "domestic" | "staycation",
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setAiSuggestions(data.suggestions || []);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to get suggestions",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleGetAiSuggestions = (day: DayPlan) => {
-    setAiSuggestionsDay(day.dayNumber);
-    setAiSuggestions([]);
-    setAiSuggestionsOpen(true);
-    aiSuggestionsMutation.mutate({
-      cityName: day.city.cityName,
-      countryName: day.city.countryName,
-      dayNumber: day.dayNumber,
-      dayInCity: day.dayInCity,
-      totalDaysInCity: day.totalDaysInCity,
-      isArrivalDay: day.isArrivalDay,
-      isDepartureDay: day.isDepartureDay,
-      existingActivities: day.activities,
-    });
+  const handleOpenDayPlanner = (day: DayPlan) => {
+    setDayPlannerDay(day);
+    setDayPlannerOpen(true);
   };
 
-  const handleAddSuggestedActivity = (activity: string, dayNumber: number) => {
+  const handleConfirmDayPlan = (activities: string[]) => {
+    if (!dayPlannerDay) return;
     setDayPlans(prev => prev.map(day => {
-      if (day.dayNumber === dayNumber) {
-        return { ...day, activities: [...day.activities, activity] };
+      if (day.dayNumber === dayPlannerDay.dayNumber) {
+        return { ...day, activities };
       }
       return day;
     }));
-    toast({
-      title: "Activity added",
-      description: activity,
-    });
   };
 
   // Update handlers
@@ -1028,98 +951,16 @@ export default function QuizRefine() {
                             Recommended Activities:
                           </h5>
                           <div className="flex items-center gap-1">
-                            <Popover 
-                              open={aiSuggestionsOpen && aiSuggestionsDay === day.dayNumber}
-                              onOpenChange={(open) => {
-                                if (!open) {
-                                  setAiSuggestionsOpen(false);
-                                  setAiSuggestionsDay(null);
-                                }
-                              }}
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleOpenDayPlanner(day)}
+                              data-testid={`button-plan-day-${day.dayNumber}`}
                             >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  onClick={() => handleGetAiSuggestions(day)}
-                                  disabled={aiSuggestionsMutation.isPending}
-                                  data-testid={`button-ai-suggest-day-${day.dayNumber}`}
-                                >
-                                  {aiSuggestionsMutation.isPending && aiSuggestionsDay === day.dayNumber ? (
-                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                  ) : (
-                                    <Wand2 className="w-3 h-3 mr-1" />
-                                  )}
-                                  AI Suggest
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-80 p-0" align="end">
-                                <div className="p-3 border-b">
-                                  <div className="flex items-center gap-2 font-medium text-sm">
-                                    <Sparkles className="w-4 h-4 text-primary" />
-                                    Activity Suggestions for Day {day.dayNumber}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Click any suggestion to add it to your itinerary
-                                  </p>
-                                </div>
-                                <div className="max-h-72 overflow-y-auto">
-                                  {aiSuggestionsMutation.isPending && aiSuggestionsDay === day.dayNumber ? (
-                                    <div className="flex items-center justify-center py-8">
-                                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                                      <span className="ml-2 text-sm text-muted-foreground">Getting suggestions...</span>
-                                    </div>
-                                  ) : aiSuggestions.length > 0 ? (
-                                    <div className="p-2 space-y-1">
-                                      {aiSuggestions.map((suggestion, idx) => (
-                                        <button
-                                          key={idx}
-                                          className="w-full text-left p-2 rounded-md hover-elevate transition-colors"
-                                          onClick={() => {
-                                            handleAddSuggestedActivity(suggestion.activity, day.dayNumber);
-                                          }}
-                                          data-testid={`button-add-suggestion-${day.dayNumber}-${idx}`}
-                                        >
-                                          <div className="flex items-start gap-2">
-                                            {getCategoryIcon(suggestion.category)}
-                                            <div className="flex-1 min-w-0">
-                                              <p className="text-sm font-medium truncate">{suggestion.activity}</p>
-                                              <div className="flex items-center gap-2 mt-0.5">
-                                                <Badge variant="secondary" className="text-xs capitalize">
-                                                  {suggestion.category.replace("-", " ")}
-                                                </Badge>
-                                              </div>
-                                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                                {suggestion.reason}
-                                              </p>
-                                            </div>
-                                            <Plus className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                          </div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="py-8 text-center text-sm text-muted-foreground">
-                                      No suggestions available
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="p-2 border-t">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="w-full h-7 text-xs"
-                                    onClick={() => handleGetAiSuggestions(day)}
-                                    disabled={aiSuggestionsMutation.isPending}
-                                    data-testid={`button-refresh-suggestions-day-${day.dayNumber}`}
-                                  >
-                                    <Sparkles className="w-3 h-3 mr-1" />
-                                    Get New Suggestions
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Plan My Day
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1417,6 +1258,34 @@ export default function QuizRefine() {
         </div>
       </div>
       </div>
+
+      {dayPlannerDay && (
+        <AIDayPlanner
+          open={dayPlannerOpen}
+          onOpenChange={setDayPlannerOpen}
+          cityName={dayPlannerDay.city.cityName}
+          countryName={dayPlannerDay.city.countryName}
+          dayNumber={dayPlannerDay.dayNumber}
+          dayInCity={dayPlannerDay.dayInCity}
+          totalDaysInCity={dayPlannerDay.totalDaysInCity}
+          isArrivalDay={dayPlannerDay.isArrivalDay}
+          isDepartureDay={dayPlannerDay.isDepartureDay}
+          existingActivities={dayPlannerDay.activities}
+          numberOfTravelers={numberOfTravelers}
+          tripType={tripType as "international" | "domestic" | "staycation"}
+          quizPreferences={{
+            tripGoal: quizData?.tripGoal,
+            placeType: quizData?.placeType,
+            dayPace: quizData?.dayPace,
+            spendingPriority: quizData?.spendingPriority,
+            travelersType: quizData?.travelersType,
+            kidsAges: quizData?.kidsAges,
+            accommodationType: quizData?.accommodationType,
+            mustHave: quizData?.mustHave,
+          }}
+          onConfirmPlan={handleConfirmDayPlan}
+        />
+      )}
     </div>
   );
 }

@@ -28,7 +28,9 @@ import {
   generateItineraryAddons,
   applyAddon,
   getActivitySuggestions,
-  type ActivitySuggestionRequest
+  planDayWithAI,
+  type ActivitySuggestionRequest,
+  type DayPlannerRequest
 } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
@@ -759,6 +761,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI activity suggestion error:", error);
         res.status(500).json({ error: "Failed to get activity suggestions" });
+      }
+    }
+  });
+
+  const dayPlannerRequestSchema = z.object({
+    cityName: z.string(),
+    countryName: z.string(),
+    dayNumber: z.number(),
+    dayInCity: z.number(),
+    totalDaysInCity: z.number(),
+    isArrivalDay: z.boolean(),
+    isDepartureDay: z.boolean(),
+    existingActivities: z.array(z.string()),
+    numberOfTravelers: z.number(),
+    tripType: z.enum(["international", "domestic", "staycation"]),
+    quizPreferences: z.object({
+      tripGoal: z.string().optional(),
+      placeType: z.string().optional(),
+      dayPace: z.string().optional(),
+      spendingPriority: z.string().optional(),
+      travelersType: z.string().optional(),
+      kidsAges: z.array(z.string()).optional(),
+      accommodationType: z.string().optional(),
+      mustHave: z.string().optional(),
+    }),
+    conversationHistory: z.array(z.object({
+      role: z.enum(["assistant", "user"]),
+      content: z.string(),
+    })),
+    userMessage: z.string().optional(),
+    currentPlan: z.array(z.object({
+      id: z.string(),
+      time: z.string(),
+      activity: z.string(),
+      duration: z.string(),
+      category: z.enum(["must-see", "hidden-gem", "food", "outdoor", "cultural", "relaxation", "transport"]),
+      notes: z.string().optional(),
+    })).optional(),
+  });
+
+  app.post("/api/ai/day-planner", isAuthenticated, async (req, res) => {
+    try {
+      const request = dayPlannerRequestSchema.parse(req.body);
+      const response = await planDayWithAI(request as DayPlannerRequest);
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid day planner request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI day planning service is not configured" });
+      } else {
+        console.error("AI day planner error:", error);
+        res.status(500).json({ error: "Failed to get day planning assistance" });
       }
     }
   });
