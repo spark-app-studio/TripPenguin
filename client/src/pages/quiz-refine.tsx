@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -43,6 +43,8 @@ import type {
   ItineraryAddonsRequest,
   ApplyAddonRequest,
   QuizResponse,
+  InsertTrip,
+  Trip,
 } from "@shared/schema";
 
 type TripType = "international" | "domestic" | "staycation";
@@ -637,10 +639,22 @@ export default function QuizRefine() {
     },
   });
 
+  // Create trip mutation for finalizing itinerary
+  const createTripMutation = useMutation({
+    mutationFn: async (data: InsertTrip) => {
+      const response = await apiRequest("POST", "/api/trips", data);
+      return response.json() as Promise<Trip>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+    },
+  });
+
   const isBusy =
     adjustDurationMutation.isPending ||
     fetchAddonsMutation.isPending ||
-    applyAddonMutation.isPending;
+    applyAddonMutation.isPending ||
+    createTripMutation.isPending;
 
   const handleDeleteCity = (cityOrder: number) => {
     if (!currentItinerary) return;
@@ -699,12 +713,11 @@ export default function QuizRefine() {
     });
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (!currentItinerary) return;
     
     // Sync dayPlans activities back to the itinerary cities
     const syncedCities = currentItinerary.cities.map(city => {
-      // Collect all activities for this city from dayPlans
       const cityActivities: string[] = [];
       dayPlans.forEach(day => {
         if (day.city.order === city.order) {
@@ -714,12 +727,58 @@ export default function QuizRefine() {
       return { ...city, activities: cityActivities.length > 0 ? cityActivities : city.activities };
     });
     
-    const syncedItinerary = { ...currentItinerary, cities: syncedCities };
-    
-    sessionStorage.setItem("selectedItinerary", JSON.stringify(syncedItinerary));
-    sessionStorage.setItem("quizNumberOfTravelers", String(numberOfTravelers));
-    sessionStorage.setItem("tripSource", "quiz");
-    setLocation("/trip/new");
+    try {
+      // Get travel season from quiz data or default
+      const travelSeason = quizData?.travelSeason || "summer";
+      
+      // Create trip in database
+      const tripPayload: InsertTrip = {
+        title: currentItinerary.title,
+        travelers: numberOfTravelers > 1 ? "family_friends" : "just_me",
+        numberOfTravelers,
+        travelSeason,
+        tripDuration: currentItinerary.totalNights,
+      };
+      
+      const newTrip = await createTripMutation.mutateAsync(tripPayload);
+      
+      // Create destinations for the trip
+      for (let i = 0; i < syncedCities.length; i++) {
+        const city = syncedCities[i];
+        await apiRequest("POST", "/api/destinations", {
+          tripId: newTrip.id,
+          cityName: city.cityName,
+          countryName: city.countryName,
+          numberOfNights: city.stayLengthNights,
+          imageUrl: "",
+          order: i,
+          arrivalAirport: city.arrivalAirport,
+          departureAirport: city.departureAirport,
+          activities: city.activities || [],
+        });
+      }
+      
+      // Store synced itinerary in session for step 2 to use
+      const syncedItinerary = { ...currentItinerary, cities: syncedCities };
+      sessionStorage.setItem("selectedItinerary", JSON.stringify(syncedItinerary));
+      sessionStorage.setItem("quizNumberOfTravelers", String(numberOfTravelers));
+      sessionStorage.setItem("tripSource", "quiz");
+      
+      toast({
+        title: "Itinerary saved",
+        description: "Your trip has been created. Now let's plan your budget!",
+      });
+      
+      // Navigate to step 2 (Save & Book) with the new trip
+      setLocation(`/trip/${newTrip.id}`);
+    } catch (error) {
+      console.error("Failed to save itinerary:", error);
+      toast({
+        title: "Failed to save itinerary",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!currentItinerary) {
@@ -1458,7 +1517,14 @@ export default function QuizRefine() {
             Back to Results
           </Button>
           <Button onClick={handleFinalize} disabled={isBusy} data-testid="button-finalize">
-            Finalize & Plan Trip
+            {createTripMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Finalize Itinerary"
+            )}
           </Button>
         </div>
       </div>
