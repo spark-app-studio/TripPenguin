@@ -226,13 +226,16 @@ export default function QuizRefine() {
   const [desiredNights, setDesiredNights] = useState<number>(7);
   const [addons, setAddons] = useState<ItineraryAddon[]>([]);
   const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
+  
+  // Day plans state - stores activities per day directly
+  const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
 
   // Editing state
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingTagline, setEditingTagline] = useState(false);
   const [editingTravelers, setEditingTravelers] = useState(false);
   const [editingCity, setEditingCity] = useState<number | null>(null);
-  const [editingActivity, setEditingActivity] = useState<{ cityOrder: number; activityIndex: number } | null>(null);
+  const [editingActivity, setEditingActivity] = useState<{ dayNumber: number; activityIndex: number } | null>(null);
   const [newActivityDay, setNewActivityDay] = useState<number | null>(null);
   const [newActivityText, setNewActivityText] = useState("");
   const [addingCity, setAddingCity] = useState(false);
@@ -298,17 +301,13 @@ export default function QuizRefine() {
     });
   };
 
-  const handleAddSuggestedActivity = (activity: string, cityOrder: number) => {
-    if (!currentItinerary) return;
-
-    const updatedCities = currentItinerary.cities.map(city => {
-      if (city.order === cityOrder) {
-        return { ...city, activities: [...city.activities, activity] };
+  const handleAddSuggestedActivity = (activity: string, dayNumber: number) => {
+    setDayPlans(prev => prev.map(day => {
+      if (day.dayNumber === dayNumber) {
+        return { ...day, activities: [...day.activities, activity] };
       }
-      return city;
-    });
-
-    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+      return day;
+    }));
     toast({
       title: "Activity added",
       description: activity,
@@ -360,50 +359,42 @@ export default function QuizRefine() {
     setEditingCity(null);
   };
 
-  const handleUpdateActivity = (cityOrder: number, activityIndex: number) => {
-    if (!currentItinerary || !tempActivity.trim()) return;
+  const handleUpdateActivity = (dayNumber: number, activityIndex: number) => {
+    if (!tempActivity.trim()) return;
 
-    const updatedCities = currentItinerary.cities.map(city => {
-      if (city.order === cityOrder) {
-        const updatedActivities = [...city.activities];
+    setDayPlans(prev => prev.map(day => {
+      if (day.dayNumber === dayNumber) {
+        const updatedActivities = [...day.activities];
         updatedActivities[activityIndex] = tempActivity.trim();
-        return { ...city, activities: updatedActivities };
+        return { ...day, activities: updatedActivities };
       }
-      return city;
-    });
-
-    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+      return day;
+    }));
     setEditingActivity(null);
   };
 
-  const handleDeleteActivity = (cityOrder: number, activityIndex: number) => {
-    if (!currentItinerary) return;
-
-    const updatedCities = currentItinerary.cities.map(city => {
-      if (city.order === cityOrder) {
-        const updatedActivities = city.activities.filter((_, idx) => idx !== activityIndex);
+  const handleDeleteActivity = (dayNumber: number, activityIndex: number) => {
+    setDayPlans(prev => prev.map(day => {
+      if (day.dayNumber === dayNumber) {
+        const updatedActivities = day.activities.filter((_, idx) => idx !== activityIndex);
         if (updatedActivities.length === 0) {
-          updatedActivities.push(`Explore ${city.cityName} at your leisure`);
+          updatedActivities.push(`Free time to explore ${day.city.cityName}`);
         }
-        return { ...city, activities: updatedActivities };
+        return { ...day, activities: updatedActivities };
       }
-      return city;
-    });
-
-    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+      return day;
+    }));
   };
 
-  const handleAddActivity = (cityOrder: number) => {
-    if (!currentItinerary || !newActivityText.trim()) return;
+  const handleAddActivity = (dayNumber: number) => {
+    if (!newActivityText.trim()) return;
 
-    const updatedCities = currentItinerary.cities.map(city => {
-      if (city.order === cityOrder) {
-        return { ...city, activities: [...city.activities, newActivityText.trim()] };
+    setDayPlans(prev => prev.map(day => {
+      if (day.dayNumber === dayNumber) {
+        return { ...day, activities: [...day.activities, newActivityText.trim()] };
       }
-      return city;
-    });
-
-    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+      return day;
+    }));
     setNewActivityDay(null);
     setNewActivityText("");
   };
@@ -454,6 +445,10 @@ export default function QuizRefine() {
       setCurrentItinerary(itinerary);
       setNumberOfTravelers(travelers);
       setDesiredNights(itinerary.totalNights);
+      
+      // Initialize day plans from the itinerary
+      const initialDayPlans = generateDayByDayPlan(itinerary);
+      setDayPlans(initialDayPlans);
     } catch (error) {
       console.error("Failed to load itinerary:", error);
       toast({
@@ -464,6 +459,18 @@ export default function QuizRefine() {
       setLocation("/quiz");
     }
   }, [setLocation, toast]);
+  
+  // Regenerate day plans when cities change (e.g., add/edit/delete city)
+  useEffect(() => {
+    if (currentItinerary && dayPlans.length > 0) {
+      // Check if cities structure changed (different number of cities or nights)
+      const currentTotalNights = dayPlans.reduce((_, day) => Math.max(_, day.dayNumber), 0);
+      if (currentTotalNights !== currentItinerary.totalNights) {
+        const newDayPlans = generateDayByDayPlan(currentItinerary);
+        setDayPlans(newDayPlans);
+      }
+    }
+  }, [currentItinerary?.totalNights, currentItinerary?.cities.length]);
 
   const adjustDurationMutation = useMutation({
     mutationFn: async (request: AdjustItineraryDurationRequest) => {
@@ -601,7 +608,22 @@ export default function QuizRefine() {
 
   const handleFinalize = () => {
     if (!currentItinerary) return;
-    sessionStorage.setItem("selectedItinerary", JSON.stringify(currentItinerary));
+    
+    // Sync dayPlans activities back to the itinerary cities
+    const syncedCities = currentItinerary.cities.map(city => {
+      // Collect all activities for this city from dayPlans
+      const cityActivities: string[] = [];
+      dayPlans.forEach(day => {
+        if (day.city.order === city.order) {
+          cityActivities.push(...day.activities);
+        }
+      });
+      return { ...city, activities: cityActivities.length > 0 ? cityActivities : city.activities };
+    });
+    
+    const syncedItinerary = { ...currentItinerary, cities: syncedCities };
+    
+    sessionStorage.setItem("selectedItinerary", JSON.stringify(syncedItinerary));
     sessionStorage.setItem("quizNumberOfTravelers", String(numberOfTravelers));
     sessionStorage.setItem("tripSource", "quiz");
     setLocation("/trip/new");
@@ -938,7 +960,6 @@ export default function QuizRefine() {
           </CardHeader>
           <CardContent className="space-y-4">
             {(() => {
-              const dayPlans = generateDayByDayPlan(currentItinerary);
               let currentCityOrder = 0;
 
               return dayPlans.map((day, index) => {
@@ -1056,7 +1077,7 @@ export default function QuizRefine() {
                                           key={idx}
                                           className="w-full text-left p-2 rounded-md hover-elevate transition-colors"
                                           onClick={() => {
-                                            handleAddSuggestedActivity(suggestion.activity, day.city.order);
+                                            handleAddSuggestedActivity(suggestion.activity, day.dayNumber);
                                           }}
                                           data-testid={`button-add-suggestion-${day.dayNumber}-${idx}`}
                                         >
@@ -1129,7 +1150,7 @@ export default function QuizRefine() {
                             <Button
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => handleAddActivity(day.city.order)}
+                              onClick={() => handleAddActivity(day.dayNumber)}
                               disabled={!newActivityText.trim()}
                               data-testid={`button-save-new-activity-day-${day.dayNumber}`}
                             >
@@ -1153,9 +1174,8 @@ export default function QuizRefine() {
                         <div className="grid gap-2">
                           {day.activities.length > 0 ? (
                             day.activities.map((activity, actIndex) => {
-                              const originalActivityIndex = day.city.activities.indexOf(activity);
-                              const isEditing = editingActivity?.cityOrder === day.city.order && 
-                                               editingActivity?.activityIndex === originalActivityIndex;
+                              const isEditing = editingActivity?.dayNumber === day.dayNumber && 
+                                               editingActivity?.activityIndex === actIndex;
 
                               return isEditing ? (
                                 <div
@@ -1173,7 +1193,7 @@ export default function QuizRefine() {
                                   <Button
                                     size="icon"
                                     className="h-7 w-7"
-                                    onClick={() => handleUpdateActivity(day.city.order, originalActivityIndex)}
+                                    onClick={() => handleUpdateActivity(day.dayNumber, actIndex)}
                                     data-testid={`button-save-activity-${day.dayNumber}-${actIndex}`}
                                   >
                                     <Check className="w-3 h-3" />
@@ -1200,8 +1220,8 @@ export default function QuizRefine() {
                                     onClick={() => {
                                       setTempActivity(activity);
                                       setEditingActivity({
-                                        cityOrder: day.city.order,
-                                        activityIndex: originalActivityIndex,
+                                        dayNumber: day.dayNumber,
+                                        activityIndex: actIndex,
                                       });
                                     }}
                                     data-testid={`text-activity-${day.dayNumber}-${actIndex}`}
@@ -1216,8 +1236,8 @@ export default function QuizRefine() {
                                       onClick={() => {
                                         setTempActivity(activity);
                                         setEditingActivity({
-                                          cityOrder: day.city.order,
-                                          activityIndex: originalActivityIndex,
+                                          dayNumber: day.dayNumber,
+                                          activityIndex: actIndex,
                                         });
                                       }}
                                       data-testid={`button-edit-activity-${day.dayNumber}-${actIndex}`}
@@ -1228,7 +1248,7 @@ export default function QuizRefine() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-6 w-6 text-destructive hover:text-destructive"
-                                      onClick={() => handleDeleteActivity(day.city.order, originalActivityIndex)}
+                                      onClick={() => handleDeleteActivity(day.dayNumber, actIndex)}
                                       data-testid={`button-delete-activity-${day.dayNumber}-${actIndex}`}
                                     >
                                       <Trash2 className="w-3 h-3" />
