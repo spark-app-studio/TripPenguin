@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Loader2, 
@@ -23,7 +25,14 @@ import {
   Mountain,
   Building,
   Music,
-  ShoppingBag
+  ShoppingBag,
+  Pencil,
+  Plus,
+  Check,
+  X,
+  Users,
+  GripVertical,
+  Clock
 } from "lucide-react";
 import type {
   ItineraryRecommendation,
@@ -185,6 +194,142 @@ export default function QuizRefine() {
   const [desiredNights, setDesiredNights] = useState<number>(7);
   const [addons, setAddons] = useState<ItineraryAddon[]>([]);
   const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
+
+  // Editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingTagline, setEditingTagline] = useState(false);
+  const [editingTravelers, setEditingTravelers] = useState(false);
+  const [editingCity, setEditingCity] = useState<number | null>(null);
+  const [editingActivity, setEditingActivity] = useState<{ cityOrder: number; activityIndex: number } | null>(null);
+  const [newActivityCity, setNewActivityCity] = useState<number | null>(null);
+  const [newActivityText, setNewActivityText] = useState("");
+  const [addingCity, setAddingCity] = useState(false);
+  const [newCity, setNewCity] = useState({ cityName: "", countryName: "", nights: 2 });
+
+  // Temporary edit values
+  const [tempTitle, setTempTitle] = useState("");
+  const [tempTagline, setTempTagline] = useState("");
+  const [tempTravelers, setTempTravelers] = useState(1);
+  const [tempCity, setTempCity] = useState({ cityName: "", countryName: "", nights: 1 });
+  const [tempActivity, setTempActivity] = useState("");
+
+  // Update handlers
+  const handleUpdateTitle = () => {
+    if (!currentItinerary || !tempTitle.trim()) return;
+    setCurrentItinerary({ ...currentItinerary, title: tempTitle.trim() });
+    setEditingTitle(false);
+  };
+
+  const handleUpdateTagline = () => {
+    if (!currentItinerary || !tempTagline.trim()) return;
+    setCurrentItinerary({ ...currentItinerary, vibeTagline: tempTagline.trim() });
+    setEditingTagline(false);
+  };
+
+  const handleUpdateTravelers = () => {
+    if (tempTravelers < 1 || tempTravelers > 20) return;
+    setNumberOfTravelers(tempTravelers);
+    setEditingTravelers(false);
+  };
+
+  const handleUpdateCity = (cityOrder: number) => {
+    if (!currentItinerary || !tempCity.cityName.trim() || !tempCity.countryName.trim()) return;
+    
+    const updatedCities = currentItinerary.cities.map(city => {
+      if (city.order === cityOrder) {
+        return {
+          ...city,
+          cityName: tempCity.cityName.trim(),
+          countryName: tempCity.countryName.trim(),
+          stayLengthNights: Math.max(1, tempCity.nights),
+        };
+      }
+      return city;
+    });
+
+    const newTotalNights = updatedCities.reduce((sum, city) => sum + city.stayLengthNights, 0);
+    
+    setCurrentItinerary({
+      ...currentItinerary,
+      cities: updatedCities,
+      totalNights: newTotalNights,
+    });
+    setDesiredNights(newTotalNights);
+    setEditingCity(null);
+  };
+
+  const handleUpdateActivity = (cityOrder: number, activityIndex: number) => {
+    if (!currentItinerary || !tempActivity.trim()) return;
+
+    const updatedCities = currentItinerary.cities.map(city => {
+      if (city.order === cityOrder) {
+        const updatedActivities = [...city.activities];
+        updatedActivities[activityIndex] = tempActivity.trim();
+        return { ...city, activities: updatedActivities };
+      }
+      return city;
+    });
+
+    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+    setEditingActivity(null);
+  };
+
+  const handleDeleteActivity = (cityOrder: number, activityIndex: number) => {
+    if (!currentItinerary) return;
+
+    const updatedCities = currentItinerary.cities.map(city => {
+      if (city.order === cityOrder) {
+        const updatedActivities = city.activities.filter((_, idx) => idx !== activityIndex);
+        if (updatedActivities.length === 0) {
+          updatedActivities.push(`Explore ${city.cityName} at your leisure`);
+        }
+        return { ...city, activities: updatedActivities };
+      }
+      return city;
+    });
+
+    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+  };
+
+  const handleAddActivity = (cityOrder: number) => {
+    if (!currentItinerary || !newActivityText.trim()) return;
+
+    const updatedCities = currentItinerary.cities.map(city => {
+      if (city.order === cityOrder) {
+        return { ...city, activities: [...city.activities, newActivityText.trim()] };
+      }
+      return city;
+    });
+
+    setCurrentItinerary({ ...currentItinerary, cities: updatedCities });
+    setNewActivityCity(null);
+    setNewActivityText("");
+  };
+
+  const handleAddNewCity = () => {
+    if (!currentItinerary || !newCity.cityName.trim() || !newCity.countryName.trim()) return;
+
+    const newCitySegment: ItineraryCitySegment = {
+      order: currentItinerary.cities.length + 1,
+      cityName: newCity.cityName.trim(),
+      countryName: newCity.countryName.trim(),
+      stayLengthNights: Math.max(1, newCity.nights),
+      activities: [`Explore ${newCity.cityName.trim()}`, `Sample local cuisine in ${newCity.cityName.trim()}`],
+      imageQuery: `${newCity.cityName.trim()} ${newCity.countryName.trim()} travel`,
+    };
+
+    const updatedCities = [...currentItinerary.cities, newCitySegment];
+    const newTotalNights = updatedCities.reduce((sum, city) => sum + city.stayLengthNights, 0);
+
+    setCurrentItinerary({
+      ...currentItinerary,
+      cities: updatedCities,
+      totalNights: newTotalNights,
+    });
+    setDesiredNights(newTotalNights);
+    setAddingCity(false);
+    setNewCity({ cityName: "", countryName: "", nights: 2 });
+  };
 
   useEffect(() => {
     try {
@@ -389,8 +534,68 @@ export default function QuizRefine() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>{currentItinerary.title}</CardTitle>
-            <CardDescription>{currentItinerary.vibeTagline}</CardDescription>
+            {/* Editable Title */}
+            {editingTitle ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  className="text-xl font-semibold"
+                  placeholder="Trip title"
+                  autoFocus
+                  data-testid="input-edit-title"
+                />
+                <Button size="icon" onClick={handleUpdateTitle} data-testid="button-save-title">
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setEditingTitle(false)} data-testid="button-cancel-title">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <CardTitle 
+                className="flex items-center gap-2 cursor-pointer group"
+                onClick={() => {
+                  setTempTitle(currentItinerary.title);
+                  setEditingTitle(true);
+                }}
+                data-testid="text-trip-title"
+              >
+                {currentItinerary.title}
+                <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </CardTitle>
+            )}
+
+            {/* Editable Tagline */}
+            {editingTagline ? (
+              <div className="flex items-center gap-2 mt-2">
+                <Input
+                  value={tempTagline}
+                  onChange={(e) => setTempTagline(e.target.value)}
+                  className="text-sm"
+                  placeholder="Trip description"
+                  data-testid="input-edit-tagline"
+                />
+                <Button size="icon" onClick={handleUpdateTagline} data-testid="button-save-tagline">
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setEditingTagline(false)} data-testid="button-cancel-tagline">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <CardDescription 
+                className="flex items-center gap-2 cursor-pointer group"
+                onClick={() => {
+                  setTempTagline(currentItinerary.vibeTagline);
+                  setEditingTagline(true);
+                }}
+                data-testid="text-trip-tagline"
+              >
+                {currentItinerary.vibeTagline}
+                <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -398,10 +603,43 @@ export default function QuizRefine() {
                 <span className="text-muted-foreground">Total Nights:</span>{" "}
                 <span className="font-semibold">{currentItinerary.totalNights}</span>
               </div>
+              
+              {/* Editable Travelers */}
               <div>
                 <span className="text-muted-foreground">Travelers:</span>{" "}
-                <span className="font-semibold">{numberOfTravelers}</span>
+                {editingTravelers ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Input
+                      type="number"
+                      value={tempTravelers}
+                      onChange={(e) => setTempTravelers(parseInt(e.target.value) || 1)}
+                      className="w-16 h-7 text-sm"
+                      min={1}
+                      max={20}
+                      data-testid="input-edit-travelers"
+                    />
+                    <Button size="icon" className="h-6 w-6" onClick={handleUpdateTravelers} data-testid="button-save-travelers">
+                      <Check className="w-3 h-3" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingTravelers(false)} data-testid="button-cancel-travelers">
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </span>
+                ) : (
+                  <span 
+                    className="font-semibold cursor-pointer hover:text-primary inline-flex items-center gap-1 group"
+                    onClick={() => {
+                      setTempTravelers(numberOfTravelers);
+                      setEditingTravelers(true);
+                    }}
+                    data-testid="text-travelers"
+                  >
+                    {numberOfTravelers}
+                    <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                  </span>
+                )}
               </div>
+              
               <div>
                 <span className="text-muted-foreground">Cost Range:</span>{" "}
                 <span className="font-semibold">
@@ -415,35 +653,169 @@ export default function QuizRefine() {
               </div>
             </div>
 
-            {/* Cities Overview */}
+            {/* Cities Overview - Now Editable */}
             <div className="space-y-3 mt-6">
-              <h3 className="font-semibold flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Destinations ({currentItinerary.cities.length} cities)
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {currentItinerary.cities.map((city) => (
-                  <div
-                    key={city.order}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30"
-                    data-testid={`city-chip-${city.order}`}
-                  >
-                    <span className="font-medium text-sm">
-                      {city.cityName}, {city.countryName}
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {city.stayLengthNights} night{city.stayLengthNights !== 1 ? "s" : ""}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => handleDeleteCity(city.order)}
-                      disabled={currentItinerary.cities.length <= 1 || isBusy}
-                      data-testid={`button-delete-city-${city.order}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Destinations ({currentItinerary.cities.length} cities)
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddingCity(true)}
+                  disabled={addingCity}
+                  data-testid="button-add-city"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add City
+                </Button>
+              </div>
+
+              {/* Add New City Form */}
+              {addingCity && (
+                <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                  <h4 className="font-medium text-sm">Add New Destination</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder="City name"
+                      value={newCity.cityName}
+                      onChange={(e) => setNewCity({ ...newCity, cityName: e.target.value })}
+                      data-testid="input-new-city-name"
+                    />
+                    <Input
+                      placeholder="Country"
+                      value={newCity.countryName}
+                      onChange={(e) => setNewCity({ ...newCity, countryName: e.target.value })}
+                      data-testid="input-new-city-country"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Nights"
+                        value={newCity.nights}
+                        onChange={(e) => setNewCity({ ...newCity, nights: parseInt(e.target.value) || 1 })}
+                        min={1}
+                        max={14}
+                        className="w-20"
+                        data-testid="input-new-city-nights"
+                      />
+                      <span className="text-sm text-muted-foreground">nights</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddNewCity} data-testid="button-confirm-add-city">
+                      <Check className="w-4 h-4 mr-1" />
+                      Add
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => {
+                      setAddingCity(false);
+                      setNewCity({ cityName: "", countryName: "", nights: 2 });
+                    }} data-testid="button-cancel-add-city">
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* City Chips - Now Editable */}
+              <div className="space-y-2">
+                {currentItinerary.cities.map((city) => (
+                  <div key={city.order}>
+                    {editingCity === city.order ? (
+                      <div className="p-3 rounded-lg border bg-muted/30 space-y-2" data-testid={`city-edit-form-${city.order}`}>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Input
+                            placeholder="City name"
+                            value={tempCity.cityName}
+                            onChange={(e) => setTempCity({ ...tempCity, cityName: e.target.value })}
+                            data-testid={`input-city-name-${city.order}`}
+                          />
+                          <Input
+                            placeholder="Country"
+                            value={tempCity.countryName}
+                            onChange={(e) => setTempCity({ ...tempCity, countryName: e.target.value })}
+                            data-testid={`input-city-country-${city.order}`}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={tempCity.nights}
+                              onChange={(e) => setTempCity({ ...tempCity, nights: parseInt(e.target.value) || 1 })}
+                              min={1}
+                              max={14}
+                              className="w-20"
+                              data-testid={`input-city-nights-${city.order}`}
+                            />
+                            <span className="text-sm text-muted-foreground">nights</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleUpdateCity(city.order)} data-testid={`button-save-city-${city.order}`}>
+                            <Check className="w-4 h-4 mr-1" />
+                            Save
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingCity(null)} data-testid={`button-cancel-city-${city.order}`}>
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 hover-elevate"
+                        data-testid={`city-chip-${city.order}`}
+                      >
+                        <GripVertical className="w-4 h-4 text-muted-foreground" />
+                        <span 
+                          className="font-medium text-sm cursor-pointer hover:text-primary flex items-center gap-1 group"
+                          onClick={() => {
+                            setTempCity({
+                              cityName: city.cityName,
+                              countryName: city.countryName,
+                              nights: city.stayLengthNights,
+                            });
+                            setEditingCity(city.order);
+                          }}
+                          data-testid={`text-city-${city.order}`}
+                        >
+                          {city.cityName}, {city.countryName}
+                          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {city.stayLengthNights} night{city.stayLengthNights !== 1 ? "s" : ""}
+                        </Badge>
+                        <div className="ml-auto flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setTempCity({
+                                cityName: city.cityName,
+                                countryName: city.countryName,
+                                nights: city.stayLengthNights,
+                              });
+                              setEditingCity(city.order);
+                            }}
+                            data-testid={`button-edit-city-${city.order}`}
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteCity(city.order)}
+                            disabled={currentItinerary.cities.length <= 1 || isBusy}
+                            data-testid={`button-delete-city-${city.order}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -526,23 +898,149 @@ export default function QuizRefine() {
                         </div>
                       </div>
 
-                      {/* Activities for this day */}
+                      {/* Activities for this day - Now Editable */}
                       <div className="ml-13 space-y-2">
-                        <h5 className="text-sm font-medium text-muted-foreground mb-2">
-                          Recommended Activities:
-                        </h5>
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-sm font-medium text-muted-foreground">
+                            Recommended Activities:
+                          </h5>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              setNewActivityCity(day.city.order);
+                              setNewActivityText("");
+                            }}
+                            data-testid={`button-add-activity-day-${day.dayNumber}`}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Activity
+                          </Button>
+                        </div>
+
+                        {/* Add Activity Form */}
+                        {newActivityCity === day.city.order && (
+                          <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 mb-2">
+                            <Input
+                              placeholder="Enter new activity..."
+                              value={newActivityText}
+                              onChange={(e) => setNewActivityText(e.target.value)}
+                              className="flex-1 h-8 text-sm"
+                              autoFocus
+                              data-testid={`input-new-activity-${day.city.order}`}
+                            />
+                            <Button
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleAddActivity(day.city.order)}
+                              disabled={!newActivityText.trim()}
+                              data-testid={`button-save-new-activity-${day.city.order}`}
+                            >
+                              <Check className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                setNewActivityCity(null);
+                                setNewActivityText("");
+                              }}
+                              data-testid={`button-cancel-new-activity-${day.city.order}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+
                         <div className="grid gap-2">
                           {day.activities.length > 0 ? (
-                            day.activities.map((activity, actIndex) => (
-                              <div
-                                key={actIndex}
-                                className="flex items-start gap-3 p-3 rounded-md bg-muted/30"
-                                data-testid={`day-${day.dayNumber}-activity-${actIndex}`}
-                              >
-                                {getActivityIcon(activity)}
-                                <span className="text-sm">{activity}</span>
-                              </div>
-                            ))
+                            day.activities.map((activity, actIndex) => {
+                              const originalActivityIndex = day.city.activities.indexOf(activity);
+                              const isEditing = editingActivity?.cityOrder === day.city.order && 
+                                               editingActivity?.activityIndex === originalActivityIndex;
+
+                              return isEditing ? (
+                                <div
+                                  key={actIndex}
+                                  className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
+                                  data-testid={`day-${day.dayNumber}-activity-edit-${actIndex}`}
+                                >
+                                  <Input
+                                    value={tempActivity}
+                                    onChange={(e) => setTempActivity(e.target.value)}
+                                    className="flex-1 h-8 text-sm"
+                                    autoFocus
+                                    data-testid={`input-edit-activity-${day.dayNumber}-${actIndex}`}
+                                  />
+                                  <Button
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleUpdateActivity(day.city.order, originalActivityIndex)}
+                                    data-testid={`button-save-activity-${day.dayNumber}-${actIndex}`}
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    onClick={() => setEditingActivity(null)}
+                                    data-testid={`button-cancel-activity-${day.dayNumber}-${actIndex}`}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div
+                                  key={actIndex}
+                                  className="flex items-start gap-3 p-3 rounded-md bg-muted/30 group hover-elevate"
+                                  data-testid={`day-${day.dayNumber}-activity-${actIndex}`}
+                                >
+                                  {getActivityIcon(activity)}
+                                  <span 
+                                    className="text-sm flex-1 cursor-pointer"
+                                    onClick={() => {
+                                      setTempActivity(activity);
+                                      setEditingActivity({
+                                        cityOrder: day.city.order,
+                                        activityIndex: originalActivityIndex,
+                                      });
+                                    }}
+                                    data-testid={`text-activity-${day.dayNumber}-${actIndex}`}
+                                  >
+                                    {activity}
+                                  </span>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => {
+                                        setTempActivity(activity);
+                                        setEditingActivity({
+                                          cityOrder: day.city.order,
+                                          activityIndex: originalActivityIndex,
+                                        });
+                                      }}
+                                      data-testid={`button-edit-activity-${day.dayNumber}-${actIndex}`}
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-destructive hover:text-destructive"
+                                      onClick={() => handleDeleteActivity(day.city.order, originalActivityIndex)}
+                                      data-testid={`button-delete-activity-${day.dayNumber}-${actIndex}`}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })
                           ) : (
                             <div className="text-sm text-muted-foreground italic p-3 rounded-md bg-muted/30">
                               Free time to explore at your own pace
