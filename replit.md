@@ -64,6 +64,11 @@ Preferred communication style: Simple, everyday language.
 - **Per-Category AI Budget Guidance**: In Step 2, GPT-4o-mini provides personalized recommendations, estimated price ranges, and money-saving tips for each budget category.
 - **AI-Recommended Monthly Savings**: Calculates recommended monthly savings based on trip cost with adaptive payoff timeframes (6-15 months).
 - **Itinerary-Wide AI Assistant**: Auto-generates day-by-day activities on the quiz-refine page using all quiz responses (trip goal, pace, spending priority, kids' ages, etc.). Provides conversational interface for Q&A about the itinerary and suggests refinements. Backend endpoints: `/api/ai/itinerary-plan` (batch activity generation) and `/api/ai/itinerary-assistant` (conversational refinement). Frontend component: `ItineraryAssistant.tsx`.
+  - **Clarification Questions**: When users request activity modifications without specifying which day or activity, the assistant asks clarifying questions before making changes.
+  - **Rest Time Balancing**: AI automatically includes rest breaks, hotel downtime, and lighter activities. Considers nap times for toddlers, snack breaks for young kids.
+  - **Accessibility Awareness**: Notes stroller-friendly activities, walking distances, and suggests accessible alternatives.
+  - **Daily Rhythm**: Structures days with morning energy activities, midday rest, lighter afternoon activities, and evening dining.
+  - **Family Considerations**: Adapts activities based on children's ages (toddlers, young kids, tweens) with appropriate pacing and breaks.
 
 **Itinerary Management**:
 - **Shared Itinerary State**: `useItinerary` hook provides reactive shared state across components via sessionStorage.
