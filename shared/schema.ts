@@ -56,6 +56,9 @@ export const trips = pgTable("trips", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
+  // Trip status: "draft" (still refining itinerary) or "active" (finalized and in planning)
+  status: text("status").notNull().default("active"), // "draft" | "active"
+  
   // Trip title
   title: text("title"), // Creative name like "The Mediterranean Dream"
   
@@ -81,6 +84,10 @@ export const trips = pgTable("trips", {
   monthlySavingsAmount: decimal("monthly_savings_amount", { precision: 10, scale: 2 }).default("0"),
   currentSavings: decimal("current_savings", { precision: 10, scale: 2 }).default("0"),
   creditCardPoints: integer("credit_card_points").default(0),
+  
+  // Draft itinerary data (stored when saving draft from quiz-refine page)
+  draftItineraryData: jsonb("draft_itinerary_data"), // Full itinerary JSON for resuming
+  draftQuizData: jsonb("draft_quiz_data"), // Quiz responses for context
   
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
