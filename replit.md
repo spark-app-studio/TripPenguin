@@ -36,7 +36,11 @@ Preferred communication style: Simple, everyday language.
     - **Itinerary Refinement**: Users can adjust trip duration, delete cities, and add "Add-On Extensions" with AI regeneration.
     - **AI Booking & Budget Guidance**: GPT-4o-mini provides personalized booking recommendations, per-category budget guidance, and monthly savings recommendations.
     - **Itinerary-Wide AI Assistant**: Auto-generates daily activities based on quiz responses, adapts to family considerations (e.g., kids' ages), balances rest times, and suggests accessible activities. Features a conversational interface for itinerary Q&A and refinements, asking clarifying questions when necessary.
-    - **Trip Personality Controls**: Interactive sliders (e.g., Pace: Slow, Moderate, Fast) allow users to customize AI-generated itineraries, triggering debounced AI regeneration.
+    - **Trip Personality Controls**: Interactive pace slider (Slow, Moderate, Fast) with instant UI responsiveness using decoupled local state. Changes trigger debounced AI regeneration in the background. Pace affects activity density, timing, and travel buffers.
+    - **Timed Activity Generation**: AI generates activities with specific start/end times (e.g., "9:00 AM - 11:00 AM: Visit museum") and includes travel time between locations (e.g., "11:00 AM - 11:30 AM: Travel to harbor (walk, ~15 min)"). Pace settings affect timing:
+      - Slow: 2-3 activities/day, 2-3 hour durations, 45-60 min travel buffers, day starts at 9:30 AM
+      - Moderate: 3-4 activities/day, 1.5-2 hour durations, 30-45 min travel buffers, day starts at 9:00 AM
+      - Fast: 5-6 activities/day, 45 min-1.5 hour durations, 15-30 min travel buffers, day starts at 7:30 AM
 - **Trip Management**: Full CRUD operations for all trip data, including destinations, budget categories, and bookings. Users can view, edit, and delete trips.
 - **Save & Book Workflow**: A three-sub-step process for managing finances:
     1. **Savings Connection**: Stub for Plaid integration or manual savings entry.
