@@ -1385,6 +1385,75 @@ export default function QuizRefine() {
           </CardContent>
         </Card>
 
+        {/* Trip Personality Controls */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Trip Personality
+            </CardTitle>
+            <CardDescription>
+              Adjust how packed or relaxed your daily schedule will be
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium">Daily Pace</label>
+                <Badge 
+                  variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
+                  data-testid="badge-pace-value"
+                >
+                  {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
+                </Badge>
+              </div>
+              <Slider
+                value={[tripPace === "slow" ? 0 : tripPace === "moderate" ? 1 : 2]}
+                onValueChange={(values) => {
+                  const newPace = values[0] === 0 ? "slow" : values[0] === 1 ? "moderate" : "fast";
+                  if (newPace !== tripPace) {
+                    setTripPace(newPace);
+                    sessionStorage.setItem("tripPace", newPace);
+                    if (paceRegenerationTimeoutRef.current) {
+                      clearTimeout(paceRegenerationTimeoutRef.current);
+                    }
+                    paceRegenerationTimeoutRef.current = setTimeout(() => {
+                      aiPlanMutation.mutate();
+                    }, 800);
+                  }
+                }}
+                min={0}
+                max={2}
+                step={1}
+                disabled={isBusy}
+                data-testid="slider-pace"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <span>Slow</span>
+                <span>Moderate</span>
+                <span>Fast</span>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+              {tripPace === "slow" && (
+                <p>2-3 activities per day with extended rest periods. Perfect for relaxation and deep exploration.</p>
+              )}
+              {tripPace === "moderate" && (
+                <p>3-4 activities per day with balanced rest time. A comfortable mix of sightseeing and downtime.</p>
+              )}
+              {tripPace === "fast" && (
+                <p>5-6 activities per day to maximize your time. Ideal for those who want to see and do everything.</p>
+              )}
+            </div>
+            {aiPlanMutation.isPending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Regenerating activities for your new pace...</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* AI Itinerary Assistant */}
         {currentItinerary && (
           <ItineraryAssistant
@@ -1702,75 +1771,6 @@ export default function QuizRefine() {
               )}
               Regenerate Itinerary
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Trip Personality
-            </CardTitle>
-            <CardDescription>
-              Adjust how packed or relaxed your daily schedule will be
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium">Daily Pace</label>
-                <Badge 
-                  variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
-                  data-testid="badge-pace-value"
-                >
-                  {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
-                </Badge>
-              </div>
-              <Slider
-                value={[tripPace === "slow" ? 0 : tripPace === "moderate" ? 1 : 2]}
-                onValueChange={(values) => {
-                  const newPace = values[0] === 0 ? "slow" : values[0] === 1 ? "moderate" : "fast";
-                  if (newPace !== tripPace) {
-                    setTripPace(newPace);
-                    // Persist to session storage for non-draft flows
-                    sessionStorage.setItem("tripPace", newPace);
-                    if (paceRegenerationTimeoutRef.current) {
-                      clearTimeout(paceRegenerationTimeoutRef.current);
-                    }
-                    paceRegenerationTimeoutRef.current = setTimeout(() => {
-                      aiPlanMutation.mutate();
-                    }, 800);
-                  }
-                }}
-                min={0}
-                max={2}
-                step={1}
-                disabled={isBusy}
-                data-testid="slider-pace"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>Slow</span>
-                <span>Moderate</span>
-                <span>Fast</span>
-              </div>
-            </div>
-            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
-              {tripPace === "slow" && (
-                <p>2-3 activities per day with extended rest periods. Perfect for relaxation and deep exploration.</p>
-              )}
-              {tripPace === "moderate" && (
-                <p>3-4 activities per day with balanced rest time. A comfortable mix of sightseeing and downtime.</p>
-              )}
-              {tripPace === "fast" && (
-                <p>5-6 activities per day to maximize your time. Ideal for those who want to see and do everything.</p>
-              )}
-            </div>
-            {aiPlanMutation.isPending && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Regenerating activities for your new pace...</span>
-              </div>
-            )}
           </CardContent>
         </Card>
 
