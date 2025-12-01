@@ -33,8 +33,28 @@ import {
   X,
   Users,
   GripVertical,
-  Clock
+  Clock,
+  ExternalLink,
+  RefreshCw,
+  Car,
+  Footprints,
+  Bus,
+  Train,
+  Ship,
+  Info,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type {
   ItineraryRecommendation,
   ItineraryAddon,
@@ -132,6 +152,37 @@ function getActivityIcon(activity: string) {
     return <ShoppingBag className="w-4 h-4 text-amber-500" />;
   }
   return <Camera className="w-4 h-4 text-primary" />;
+}
+
+function getTravelIcon(travelMode?: string) {
+  switch (travelMode?.toLowerCase()) {
+    case "walk":
+      return <Footprints className="w-4 h-4 text-emerald-500" />;
+    case "taxi":
+    case "car":
+    case "uber":
+      return <Car className="w-4 h-4 text-yellow-600" />;
+    case "bus":
+      return <Bus className="w-4 h-4 text-blue-600" />;
+    case "train":
+    case "subway":
+    case "metro":
+      return <Train className="w-4 h-4 text-purple-600" />;
+    case "ferry":
+    case "boat":
+      return <Ship className="w-4 h-4 text-cyan-600" />;
+    case "flight":
+      return <Plane className="w-4 h-4 text-sky-500" />;
+    default:
+      return <Footprints className="w-4 h-4 text-muted-foreground" />;
+  }
+}
+
+function getStructuredActivityIcon(activity: StructuredActivity) {
+  if (activity.isTravel) {
+    return getTravelIcon(activity.travelMode);
+  }
+  return getActivityIcon(activity.title);
 }
 
 function generateSupplementaryActivities(
@@ -275,6 +326,7 @@ export default function QuizRefine() {
   const [newActivityDay, setNewActivityDay] = useState<number | null>(null);
   const [newActivityText, setNewActivityText] = useState("");
   const [addingCity, setAddingCity] = useState(false);
+  const [expandedAlternates, setExpandedAlternates] = useState<Set<string>>(new Set());
   const [newCity, setNewCity] = useState({ cityName: "", countryName: "", nights: 2 });
 
   // Temporary edit values
@@ -345,6 +397,8 @@ export default function QuizRefine() {
                 ...updatedPlans[existingIndex],
                 dayTitle: aiDay.dayTitle,
                 activities: aiDay.activities,
+                structuredActivities: aiDay.structuredActivities,
+                dailyCostEstimate: aiDay.dailyCostEstimate,
               };
             }
           }
@@ -1620,9 +1674,17 @@ export default function QuizRefine() {
                       {/* Activities for this day - Now Editable */}
                       <div className="ml-13 space-y-2">
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                          <h5 className="text-sm font-medium text-muted-foreground">
-                            {aiPlanMutation.isPending ? "Generating activities..." : "Recommended Activities:"}
-                          </h5>
+                          <div className="flex items-center gap-3">
+                            <h5 className="text-sm font-medium text-muted-foreground">
+                              {aiPlanMutation.isPending ? "Generating activities..." : "Activities:"}
+                            </h5>
+                            {day.dailyCostEstimate !== undefined && day.dailyCostEstimate > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                <DollarSign className="w-3 h-3 mr-1" />
+                                Est. ${day.dailyCostEstimate}/person
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -1676,7 +1738,210 @@ export default function QuizRefine() {
                         )}
 
                         <div className="grid gap-2">
-                          {day.activities.length > 0 ? (
+                          {/* Use structured activities if available, otherwise fall back to string activities */}
+                          {day.structuredActivities && day.structuredActivities.length > 0 ? (
+                            day.structuredActivities.map((structuredAct, actIndex) => {
+                              const isExpanded = expandedAlternates.has(structuredAct.id);
+                              
+                              return (
+                                <div key={structuredAct.id} className="space-y-1">
+                                  <HoverCard>
+                                    <HoverCardTrigger asChild>
+                                      <div
+                                        className={`flex items-start gap-3 p-3 rounded-md group hover-elevate cursor-pointer ${
+                                          structuredAct.isTravel 
+                                            ? 'bg-muted/20 border-l-2 border-muted-foreground/30' 
+                                            : 'bg-muted/30'
+                                        }`}
+                                        data-testid={`day-${day.dayNumber}-structured-activity-${actIndex}`}
+                                      >
+                                        {getStructuredActivityIcon(structuredAct)}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-xs text-muted-foreground font-medium">
+                                              {structuredAct.startTime} - {structuredAct.endTime}
+                                            </span>
+                                            {structuredAct.costEstimate !== undefined && structuredAct.costEstimate > 0 && !structuredAct.isTravel && (
+                                              <Badge variant="outline" className="text-xs py-0 h-5">
+                                                ${structuredAct.costEstimate}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className={`text-sm ${structuredAct.isTravel ? 'text-muted-foreground italic' : ''}`}>
+                                            {structuredAct.title}
+                                          </p>
+                                          {structuredAct.location && !structuredAct.isTravel && (
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                              <MapPin className="w-3 h-3" />
+                                              {structuredAct.location}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          {structuredAct.externalLink && (
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(structuredAct.externalLink, '_blank');
+                                              }}
+                                              data-testid={`button-external-link-${day.dayNumber}-${actIndex}`}
+                                            >
+                                              <ExternalLink className="w-3 h-3" />
+                                            </Button>
+                                          )}
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-destructive hover:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteActivity(day.dayNumber, actIndex);
+                                            }}
+                                            data-testid={`button-delete-structured-activity-${day.dayNumber}-${actIndex}`}
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent className="w-80" align="start">
+                                      <div className="space-y-2">
+                                        <h4 className="font-semibold">{structuredAct.title}</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                          {structuredAct.description}
+                                        </p>
+                                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                          <span className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {structuredAct.startTime} - {structuredAct.endTime}
+                                          </span>
+                                          {structuredAct.costEstimate !== undefined && (
+                                            <span className="flex items-center gap-1">
+                                              <DollarSign className="w-3 h-3" />
+                                              {structuredAct.costEstimate === 0 ? 'Free' : `$${structuredAct.costEstimate}`}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {structuredAct.location && (
+                                          <p className="text-xs flex items-center gap-1">
+                                            <MapPin className="w-3 h-3 text-muted-foreground" />
+                                            {structuredAct.location}
+                                          </p>
+                                        )}
+                                        {structuredAct.externalLink && (
+                                          <a 
+                                            href={structuredAct.externalLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary flex items-center gap-1 hover:underline"
+                                          >
+                                            <ExternalLink className="w-3 h-3" />
+                                            Visit Website
+                                          </a>
+                                        )}
+                                      </div>
+                                    </HoverCardContent>
+                                  </HoverCard>
+                                  
+                                  {/* Alternate Activities */}
+                                  {structuredAct.alternates && structuredAct.alternates.length > 0 && !structuredAct.isTravel && (
+                                    <Collapsible 
+                                      open={isExpanded}
+                                      onOpenChange={(open) => {
+                                        setExpandedAlternates(prev => {
+                                          const next = new Set(prev);
+                                          if (open) {
+                                            next.add(structuredAct.id);
+                                          } else {
+                                            next.delete(structuredAct.id);
+                                          }
+                                          return next;
+                                        });
+                                      }}
+                                    >
+                                      <CollapsibleTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 text-xs ml-7 text-muted-foreground"
+                                          data-testid={`button-alternates-${day.dayNumber}-${actIndex}`}
+                                        >
+                                          <RefreshCw className="w-3 h-3 mr-1" />
+                                          Alternate Activities ({structuredAct.alternates.length})
+                                          {isExpanded ? (
+                                            <ChevronUp className="w-3 h-3 ml-1" />
+                                          ) : (
+                                            <ChevronDown className="w-3 h-3 ml-1" />
+                                          )}
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                      <CollapsibleContent className="ml-7 mt-1 space-y-1">
+                                        {structuredAct.alternates.map((alt) => (
+                                          <HoverCard key={alt.id}>
+                                            <HoverCardTrigger asChild>
+                                              <div 
+                                                className="flex items-center gap-2 p-2 rounded-md bg-muted/20 border border-dashed border-muted-foreground/20 hover-elevate cursor-pointer"
+                                                data-testid={`alternate-${alt.id}`}
+                                              >
+                                                <RefreshCw className="w-3 h-3 text-muted-foreground" />
+                                                <span className="text-sm flex-1">{alt.title}</span>
+                                                {alt.costEstimate !== undefined && (
+                                                  <Badge variant="outline" className="text-xs py-0 h-5">
+                                                    {alt.costEstimate === 0 ? 'Free' : `$${alt.costEstimate}`}
+                                                  </Badge>
+                                                )}
+                                                {alt.externalLink && (
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      window.open(alt.externalLink, '_blank');
+                                                    }}
+                                                  >
+                                                    <ExternalLink className="w-3 h-3" />
+                                                  </Button>
+                                                )}
+                                              </div>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent className="w-72" align="start">
+                                              <div className="space-y-2">
+                                                <h4 className="font-semibold text-sm">{alt.title}</h4>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {alt.description}
+                                                </p>
+                                                {alt.costEstimate !== undefined && (
+                                                  <p className="text-xs flex items-center gap-1">
+                                                    <DollarSign className="w-3 h-3" />
+                                                    {alt.costEstimate === 0 ? 'Free' : `$${alt.costEstimate} per person`}
+                                                  </p>
+                                                )}
+                                                {alt.externalLink && (
+                                                  <a 
+                                                    href={alt.externalLink} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-primary flex items-center gap-1 hover:underline"
+                                                  >
+                                                    <ExternalLink className="w-3 h-3" />
+                                                    Visit Website
+                                                  </a>
+                                                )}
+                                              </div>
+                                            </HoverCardContent>
+                                          </HoverCard>
+                                        ))}
+                                      </CollapsibleContent>
+                                    </Collapsible>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : day.activities.length > 0 ? (
                             day.activities.map((activity, actIndex) => {
                               const isEditing = editingActivity?.dayNumber === day.dayNumber && 
                                                editingActivity?.activityIndex === actIndex;
