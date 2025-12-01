@@ -482,3 +482,12 @@ export type ItineraryAddonsRequest = z.infer<typeof itineraryAddonsRequestSchema
 export type ItineraryAddonsResponse = z.infer<typeof itineraryAddonsResponseSchema>;
 export type ApplyAddonRequest = z.infer<typeof applyAddonRequestSchema>;
 export type ApplyAddonResponse = z.infer<typeof applyAddonResponseSchema>;
+
+// Trip Personality schema for itinerary customization
+export const tripPersonalitySchema = z.object({
+  pace: z.enum(["slow", "moderate", "fast"]).default("moderate"),
+  expenseLevel: z.enum(["budget", "balanced", "premium"]).optional(),
+  energyTone: z.enum(["calm", "playful", "adventurous"]).optional(),
+});
+
+export type TripPersonality = z.infer<typeof tripPersonalitySchema>;

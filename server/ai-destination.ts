@@ -1109,10 +1109,17 @@ export interface ActivitySuggestionRequest {
   tripType: "international" | "domestic" | "staycation";
 }
 
+export interface TripPersonality {
+  pace: "slow" | "moderate" | "fast";
+  expenseLevel?: "budget" | "balanced" | "premium";
+  energyTone?: "calm" | "playful" | "adventurous";
+}
+
 export interface FullItineraryPlanRequest {
   itinerary: ItineraryRecommendation;
   numberOfTravelers: number;
   tripType: "international" | "domestic" | "staycation";
+  tripPersonality?: TripPersonality;
   quizPreferences: {
     tripGoal?: string;
     placeType?: string;
@@ -1495,6 +1502,45 @@ Return JSON in this exact format:
 export async function generateFullItineraryPlan(request: FullItineraryPlanRequest): Promise<FullItineraryPlanResponse> {
   const preferencesContext = buildPreferencesContext(request.quizPreferences);
   
+  // Build pace-specific instructions
+  const pace = request.tripPersonality?.pace || "moderate";
+  let paceInstructions = "";
+  
+  switch (pace) {
+    case "slow":
+      paceInstructions = `
+PACE SETTING: SLOW (Relaxed & Leisurely)
+- Maximum 2-3 activities per day (not counting meals)
+- Include extended rest periods (2+ hours in afternoon)
+- Schedule plenty of "free time to explore at your own pace"
+- Focus on depth over breadth - spend more time at fewer places
+- Include spa visits, park relaxation, cafe time, or scenic strolls
+- Allow for spontaneous discoveries and unhurried exploration
+- Never rush from one activity to another`;
+      break;
+    case "fast":
+      paceInstructions = `
+PACE SETTING: FAST (Energetic & Packed)
+- Plan 5-6 activities per day (not counting meals)
+- Minimize downtime - keep the momentum going
+- Include iconic highlights AND hidden gems
+- Early starts and late evenings to maximize time
+- Brief rest breaks only (30-45 min max)
+- Focus on breadth - see and do as much as possible
+- Include walking tours, multiple neighborhoods, and back-to-back experiences`;
+      break;
+    case "moderate":
+    default:
+      paceInstructions = `
+PACE SETTING: MODERATE (Balanced)
+- Plan 3-4 activities per day (not counting meals)
+- Include 1-2 hour rest/downtime periods
+- Balance must-see attractions with relaxation
+- Morning energy, afternoon ease, evening enjoyment
+- Time for both planned activities and spontaneous exploration`;
+      break;
+  }
+  
   const citiesOverview = request.itinerary.cities.map(city => 
     `${city.cityName}, ${city.countryName} (${city.stayLengthNights} nights)`
   ).join(" -> ");
@@ -1558,20 +1604,20 @@ TRIP OVERVIEW:
 - ${request.numberOfTravelers} traveler(s)
 - ${preferencesContext}
 ${familyContext}
+${paceInstructions}
 
 CRITICAL RULES FOR ACTIVITIES:
 - NEVER use emojis in any activity descriptions
 - You MUST incorporate ALL traveler preferences into every day's activities
-- Create realistic, achievable daily plans with 3-5 activities per day
-- Include a mix of: meals, sightseeing, cultural experiences, AND REST PERIODS
+- You MUST follow the PACE SETTING instructions above - this is the traveler's preferred travel style
+- Include a mix of: meals, sightseeing, cultural experiences, AND REST PERIODS (adjusted for pace)
 
-REST TIME REQUIREMENTS (MANDATORY):
-- Include "Rest break" or "Hotel downtime" at least once per day
-- For families with young kids: Add afternoon rest/nap time (1-2pm typically)
-- For longer trips (5+ nights): Include at least one "easy day" with fewer activities
+REST TIME REQUIREMENTS (adjusted for pace setting):
+- For SLOW pace: Include extended rest periods (2+ hours) and leisurely exploration time
+- For MODERATE pace: Include "Rest break" or "Hotel downtime" at least once per day
+- For FAST pace: Brief rest breaks only, maximize activities and experiences
+- For families with young kids: Always add afternoon rest/nap time regardless of pace
 - Balance high-energy and low-energy activities within each day
-- Morning activities should be more demanding; afternoon can be lighter
-- Never schedule more than 2 intensive activities back-to-back without a break
 
 ACCESSIBILITY CONSIDERATIONS:
 - Prefer attractions with easy access and minimal walking where possible
