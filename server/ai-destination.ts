@@ -1631,8 +1631,13 @@ DAILY RHYTHM:
 - Afternoon (2-5): 1-2 lighter activities  
 - Evening (6-9): Dinner + optional easy activity
 
-For arrival days: lighter afternoon/evening activities only
-For departure/travel days: morning activities only before travel
+ARRIVAL AND DEPARTURE DAY RULES:
+- For ARRIVAL days: Start with "Arrival: Arrive at [city], check into hotel", then lighter afternoon/evening activities only
+- For DEPARTURE/TRAVEL days when moving to next city: 
+  * Morning activities only before travel
+  * MUST include "Travel: Depart [current city] to [next city] via [train/flight/bus]" as a midday/afternoon activity
+  * The travel activity should specify the mode of transport (train for nearby cities, flight for distant ones)
+- For FINAL departure day (leaving the trip): Morning activities, then "Departure: Head to airport for flight home"
 
 Return JSON in this exact format:
 {
@@ -1653,9 +1658,20 @@ Return JSON in this exact format:
   ]
 }`;
 
-  const daysDescription = dayStructure.map(d => 
-    `Day ${d.dayNumber}: ${d.city.cityName}, ${d.city.countryName} (Day ${d.dayInCity}/${d.totalDaysInCity}${d.isArrival ? ", ARRIVAL" : ""}${d.isDeparture ? ", DEPARTURE" : ""})`
-  ).join("\n");
+  const daysDescription = dayStructure.map((d, idx) => {
+    let dayDesc = `Day ${d.dayNumber}: ${d.city.cityName}, ${d.city.countryName} (Day ${d.dayInCity}/${d.totalDaysInCity}`;
+    if (d.isArrival) dayDesc += ", ARRIVAL";
+    if (d.isDeparture) {
+      const nextCity = dayStructure[idx + 1]?.city;
+      if (nextCity) {
+        dayDesc += `, TRAVEL DAY - departing to ${nextCity.cityName}, ${nextCity.countryName}`;
+      } else {
+        dayDesc += ", DEPARTURE";
+      }
+    }
+    dayDesc += ")";
+    return dayDesc;
+  }).join("\n");
 
   const userPrompt = `Create a complete day-by-day activity plan for this ${request.itinerary.totalNights}-night trip:
 
