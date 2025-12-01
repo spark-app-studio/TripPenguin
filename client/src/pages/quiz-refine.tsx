@@ -46,7 +46,9 @@ import type {
   InsertTrip,
   Trip,
   TripWithDestinations,
+  TripPersonality,
 } from "@shared/schema";
+import { tripPersonalitySchema } from "@shared/schema";
 
 type TripType = "international" | "domestic" | "staycation";
 
@@ -260,15 +262,31 @@ export default function QuizRefine() {
   // AI generation state
   const [aiGenerationComplete, setAiGenerationComplete] = useState(false);
   const aiGenerationTriggeredRef = useRef(false);
+  
+  // Trip Personality state - controls AI-generated activity density
+  const [tripPace, setTripPace] = useState<"slow" | "moderate" | "fast">("moderate");
+  const paceRegenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (paceRegenerationTimeoutRef.current) {
+        clearTimeout(paceRegenerationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // AI itinerary plan generation mutation
   const aiPlanMutation = useMutation({
     mutationFn: async () => {
       if (!currentItinerary) throw new Error("No itinerary");
+      // Validate trip personality using schema to ensure type safety
+      const validatedPersonality = tripPersonalitySchema.parse({ pace: tripPace });
       const response = await apiRequest("POST", "/api/ai/itinerary-plan", {
         itinerary: currentItinerary,
         numberOfTravelers,
         tripType,
+        tripPersonality: validatedPersonality,
         quizPreferences: {
           tripGoal: quizData?.tripGoal,
           placeType: quizData?.placeType,
@@ -560,6 +578,11 @@ export default function QuizRefine() {
           // Load quiz data if available
           if (trip.draftQuizData) {
             setQuizData(trip.draftQuizData);
+            // Restore pace from saved draft
+            const savedPace = (trip.draftQuizData as QuizResponse & { tripPace?: "slow" | "moderate" | "fast" }).tripPace;
+            if (savedPace && ["slow", "moderate", "fast"].includes(savedPace)) {
+              setTripPace(savedPace);
+            }
           }
           
           setCurrentDraftId(draftId);
@@ -613,6 +636,12 @@ export default function QuizRefine() {
         if (storedQuizData) {
           const quiz = JSON.parse(storedQuizData) as QuizResponse;
           setQuizData(quiz);
+        }
+        
+        // Load trip pace from session storage
+        const storedTripPace = sessionStorage.getItem("tripPace");
+        if (storedTripPace && ["slow", "moderate", "fast"].includes(storedTripPace)) {
+          setTripPace(storedTripPace as "slow" | "moderate" | "fast");
         }
         
         // Load trip type - check multiple sources in order of priority:
@@ -850,7 +879,7 @@ export default function QuizRefine() {
           numberOfTravelers,
           tripDuration: currentItinerary.totalNights,
           draftItineraryData: syncedItinerary,
-          draftQuizData: quizData,
+          draftQuizData: { ...(quizData ?? {}), tripPace: tripPace },
         });
         
         // Delete existing destinations and recreate
@@ -891,7 +920,7 @@ export default function QuizRefine() {
           tripDuration: currentItinerary.totalNights,
           status: "draft" as const,
           draftItineraryData: syncedItinerary,
-          draftQuizData: quizData,
+          draftQuizData: { ...(quizData ?? {}), tripPace: tripPace },
         };
         
         const newDraft = await saveDraftMutation.mutateAsync(draftPayload);
@@ -1673,6 +1702,75 @@ export default function QuizRefine() {
               )}
               Regenerate Itinerary
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Trip Personality
+            </CardTitle>
+            <CardDescription>
+              Adjust how packed or relaxed your daily schedule will be
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium">Daily Pace</label>
+                <Badge 
+                  variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
+                  data-testid="badge-pace-value"
+                >
+                  {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
+                </Badge>
+              </div>
+              <Slider
+                value={[tripPace === "slow" ? 0 : tripPace === "moderate" ? 1 : 2]}
+                onValueChange={(values) => {
+                  const newPace = values[0] === 0 ? "slow" : values[0] === 1 ? "moderate" : "fast";
+                  if (newPace !== tripPace) {
+                    setTripPace(newPace);
+                    // Persist to session storage for non-draft flows
+                    sessionStorage.setItem("tripPace", newPace);
+                    if (paceRegenerationTimeoutRef.current) {
+                      clearTimeout(paceRegenerationTimeoutRef.current);
+                    }
+                    paceRegenerationTimeoutRef.current = setTimeout(() => {
+                      aiPlanMutation.mutate();
+                    }, 800);
+                  }
+                }}
+                min={0}
+                max={2}
+                step={1}
+                disabled={isBusy}
+                data-testid="slider-pace"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <span>Slow</span>
+                <span>Moderate</span>
+                <span>Fast</span>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+              {tripPace === "slow" && (
+                <p>2-3 activities per day with extended rest periods. Perfect for relaxation and deep exploration.</p>
+              )}
+              {tripPace === "moderate" && (
+                <p>3-4 activities per day with balanced rest time. A comfortable mix of sightseeing and downtime.</p>
+              )}
+              {tripPace === "fast" && (
+                <p>5-6 activities per day to maximize your time. Ideal for those who want to see and do everything.</p>
+              )}
+            </div>
+            {aiPlanMutation.isPending && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Regenerating activities for your new pace...</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
