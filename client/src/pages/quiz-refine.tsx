@@ -75,6 +75,28 @@ interface GettingStartedData {
 import { NavBar } from "@/components/NavBar";
 import { ProgressStepper } from "@/components/ProgressStepper";
 
+interface ActivityAlternate {
+  id: string;
+  title: string;
+  description: string;
+  costEstimate?: number;
+  externalLink?: string;
+}
+
+interface StructuredActivity {
+  id: string;
+  startTime: string;
+  endTime: string;
+  title: string;
+  description: string;
+  location?: string;
+  costEstimate?: number;
+  externalLink?: string;
+  isTravel?: boolean;
+  travelMode?: string;
+  alternates?: ActivityAlternate[];
+}
+
 interface DayPlan {
   dayNumber: number;
   dayTitle?: string;
@@ -84,6 +106,8 @@ interface DayPlan {
   isArrivalDay: boolean;
   isDepartureDay: boolean;
   activities: string[];
+  structuredActivities?: StructuredActivity[];
+  dailyCostEstimate?: number;
 }
 
 
