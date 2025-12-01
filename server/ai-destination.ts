@@ -1511,33 +1511,37 @@ export async function generateFullItineraryPlan(request: FullItineraryPlanReques
       paceInstructions = `
 PACE SETTING: SLOW (Relaxed & Leisurely)
 - Maximum 2-3 activities per day (not counting meals)
+- Activity durations: 2-3 hours each (spend quality time at each place)
+- Travel buffer between activities: 45-60 minutes (never rush)
 - Include extended rest periods (2+ hours in afternoon)
+- Day typically starts at 9:30-10:00 AM, ends by 8:00 PM
 - Schedule plenty of "free time to explore at your own pace"
 - Focus on depth over breadth - spend more time at fewer places
-- Include spa visits, park relaxation, cafe time, or scenic strolls
-- Allow for spontaneous discoveries and unhurried exploration
-- Never rush from one activity to another`;
+- Include spa visits, park relaxation, cafe time, or scenic strolls`;
       break;
     case "fast":
       paceInstructions = `
 PACE SETTING: FAST (Energetic & Packed)
 - Plan 5-6 activities per day (not counting meals)
+- Activity durations: 45 min - 1.5 hours (efficient but meaningful)
+- Travel buffer between activities: 15-30 minutes (quick transitions)
+- Day starts early at 7:30-8:00 AM, can extend to 10:00 PM
+- Brief rest breaks only (30-45 min max)
 - Minimize downtime - keep the momentum going
 - Include iconic highlights AND hidden gems
-- Early starts and late evenings to maximize time
-- Brief rest breaks only (30-45 min max)
-- Focus on breadth - see and do as much as possible
-- Include walking tours, multiple neighborhoods, and back-to-back experiences`;
+- Walking tours, multiple neighborhoods, and back-to-back experiences`;
       break;
     case "moderate":
     default:
       paceInstructions = `
 PACE SETTING: MODERATE (Balanced)
 - Plan 3-4 activities per day (not counting meals)
+- Activity durations: 1.5-2 hours each (comfortable exploration)
+- Travel buffer between activities: 30-45 minutes (reasonable transitions)
+- Day starts at 9:00 AM, ends around 9:00 PM
 - Include 1-2 hour rest/downtime periods
 - Balance must-see attractions with relaxation
-- Morning energy, afternoon ease, evening enjoyment
-- Time for both planned activities and spontaneous exploration`;
+- Morning energy, afternoon ease, evening enjoyment`;
       break;
   }
   
@@ -1611,6 +1615,15 @@ CRITICAL RULES FOR ACTIVITIES:
 - You MUST incorporate ALL traveler preferences into every day's activities
 - You MUST follow the PACE SETTING instructions above - this is the traveler's preferred travel style
 - Include a mix of: meals, sightseeing, cultural experiences, AND REST PERIODS (adjusted for pace)
+- EVERY activity MUST include specific start and end times in format: "HH:MM AM/PM - HH:MM AM/PM: Activity description"
+
+TIME AND DISTANCE REQUIREMENTS:
+- Each activity MUST have a start time and end time (e.g., "9:00 AM - 11:00 AM: Visit Auckland Museum")
+- When activities are in different locations, include travel time between them
+- Travel time format: "11:00 AM - 11:30 AM: Travel to [destination] (walk/taxi/bus, ~X min)"
+- Consider realistic distances within the city when scheduling consecutive activities
+- Activities should flow logically based on geography to minimize backtracking
+- Factor in city-specific transport: walking in compact cities, transit in larger ones
 
 REST TIME REQUIREMENTS (adjusted for pace setting):
 - For SLOW pace: Include extended rest periods (2+ hours) and leisurely exploration time
@@ -1624,12 +1637,6 @@ ACCESSIBILITY CONSIDERATIONS:
 - Note if activities are stroller-friendly when traveling with young children
 - Suggest rest stops and cafes along walking routes
 - Consider the physical demands of each activity
-
-DAILY RHYTHM:
-- Morning (9-12): 1-2 activities with energy
-- Midday (12-2): Lunch + rest/downtime
-- Afternoon (2-5): 1-2 lighter activities  
-- Evening (6-9): Dinner + optional easy activity
 
 ARRIVAL AND DEPARTURE DAY RULES:
 - For ARRIVAL days: Start with "Arrival: Arrive at [city], check into hotel", then lighter afternoon/evening activities only
@@ -1649,10 +1656,13 @@ Return JSON in this exact format:
       "isArrivalDay": true/false,
       "isDepartureDay": true/false,
       "activities": [
-        "Morning: Specific activity description",
-        "Midday: Lunch and rest break at hotel/park",
-        "Afternoon: Lighter activity",
-        "Evening: Dinner at recommended restaurant type"
+        "9:00 AM - 11:00 AM: Visit [attraction name] - description of what to see/do",
+        "11:00 AM - 11:30 AM: Travel to [next area] (walk, ~15 min)",
+        "11:30 AM - 1:00 PM: Explore [neighborhood/market] and lunch at [restaurant type]",
+        "1:00 PM - 3:00 PM: Rest break at hotel",
+        "3:00 PM - 5:30 PM: [Afternoon activity]",
+        "5:30 PM - 6:00 PM: Travel to dinner area (taxi, ~20 min)",
+        "6:00 PM - 8:00 PM: Dinner at [restaurant recommendation]"
       ]
     }
   ]
@@ -1677,7 +1687,12 @@ Return JSON in this exact format:
 
 ${daysDescription}
 
-Generate specific, actionable activities for each day that match the traveler's preferences. Include meal recommendations and consider timing/logistics.`;
+REQUIREMENTS:
+1. Every activity MUST have specific start and end times (e.g., "9:00 AM - 11:00 AM: Visit museum")
+2. Include travel time between activities when locations are different
+3. Activities should be geographically logical to minimize transit time
+4. Match the traveler's preferences and selected pace setting
+5. Include meal recommendations with realistic timing`;
 
   try {
     const completion = await openai.chat.completions.create({

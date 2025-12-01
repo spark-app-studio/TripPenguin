@@ -265,7 +265,16 @@ export default function QuizRefine() {
   
   // Trip Personality state - controls AI-generated activity density
   const [tripPace, setTripPace] = useState<"slow" | "moderate" | "fast">("moderate");
+  // Separate slider value for instant UI responsiveness (0=slow, 1=moderate, 2=fast)
+  const [sliderValue, setSliderValue] = useState<number>(1);
   const paceRegenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Keep sliderValue synchronized with tripPace (handles external updates only)
+  // Only depends on tripPace to avoid overwriting user's optimistic slider input
+  useEffect(() => {
+    const newSliderValue = tripPace === "slow" ? 0 : tripPace === "fast" ? 2 : 1;
+    setSliderValue(newSliderValue);
+  }, [tripPace]);
   
   // Cleanup debounce timeout on unmount
   useEffect(() => {
@@ -578,7 +587,7 @@ export default function QuizRefine() {
           // Load quiz data if available
           if (trip.draftQuizData) {
             setQuizData(trip.draftQuizData);
-            // Restore pace from saved draft
+            // Restore pace from saved draft (useEffect syncs sliderValue automatically)
             const savedPace = (trip.draftQuizData as QuizResponse & { tripPace?: "slow" | "moderate" | "fast" }).tripPace;
             if (savedPace && ["slow", "moderate", "fast"].includes(savedPace)) {
               setTripPace(savedPace);
@@ -638,7 +647,7 @@ export default function QuizRefine() {
           setQuizData(quiz);
         }
         
-        // Load trip pace from session storage
+        // Load trip pace from session storage (useEffect syncs sliderValue automatically)
         const storedTripPace = sessionStorage.getItem("tripPace");
         if (storedTripPace && ["slow", "moderate", "fast"].includes(storedTripPace)) {
           setTripPace(storedTripPace as "slow" | "moderate" | "fast");
@@ -1408,8 +1417,12 @@ export default function QuizRefine() {
                 </Badge>
               </div>
               <Slider
-                value={[tripPace === "slow" ? 0 : tripPace === "moderate" ? 1 : 2]}
+                value={[sliderValue]}
                 onValueChange={(values) => {
+                  // Instant UI update - slider moves immediately
+                  setSliderValue(values[0]);
+                  
+                  // Sync pace state and trigger AI regeneration with debounce
                   const newPace = values[0] === 0 ? "slow" : values[0] === 1 ? "moderate" : "fast";
                   if (newPace !== tripPace) {
                     setTripPace(newPace);
@@ -1425,7 +1438,7 @@ export default function QuizRefine() {
                 min={0}
                 max={2}
                 step={1}
-                disabled={isBusy}
+                disabled={isBusy && !aiPlanMutation.isPending}
                 data-testid="slider-pace"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-2">
