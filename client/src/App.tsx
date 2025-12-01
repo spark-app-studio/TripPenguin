@@ -26,6 +26,7 @@ import QuizRefine from "@/pages/quiz-refine";
 import MeetPebbles from "@/pages/meet-pebbles";
 import NotFound from "@/pages/not-found";
 import { PenguinLogo } from "@/components/PenguinLogo";
+import { Loader2 } from "lucide-react";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,8 +35,11 @@ function Router() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <PenguinLogo size="xl" className="mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
+          <PenguinLogo size="xl" className="mx-auto mb-4" />
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
       </div>
     );

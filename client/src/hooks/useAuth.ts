@@ -1,10 +1,11 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { PublicUser } from "@shared/schema";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<PublicUser>({
+  const { data: user, isLoading } = useQuery<PublicUser | null>({
     queryKey: ["/api/auth/user"],
+    queryFn: getQueryFn<PublicUser | null>({ on401: "returnNull" }),
     retry: false,
   });
 
