@@ -77,6 +77,7 @@ import { ProgressStepper } from "@/components/ProgressStepper";
 
 interface DayPlan {
   dayNumber: number;
+  dayTitle?: string;
   city: ItineraryCitySegment;
   dayInCity: number;
   totalDaysInCity: number;
@@ -318,6 +319,7 @@ export default function QuizRefine() {
             if (existingIndex >= 0) {
               updatedPlans[existingIndex] = {
                 ...updatedPlans[existingIndex],
+                dayTitle: aiDay.dayTitle,
                 activities: aiDay.activities,
               };
             }
@@ -1558,6 +1560,11 @@ export default function QuizRefine() {
                             <h4 className="font-semibold flex items-center gap-2">
                               <MapPin className="w-4 h-4 text-primary" />
                               {day.city.cityName}, {day.city.countryName}
+                              {day.dayTitle && (
+                                <span className="text-muted-foreground font-normal">
+                                  - {day.dayTitle}
+                                </span>
+                              )}
                             </h4>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <span>

@@ -1651,6 +1651,7 @@ Return JSON in this exact format:
   "dayPlans": [
     {
       "dayNumber": 1,
+      "dayTitle": "A short, evocative title for the day (e.g., 'Arrival & First Impressions', 'Beach Day Bliss', 'Cultural Deep Dive')",
       "cityName": "City Name",
       "countryName": "Country Name",
       "isArrivalDay": true/false,
@@ -1666,7 +1667,13 @@ Return JSON in this exact format:
       ]
     }
   ]
-}`;
+}
+
+DAY TITLE GUIDELINES:
+- Each day MUST have a unique, descriptive "dayTitle" that captures the day's theme
+- Keep titles short (2-5 words) and evocative
+- Examples: "Arrival & Settling In", "Harbor Exploration", "Mountain Adventure", "Cultural Immersion", "Beach Day Retreat", "Farewell & Departure"
+- For travel days: "Journey to [Next City]" or "On the Road"`;
 
   const daysDescription = dayStructure.map((d, idx) => {
     let dayDesc = `Day ${d.dayNumber}: ${d.city.cityName}, ${d.city.countryName} (Day ${d.dayInCity}/${d.totalDaysInCity}`;
