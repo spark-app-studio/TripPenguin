@@ -1600,159 +1600,20 @@ PACE SETTING: MODERATE (Balanced)
     }
   }
 
-  const systemPrompt = `You are Pebbles, a knowledgeable travel planning assistant creating a complete day-by-day itinerary for a ${request.tripType} trip.
-
-TRIP OVERVIEW:
-- Route: ${citiesOverview}
-- Total nights: ${request.itinerary.totalNights}
-- ${request.numberOfTravelers} traveler(s)
-- ${preferencesContext}
-${familyContext}
+  const systemPrompt = `Travel planner creating day-by-day itinerary. Route: ${citiesOverview}. ${request.numberOfTravelers} travelers. ${preferencesContext}${familyContext}
 ${paceInstructions}
 
-CRITICAL RULES FOR ACTIVITIES:
-- NEVER use emojis in any activity descriptions
-- You MUST incorporate ALL traveler preferences into every day's activities
-- You MUST follow the PACE SETTING instructions above - this is the traveler's preferred travel style
-- Include a mix of: meals, sightseeing, cultural experiences, AND REST PERIODS (adjusted for pace)
-- EVERY activity MUST include specific start and end times in format: "HH:MM AM/PM - HH:MM AM/PM: Activity description"
+RULES:
+- No emojis. Follow pace setting above.
+- Times: "9:00 AM - 11:00 AM" format. No overlapping times.
+- Include travel between locations (walk/taxi/bus/train).
+- ARRIVAL days: "Arrival: Check into hotel" then light evening activities.
+- DEPARTURE days: Morning only, then "Travel: Depart to [city] via [mode]".
 
-TIME AND DISTANCE REQUIREMENTS:
-- Each activity MUST have a start time and end time (e.g., "9:00 AM - 11:00 AM: Visit Auckland Museum")
-- When activities are in different locations, include travel time between them
-- Travel time format: "11:00 AM - 11:30 AM: Travel to [destination] (walk/taxi/bus, ~X min)"
-- Consider realistic distances within the city when scheduling consecutive activities
-- Activities should flow logically based on geography to minimize backtracking
-- Factor in city-specific transport: walking in compact cities, transit in larger ones
+Return JSON:
+{"dayPlans":[{"dayNumber":1,"dayTitle":"Short Theme","cityName":"City","countryName":"Country","isArrivalDay":false,"isDepartureDay":false,"dailyCostEstimate":100,"structuredActivities":[{"id":"day1-act1","startTime":"9:00 AM","endTime":"11:00 AM","title":"Activity Name","description":"Brief description","location":"Area","costEstimate":25,"externalLink":"https://...","isTravel":false,"alternates":[{"id":"day1-alt1","title":"Alternative","description":"Brief","costEstimate":20}]},{"id":"day1-travel1","startTime":"11:00 AM","endTime":"11:30 AM","title":"Travel to Next","isTravel":true,"travelMode":"walk","costEstimate":0}],"activities":["9:00 AM - 11:00 AM: Activity Name"]}]}
 
-REST TIME REQUIREMENTS (adjusted for pace setting):
-- For SLOW pace: Include extended rest periods (2+ hours) and leisurely exploration time
-- For MODERATE pace: Include "Rest break" or "Hotel downtime" at least once per day
-- For FAST pace: Brief rest breaks only, maximize activities and experiences
-- For families with young kids: Always add afternoon rest/nap time regardless of pace
-- Balance high-energy and low-energy activities within each day
-
-ACCESSIBILITY CONSIDERATIONS:
-- Prefer attractions with easy access and minimal walking where possible
-- Note if activities are stroller-friendly when traveling with young children
-- Suggest rest stops and cafes along walking routes
-- Consider the physical demands of each activity
-
-ARRIVAL AND DEPARTURE DAY RULES:
-- For ARRIVAL days: Start with "Arrival: Arrive at [city], check into hotel", then lighter afternoon/evening activities only
-- For DEPARTURE/TRAVEL days when moving to next city: 
-  * Morning activities only before travel
-  * MUST include "Travel: Depart [current city] to [next city] via [train/flight/bus]" as a midday/afternoon activity
-  * The travel activity should specify the mode of transport (train for nearby cities, flight for distant ones)
-- For FINAL departure day (leaving the trip): Morning activities, then "Departure: Head to airport for flight home"
-
-CRITICAL SCHEDULING RULES:
-- Activities must NEVER overlap - there MUST be at least 15 minutes between end time of one activity and start time of the next
-- Travel time between activities is MANDATORY when locations are different
-- Example of WRONG scheduling: Activity A ends at 2:30 PM, Activity B starts at 2:30 PM (NO GAP!)
-- Example of CORRECT scheduling: Activity A ends at 2:30 PM, Travel starts at 2:30 PM ends at 3:00 PM, Activity B starts at 3:00 PM
-
-Return JSON in this exact format:
-{
-  "dayPlans": [
-    {
-      "dayNumber": 1,
-      "dayTitle": "A short, evocative title for the day (e.g., 'Arrival & First Impressions', 'Beach Day Bliss', 'Cultural Deep Dive')",
-      "cityName": "City Name",
-      "countryName": "Country Name",
-      "isArrivalDay": true/false,
-      "isDepartureDay": true/false,
-      "dailyCostEstimate": 150,
-      "structuredActivities": [
-        {
-          "id": "day1-act1",
-          "startTime": "9:00 AM",
-          "endTime": "11:00 AM",
-          "title": "Auckland Museum Visit",
-          "description": "Explore New Zealand's largest museum featuring Maori culture, natural history, and war memorial exhibits. The iconic neoclassical building offers stunning views of the Domain parklands.",
-          "location": "Auckland Domain, Parnell",
-          "costEstimate": 25,
-          "externalLink": "https://www.aucklandmuseum.com",
-          "isTravel": false,
-          "alternates": [
-            {
-              "id": "day1-alt1a",
-              "title": "Auckland Art Gallery",
-              "description": "New Zealand's largest art institution with over 15,000 works spanning historical and contemporary art.",
-              "costEstimate": 0,
-              "externalLink": "https://www.aucklandartgallery.com"
-            },
-            {
-              "id": "day1-alt1b",
-              "title": "MOTAT - Museum of Transport",
-              "description": "Interactive transport and technology museum with vintage vehicles and aircraft.",
-              "costEstimate": 20,
-              "externalLink": "https://www.motat.nz"
-            }
-          ]
-        },
-        {
-          "id": "day1-travel1",
-          "startTime": "11:00 AM",
-          "endTime": "11:30 AM",
-          "title": "Travel to Viaduct Harbour",
-          "description": "Take a scenic walk through the city center to the waterfront area.",
-          "isTravel": true,
-          "travelMode": "walk",
-          "costEstimate": 0
-        },
-        {
-          "id": "day1-act2",
-          "startTime": "11:30 AM",
-          "endTime": "1:30 PM",
-          "title": "Viaduct Harbour Exploration & Lunch",
-          "description": "Stroll along the harbor promenade lined with restaurants and cafes. Enjoy fresh seafood at one of the waterfront restaurants with views of superyachts.",
-          "location": "Viaduct Harbour, Auckland CBD",
-          "costEstimate": 45,
-          "isTravel": false,
-          "alternates": [
-            {
-              "id": "day1-alt2a",
-              "title": "Wynyard Quarter & Silo Park",
-              "description": "Trendy waterfront precinct with markets, public art, and family-friendly spaces.",
-              "costEstimate": 35
-            }
-          ]
-        }
-      ],
-      "activities": [
-        "9:00 AM - 11:00 AM: Auckland Museum Visit - Explore Maori culture and natural history",
-        "11:00 AM - 11:30 AM: Travel to Viaduct Harbour (walk, ~30 min)",
-        "11:30 AM - 1:30 PM: Viaduct Harbour Exploration & Lunch"
-      ]
-    }
-  ]
-}
-
-STRUCTURED ACTIVITY REQUIREMENTS:
-- Each activity MUST have a unique "id" (format: "dayX-actY" or "dayX-travelY")
-- "startTime" and "endTime" in "H:MM AM/PM" format
-- "title": Short activity name (e.g., "Auckland Museum Visit")
-- "description": 1-2 sentences with details about what to see/do and why it's special
-- "location": Specific area/address when relevant
-- "costEstimate": Estimated cost per person in USD (use 0 for free activities)
-- "externalLink": Official website URL when available (omit if not known)
-- "isTravel": true only for transit between locations
-- "travelMode": "walk", "taxi", "bus", "train", "ferry" (only for travel activities)
-- "alternates": 1-3 nearby alternatives for non-travel activities (omit for travel/rest)
-
-DAILY COST ESTIMATE:
-- "dailyCostEstimate" should be the sum of all activity costs for that day per person
-- Include meals, attractions, and transport in the estimate
-- Be realistic based on local prices
-
-DAY TITLE GUIDELINES:
-- Each day MUST have a unique, descriptive "dayTitle" that captures the day's theme
-- Keep titles short (2-5 words) and evocative
-- Examples: "Arrival & Settling In", "Harbor Exploration", "Mountain Adventure", "Cultural Immersion", "Beach Day Retreat", "Farewell & Departure"
-- For travel days: "Journey to [Next City]" or "On the Road"
-
-ALSO include the legacy "activities" array with string format for backwards compatibility.`;
+FIELDS: id (dayX-actY), startTime/endTime (H:MM AM/PM), title, description (1 sentence), location, costEstimate (USD), externalLink (official URL if known), isTravel, travelMode (walk/taxi/bus/train/ferry), alternates (1 nearby option for main activities only).`;
 
   const daysDescription = dayStructure.map((d, idx) => {
     let dayDesc = `Day ${d.dayNumber}: ${d.city.cityName}, ${d.city.countryName} (Day ${d.dayInCity}/${d.totalDaysInCity}`;
@@ -1769,16 +1630,7 @@ ALSO include the legacy "activities" array with string format for backwards comp
     return dayDesc;
   }).join("\n");
 
-  const userPrompt = `Create a complete day-by-day activity plan for this ${request.itinerary.totalNights}-night trip:
-
-${daysDescription}
-
-REQUIREMENTS:
-1. Every activity MUST have specific start and end times (e.g., "9:00 AM - 11:00 AM: Visit museum")
-2. Include travel time between activities when locations are different
-3. Activities should be geographically logical to minimize transit time
-4. Match the traveler's preferences and selected pace setting
-5. Include meal recommendations with realistic timing`;
+  const userPrompt = `Plan ${request.itinerary.totalNights}-night trip:\n${daysDescription}\nInclude times, travel, meals. Be concise.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -1788,8 +1640,8 @@ REQUIREMENTS:
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 8000,
+      temperature: 0.5,
+      max_tokens: 6000,
     });
 
     const content = completion.choices[0]?.message?.content;
