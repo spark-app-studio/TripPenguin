@@ -546,7 +546,22 @@ export default function QuizRefine() {
       if (day.dayNumber === dayNumber) {
         const updatedActivities = [...day.activities];
         updatedActivities[activityIndex] = tempActivity.trim();
-        return { ...day, activities: updatedActivities };
+        
+        // Also update structured activities if they exist
+        let updatedStructuredActivities = day.structuredActivities;
+        if (day.structuredActivities && day.structuredActivities[activityIndex]) {
+          updatedStructuredActivities = [...day.structuredActivities];
+          updatedStructuredActivities[activityIndex] = {
+            ...updatedStructuredActivities[activityIndex],
+            title: tempActivity.trim(),
+          };
+        }
+        
+        return { 
+          ...day, 
+          activities: updatedActivities,
+          structuredActivities: updatedStructuredActivities,
+        };
       }
       return day;
     }));
@@ -560,7 +575,21 @@ export default function QuizRefine() {
         if (updatedActivities.length === 0) {
           updatedActivities.push(`Free time to explore ${day.city.cityName}`);
         }
-        return { ...day, activities: updatedActivities };
+        
+        // Also update structured activities if they exist
+        let updatedStructuredActivities = day.structuredActivities;
+        if (day.structuredActivities) {
+          updatedStructuredActivities = day.structuredActivities.filter((_, idx) => idx !== activityIndex);
+          if (updatedStructuredActivities.length === 0) {
+            updatedStructuredActivities = undefined; // Fall back to string activities
+          }
+        }
+        
+        return { 
+          ...day, 
+          activities: updatedActivities,
+          structuredActivities: updatedStructuredActivities,
+        };
       }
       return day;
     }));
@@ -571,7 +600,28 @@ export default function QuizRefine() {
 
     setDayPlans(prev => prev.map(day => {
       if (day.dayNumber === dayNumber) {
-        return { ...day, activities: [...day.activities, newActivityText.trim()] };
+        const newActivity = newActivityText.trim();
+        
+        // If structured activities exist, add a new structured activity too
+        let updatedStructuredActivities = day.structuredActivities;
+        if (day.structuredActivities && day.structuredActivities.length > 0) {
+          const lastActivity = day.structuredActivities[day.structuredActivities.length - 1];
+          const newStructuredActivity: StructuredActivity = {
+            id: `day${dayNumber}-custom-${Date.now()}`,
+            startTime: lastActivity?.endTime || "12:00 PM",
+            endTime: "1:00 PM",
+            title: newActivity,
+            description: "Custom activity added by user",
+            costEstimate: 0,
+          };
+          updatedStructuredActivities = [...day.structuredActivities, newStructuredActivity];
+        }
+        
+        return { 
+          ...day, 
+          activities: [...day.activities, newActivity],
+          structuredActivities: updatedStructuredActivities,
+        };
       }
       return day;
     }));
@@ -1678,12 +1728,13 @@ export default function QuizRefine() {
                             <h5 className="text-sm font-medium text-muted-foreground">
                               {aiPlanMutation.isPending ? "Generating activities..." : "Activities:"}
                             </h5>
-                            {day.dailyCostEstimate !== undefined && day.dailyCostEstimate > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                <DollarSign className="w-3 h-3 mr-1" />
-                                Est. ${day.dailyCostEstimate}/person
-                              </Badge>
-                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              {day.dailyCostEstimate !== undefined && day.dailyCostEstimate > 0 
+                                ? `Est. $${day.dailyCostEstimate}/person`
+                                : "Cost TBD"
+                              }
+                            </Badge>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button
