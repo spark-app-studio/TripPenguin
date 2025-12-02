@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -340,27 +340,39 @@ export default function QuizRefine() {
   const [aiGenerationComplete, setAiGenerationComplete] = useState(false);
   const aiGenerationTriggeredRef = useRef(false);
   
-  // Trip Personality state - controls AI-generated activity density
-  const [tripPace, setTripPace] = useState<"slow" | "moderate" | "fast">("moderate");
-  // Separate slider value for instant UI responsiveness (0=slow, 1=moderate, 2=fast)
-  const [sliderValue, setSliderValue] = useState<number>(1);
-  const paceRegenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Progressive loading state - tracks which days have been revealed
+  const [revealedDays, setRevealedDays] = useState<Set<number>>(new Set());
+  const [currentLoadingDay, setCurrentLoadingDay] = useState<number | null>(null);
+  const [pebblesMessage, setPebblesMessage] = useState<string>("");
+  const progressiveRevealTimeouts = useRef<NodeJS.Timeout[]>([]);
   
-  // Keep sliderValue synchronized with tripPace (handles external updates only)
-  // Only depends on tripPace to avoid overwriting user's optimistic slider input
-  useEffect(() => {
-    const newSliderValue = tripPace === "slow" ? 0 : tripPace === "fast" ? 2 : 1;
-    setSliderValue(newSliderValue);
-  }, [tripPace]);
-  
-  // Cleanup debounce timeout on unmount
+  // Cleanup progressive reveal timeouts on unmount
   useEffect(() => {
     return () => {
-      if (paceRegenerationTimeoutRef.current) {
-        clearTimeout(paceRegenerationTimeoutRef.current);
-      }
+      progressiveRevealTimeouts.current.forEach(t => clearTimeout(t));
     };
   }, []);
+  
+  // Pebbles messages for progressive loading
+  const pebblesMessages = useMemo(() => [
+    "Checking the weather forecast...",
+    "Finding the best local spots...",
+    "Planning perfect timing for activities...",
+    "Adding travel time between locations...",
+    "Including must-see attractions...",
+    "Making sure you have time to rest...",
+    "Adding some hidden gems...",
+    "Finalizing your adventure...",
+  ], []);
+  
+  // Trip pace - derived from quiz dayPace, not user-adjustable
+  // Maps quiz values: "relaxed" → "slow", "balanced" → "moderate", "packed" → "fast"
+  const tripPace = useMemo(() => {
+    const quizDayPace = quizData?.dayPace;
+    if (quizDayPace === "relaxed") return "slow";
+    if (quizDayPace === "packed") return "fast";
+    return "moderate"; // "balanced" or default
+  }, [quizData?.dayPace]);
 
   // AI itinerary plan generation mutation
   const aiPlanMutation = useMutation({
@@ -389,6 +401,7 @@ export default function QuizRefine() {
     },
     onSuccess: (data) => {
       if (data.dayPlans && data.dayPlans.length > 0) {
+        // Store all day data immediately but reveal progressively
         setDayPlans(prev => {
           const updatedPlans = [...prev];
           for (const aiDay of data.dayPlans) {
@@ -405,10 +418,34 @@ export default function QuizRefine() {
           }
           return updatedPlans;
         });
-        setAiGenerationComplete(true);
-        toast({
-          title: "Itinerary activities generated",
-          description: "Your day-by-day activities have been planned based on your preferences.",
+        
+        // Clear any existing timeouts before starting new reveal sequence
+        progressiveRevealTimeouts.current.forEach(t => clearTimeout(t));
+        progressiveRevealTimeouts.current = [];
+        
+        // Progressive reveal - reveal each day with a delay
+        const dayNumbers = data.dayPlans.map((d: { dayNumber: number }) => d.dayNumber).sort((a: number, b: number) => a - b);
+        dayNumbers.forEach((dayNum: number, index: number) => {
+          const outerTimeout = setTimeout(() => {
+            setCurrentLoadingDay(dayNum);
+            setPebblesMessage(pebblesMessages[index % pebblesMessages.length]);
+            
+            const innerTimeout = setTimeout(() => {
+              setRevealedDays(prev => new Set([...Array.from(prev), dayNum]));
+              // On last day, mark complete
+              if (index === dayNumbers.length - 1) {
+                setCurrentLoadingDay(null);
+                setPebblesMessage("");
+                setAiGenerationComplete(true);
+                toast({
+                  title: "Itinerary complete!",
+                  description: "Pebbles has finished planning your adventure.",
+                });
+              }
+            }, 300);
+            progressiveRevealTimeouts.current.push(innerTimeout);
+          }, index * 600); // 600ms between each day reveal
+          progressiveRevealTimeouts.current.push(outerTimeout);
         });
       }
     },
@@ -718,14 +755,9 @@ export default function QuizRefine() {
           
           setNumberOfTravelers(trip.numberOfTravelers || 1);
           
-          // Load quiz data if available
+          // Load quiz data if available (pace is derived from quizData.dayPace automatically)
           if (trip.draftQuizData) {
             setQuizData(trip.draftQuizData);
-            // Restore pace from saved draft (useEffect syncs sliderValue automatically)
-            const savedPace = (trip.draftQuizData as QuizResponse & { tripPace?: "slow" | "moderate" | "fast" }).tripPace;
-            if (savedPace && ["slow", "moderate", "fast"].includes(savedPace)) {
-              setTripPace(savedPace);
-            }
           }
           
           setCurrentDraftId(draftId);
@@ -775,16 +807,10 @@ export default function QuizRefine() {
         setNumberOfTravelers(travelers);
         setDesiredNights(itinerary.totalNights);
         
-        // Load quiz preferences from quizData (both legacy and new flows store this)
+        // Load quiz preferences from quizData (pace is derived from quizData.dayPace automatically)
         if (storedQuizData) {
           const quiz = JSON.parse(storedQuizData) as QuizResponse;
           setQuizData(quiz);
-        }
-        
-        // Load trip pace from session storage (useEffect syncs sliderValue automatically)
-        const storedTripPace = sessionStorage.getItem("tripPace");
-        if (storedTripPace && ["slow", "moderate", "fast"].includes(storedTripPace)) {
-          setTripPace(storedTripPace as "slow" | "moderate" | "fast");
         }
         
         // Load trip type - check multiple sources in order of priority:
@@ -1528,7 +1554,7 @@ export default function QuizRefine() {
           </CardContent>
         </Card>
 
-        {/* Trip Personality Controls */}
+        {/* Trip Personality Display (read-only, derived from quiz) */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1536,50 +1562,18 @@ export default function QuizRefine() {
               Trip Personality
             </CardTitle>
             <CardDescription>
-              Adjust how packed or relaxed your daily schedule will be
+              Based on your quiz preferences
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium">Daily Pace</label>
-                <Badge 
-                  variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
-                  data-testid="badge-pace-value"
-                >
-                  {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
-                </Badge>
-              </div>
-              <Slider
-                value={[sliderValue]}
-                onValueChange={(values) => {
-                  // Instant UI update - slider moves immediately
-                  setSliderValue(values[0]);
-                  
-                  // Sync pace state and trigger AI regeneration with debounce
-                  const newPace = values[0] === 0 ? "slow" : values[0] === 1 ? "moderate" : "fast";
-                  if (newPace !== tripPace) {
-                    setTripPace(newPace);
-                    sessionStorage.setItem("tripPace", newPace);
-                    if (paceRegenerationTimeoutRef.current) {
-                      clearTimeout(paceRegenerationTimeoutRef.current);
-                    }
-                    paceRegenerationTimeoutRef.current = setTimeout(() => {
-                      aiPlanMutation.mutate();
-                    }, 800);
-                  }
-                }}
-                min={0}
-                max={2}
-                step={1}
-                disabled={isBusy && !aiPlanMutation.isPending}
-                data-testid="slider-pace"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>Slow</span>
-                <span>Moderate</span>
-                <span>Fast</span>
-              </div>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Daily Pace</span>
+              <Badge 
+                variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
+                data-testid="badge-pace-value"
+              >
+                {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
+              </Badge>
             </div>
             <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
               {tripPace === "slow" && (
@@ -1592,12 +1586,6 @@ export default function QuizRefine() {
                 <p>5-6 activities per day to maximize your time. Ideal for those who want to see and do everything.</p>
               )}
             </div>
-            {aiPlanMutation.isPending && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Regenerating activities for your new pace...</span>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1630,16 +1618,27 @@ export default function QuizRefine() {
           />
         )}
 
-        {/* AI Generation Status */}
-        {aiPlanMutation.isPending && (
-          <Card className="border-primary/20 bg-primary/5">
+        {/* Pebbles AI Generation Status */}
+        {(aiPlanMutation.isPending || (currentLoadingDay !== null)) && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
             <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <div>
-                  <p className="font-medium">Planning your activities...</p>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-2xl">🐧</span>
+                  </div>
+                  <Loader2 className="w-4 h-4 animate-spin text-primary absolute -bottom-1 -right-1" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-primary">
+                    {aiPlanMutation.isPending 
+                      ? "Pebbles is planning your adventure..." 
+                      : `Building Day ${currentLoadingDay}...`}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Pebbles is creating personalized activities based on your preferences
+                    {aiPlanMutation.isPending 
+                      ? "Creating personalized activities based on your preferences"
+                      : pebblesMessage || "Preparing your activities..."}
                   </p>
                 </div>
               </div>
@@ -1726,13 +1725,33 @@ export default function QuizRefine() {
                         </div>
                       </div>
 
-                      {/* Activities for this day - Now Editable */}
+                      {/* Activities for this day - Progressive loading */}
                       <div className="ml-13 space-y-2">
+                        {/* Show loading state if day is not yet revealed and AI is generating */}
+                        {(aiPlanMutation.isPending || !revealedDays.has(day.dayNumber)) && !aiGenerationComplete ? (
+                          <div className="p-4 rounded-md bg-muted/30 border border-dashed">
+                            <div className="flex items-center gap-3">
+                              {currentLoadingDay === day.dayNumber ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                  <div>
+                                    <p className="text-sm font-medium">Building activities for Day {day.dayNumber}...</p>
+                                    <p className="text-xs text-muted-foreground">{pebblesMessage || "Almost there..."}</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                                  <p className="text-sm text-muted-foreground">Waiting to plan Day {day.dayNumber}...</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                        <>
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                           <div className="flex items-center gap-3">
-                            <h5 className="text-sm font-medium text-muted-foreground">
-                              {aiPlanMutation.isPending ? "Generating activities..." : "Activities:"}
-                            </h5>
+                            <h5 className="text-sm font-medium text-muted-foreground">Activities:</h5>
                             <Badge variant="secondary" className="text-xs">
                               <DollarSign className="w-3 h-3 mr-1" />
                               {day.dailyCostEstimate !== undefined && day.dailyCostEstimate > 0 
@@ -2088,6 +2107,8 @@ export default function QuizRefine() {
                             </div>
                           )}
                         </div>
+                        </>
+                        )}
                       </div>
                     </div>
                   </div>
