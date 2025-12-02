@@ -460,6 +460,85 @@ export default function QuizRefine() {
     },
   });
 
+  // Track which activity is currently generating new alternatives
+  const [generatingAlternativesFor, setGeneratingAlternativesFor] = useState<{
+    dayNumber: number;
+    activityIndex: number;
+  } | null>(null);
+
+  // Mutation for generating new alternatives for an activity
+  const generateAlternativesMutation = useMutation({
+    mutationFn: async (params: {
+      dayNumber: number;
+      activityIndex: number;
+      activity: StructuredActivity;
+      city: DayPlan["city"];
+    }) => {
+      const response = await apiRequest("POST", "/api/ai/generate-alternative", {
+        cityName: params.city.cityName,
+        countryName: params.city.countryName,
+        currentActivity: {
+          title: params.activity.title,
+          description: params.activity.description,
+          startTime: params.activity.startTime,
+          endTime: params.activity.endTime,
+        },
+        existingAlternates: params.activity.alternates?.map(a => ({ title: a.title })) || [],
+        tripType,
+        quizPreferences: {
+          tripGoal: quizData?.tripGoal,
+          dayPace: quizData?.dayPace,
+          spendingPriority: quizData?.spendingPriority,
+          travelersType: (quizData as Record<string, unknown>)?.travelersType as string | undefined,
+          kidsAges: (quizData as Record<string, unknown>)?.kidsAges as string[] | undefined,
+        },
+      });
+      return { ...await response.json(), dayNumber: params.dayNumber, activityIndex: params.activityIndex };
+    },
+    onSuccess: (data) => {
+      if (data.alternates && data.alternates.length > 0) {
+        setDayPlans(prev => prev.map(day => {
+          if (day.dayNumber === data.dayNumber && day.structuredActivities) {
+            const updatedStructuredActivities = [...day.structuredActivities];
+            const currentActivity = updatedStructuredActivities[data.activityIndex];
+            
+            if (currentActivity) {
+              updatedStructuredActivities[data.activityIndex] = {
+                ...currentActivity,
+                alternates: data.alternates,
+              };
+            }
+            
+            return { ...day, structuredActivities: updatedStructuredActivities };
+          }
+          return day;
+        }));
+        
+        toast({
+          title: "New alternatives ready!",
+          description: `Generated ${data.alternates.length} new options for you.`,
+        });
+      }
+    },
+    onError: (error: Error) => {
+      console.error("Generate alternatives error:", error);
+      toast({
+        title: "Could not generate alternatives",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Always clear the loading state when mutation completes (success or error)
+      setGeneratingAlternativesFor(null);
+    },
+  });
+
+  const handleGenerateAlternatives = (dayNumber: number, activityIndex: number, activity: StructuredActivity, city: DayPlan["city"]) => {
+    setGeneratingAlternativesFor({ dayNumber, activityIndex });
+    generateAlternativesMutation.mutate({ dayNumber, activityIndex, activity, city });
+  };
+
   // Normalize activity text for matching - strips punctuation and extra whitespace
   const normalizeActivity = (text: string): string => {
     return text.toLowerCase().trim().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
@@ -665,6 +744,93 @@ export default function QuizRefine() {
     }));
     setNewActivityDay(null);
     setNewActivityText("");
+  };
+
+  // Swap an activity with one of its alternates
+  const handleSwapWithAlternate = (dayNumber: number, activityIndex: number, alternate: ActivityAlternate) => {
+    setDayPlans(prev => prev.map(day => {
+      if (day.dayNumber === dayNumber && day.structuredActivities) {
+        const updatedStructuredActivities = [...day.structuredActivities];
+        const currentActivity = updatedStructuredActivities[activityIndex];
+        
+        if (currentActivity) {
+          // Build new alternates list preserving all data across swaps:
+          // 1. Add current activity as an alternate (preserving all its data)
+          // 2. Keep all existing alternates except the one being swapped to
+          // 3. Include any alternates the chosen alternate might have carried
+          // This ensures users can continue cycling through all options
+          const chosenAlternateAlternates = (alternate as unknown as { alternates?: ActivityAlternate[] }).alternates || [];
+          
+          // Preserve full current activity data as an alternate
+          // ActivityAlternate stores: id, title, description, costEstimate, externalLink
+          const currentAsAlternate: ActivityAlternate = {
+            id: currentActivity.id,
+            title: currentActivity.title,
+            description: currentActivity.description || "",
+            costEstimate: currentActivity.costEstimate,
+            externalLink: currentActivity.externalLink,
+          };
+          
+          // Collect ALL alternates to preserve the full swap history
+          const newAlternates: ActivityAlternate[] = [
+            // Current activity becomes an alternate (user can swap back)
+            currentAsAlternate,
+            // Keep all other alternates from the current activity (except the one being used)
+            ...(currentActivity.alternates?.filter(alt => alt.id !== alternate.id) || []),
+            // Include any alternates the chosen alternate had (preserves nested options)
+            ...chosenAlternateAlternates,
+          ];
+          
+          // Deduplicate by id to prevent duplicate alternates after multiple swaps
+          const uniqueAlternates = newAlternates.filter((alt, index, self) => 
+            index === self.findIndex(a => a.id === alt.id)
+          );
+          
+          // Create the swapped activity - merge alternate onto current activity
+          // Missing fields in alternate fallback to current activity data
+          const swappedActivity: StructuredActivity = {
+            id: alternate.id,
+            startTime: currentActivity.startTime,
+            endTime: currentActivity.endTime,
+            title: alternate.title,
+            description: alternate.description || currentActivity.description || "",
+            location: currentActivity.location, // Preserve location context from time slot
+            costEstimate: alternate.costEstimate ?? currentActivity.costEstimate,
+            externalLink: alternate.externalLink || currentActivity.externalLink,
+            isTravel: false,
+            alternates: uniqueAlternates,
+          };
+          
+          updatedStructuredActivities[activityIndex] = swappedActivity;
+        }
+        
+        // Also update the string activities array
+        const updatedActivities = [...day.activities];
+        if (updatedActivities[activityIndex]) {
+          updatedActivities[activityIndex] = `${currentActivity?.startTime} - ${currentActivity?.endTime}: ${alternate.title}`;
+        }
+        
+        return { 
+          ...day, 
+          activities: updatedActivities,
+          structuredActivities: updatedStructuredActivities,
+        };
+      }
+      return day;
+    }));
+    
+    // Collapse the alternates section after swap
+    setExpandedAlternates(prev => {
+      const next = new Set(prev);
+      const activityId = dayPlans.find(d => d.dayNumber === dayNumber)?.structuredActivities?.[activityIndex]?.id;
+      if (activityId) next.delete(activityId);
+      return next;
+    });
+    
+    toast({
+      title: "Activity swapped",
+      description: `Changed to "${alternate.title}"`,
+    });
   };
 
   const handleAddNewCity = () => {
@@ -1968,6 +2134,19 @@ export default function QuizRefine() {
                                                     {alt.costEstimate === 0 ? 'Free' : `$${alt.costEstimate}`}
                                                   </Badge>
                                                 )}
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-6 text-xs"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSwapWithAlternate(day.dayNumber, actIndex, alt);
+                                                  }}
+                                                  data-testid={`button-use-alternate-${alt.id}`}
+                                                >
+                                                  <Check className="w-3 h-3 mr-1" />
+                                                  Use This
+                                                </Button>
                                                 {alt.externalLink && (
                                                   <Button
                                                     variant="ghost"
@@ -1977,6 +2156,7 @@ export default function QuizRefine() {
                                                       e.stopPropagation();
                                                       window.open(alt.externalLink, '_blank');
                                                     }}
+                                                    data-testid={`button-external-link-${alt.id}`}
                                                   >
                                                     <ExternalLink className="w-3 h-3" />
                                                   </Button>
@@ -2006,12 +2186,66 @@ export default function QuizRefine() {
                                                     Visit Website
                                                   </a>
                                                 )}
+                                                <Button
+                                                  variant="default"
+                                                  size="sm"
+                                                  className="w-full mt-2"
+                                                  onClick={() => handleSwapWithAlternate(day.dayNumber, actIndex, alt)}
+                                                  data-testid={`button-use-alternate-hover-${alt.id}`}
+                                                >
+                                                  <Check className="w-3 h-3 mr-1" />
+                                                  Use This Instead
+                                                </Button>
                                               </div>
                                             </HoverCardContent>
                                           </HoverCard>
                                         ))}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 text-xs w-full mt-2 border border-dashed border-muted-foreground/30"
+                                          onClick={() => handleGenerateAlternatives(day.dayNumber, actIndex, structuredAct, day.city)}
+                                          disabled={generatingAlternativesFor?.dayNumber === day.dayNumber && generatingAlternativesFor?.activityIndex === actIndex}
+                                          data-testid={`button-generate-alternatives-${day.dayNumber}-${actIndex}`}
+                                        >
+                                          {generatingAlternativesFor?.dayNumber === day.dayNumber && generatingAlternativesFor?.activityIndex === actIndex ? (
+                                            <>
+                                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                              Generating...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Sparkles className="w-3 h-3 mr-1" />
+                                              Generate New Options
+                                            </>
+                                          )}
+                                        </Button>
                                       </CollapsibleContent>
                                     </Collapsible>
+                                  )}
+                                  
+                                  {/* Generate alternatives button for activities without alternates */}
+                                  {(!structuredAct.alternates || structuredAct.alternates.length === 0) && !structuredAct.isTravel && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 text-xs ml-7 text-muted-foreground"
+                                      onClick={() => handleGenerateAlternatives(day.dayNumber, actIndex, structuredAct, day.city)}
+                                      disabled={generatingAlternativesFor?.dayNumber === day.dayNumber && generatingAlternativesFor?.activityIndex === actIndex}
+                                      data-testid={`button-generate-alternatives-empty-${day.dayNumber}-${actIndex}`}
+                                    >
+                                      {generatingAlternativesFor?.dayNumber === day.dayNumber && generatingAlternativesFor?.activityIndex === actIndex ? (
+                                        <>
+                                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                          Generating alternatives...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Sparkles className="w-3 h-3 mr-1" />
+                                          Generate Alternatives
+                                        </>
+                                      )}
+                                    </Button>
                                   )}
                                 </div>
                               );

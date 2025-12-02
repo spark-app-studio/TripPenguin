@@ -1633,6 +1633,25 @@ FIELDS: id (dayX-actY), startTime/endTime (H:MM AM/PM), title, description (1 se
   const userPrompt = `Plan ${request.itinerary.totalNights}-night trip:\n${daysDescription}\nInclude times, travel, meals. Be concise.`;
 
   try {
+    // Calculate max_tokens based on trip length - longer trips need more tokens
+    // Each day needs ~800-1200 tokens for structured activities with alternates
+    // Use confirmed day count from dayStructure (unique dayNumbers), validated against totalNights
+    const uniqueDayNumbers = new Set(dayStructure.map(d => d.dayNumber));
+    const confirmedDays = uniqueDayNumbers.size;
+    const totalNights = request.itinerary.totalNights;
+    const expectedDays = (typeof totalNights === 'number' && totalNights > 0) 
+      ? totalNights + 1  // N nights means N+1 days
+      : 8;
+    // Use the larger of confirmed or expected to ensure coverage
+    const numberOfDays = Math.max(confirmedDays, expectedDays, 1);
+    const estimatedTokensPerDay = 1200;
+    const baseTokens = 2000; // For response structure overhead
+    const calculatedTokens = baseTokens + (numberOfDays * estimatedTokensPerDay);
+    // Ensure we never pass NaN to the API
+    const maxTokens = Number.isFinite(calculatedTokens) 
+      ? Math.min(16000, Math.max(8000, calculatedTokens)) 
+      : 10000; // Safe default
+    
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -1641,7 +1660,7 @@ FIELDS: id (dayX-actY), startTime/endTime (H:MM AM/PM), title, description (1 se
       ],
       response_format: { type: "json_object" },
       temperature: 0.5,
-      max_tokens: 6000,
+      max_tokens: maxTokens,
     });
 
     const content = completion.choices[0]?.message?.content;
@@ -1812,5 +1831,105 @@ For general questions or info, just provide the message without suggestedChanges
   } catch (error) {
     console.error("Error chatting with itinerary assistant:", error);
     throw new Error("Failed to get assistant response");
+  }
+}
+
+export interface GenerateAlternativeRequest {
+  cityName: string;
+  countryName: string;
+  currentActivity: {
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+  };
+  existingAlternates?: { title: string }[];
+  tripType: string;
+  quizPreferences?: {
+    tripGoal?: string;
+    dayPace?: string;
+    spendingPriority?: string;
+    travelersType?: string;
+    kidsAges?: string[];
+  };
+}
+
+export interface GenerateAlternativeResponse {
+  alternates: {
+    id: string;
+    title: string;
+    description: string;
+    costEstimate?: number;
+    externalLink?: string;
+  }[];
+}
+
+export async function generateActivityAlternatives(request: GenerateAlternativeRequest): Promise<GenerateAlternativeResponse> {
+  const preferencesContext = buildPreferencesContext(request.quizPreferences || {});
+  
+  const existingList = request.existingAlternates && request.existingAlternates.length > 0
+    ? `Avoid suggesting: ${request.existingAlternates.map(a => a.title).join(", ")}`
+    : "";
+  
+  const kidsAges = request.quizPreferences?.kidsAges || [];
+  let familyContext = "";
+  if (kidsAges.length > 0) {
+    familyContext = `Traveling with children ages: ${kidsAges.join(", ")}. Suggest family-friendly alternatives.`;
+  }
+
+  const systemPrompt = `You are Pebbles, a travel planning assistant. Generate 3 alternative activities for the given activity in ${request.cityName}, ${request.countryName}.
+
+CONTEXT:
+- Trip type: ${request.tripType}
+- Current activity: ${request.currentActivity.title}
+- Time slot: ${request.currentActivity.startTime} - ${request.currentActivity.endTime}
+- ${preferencesContext}
+${familyContext ? `- ${familyContext}` : ""}
+${existingList ? `- ${existingList}` : ""}
+
+RULES:
+- No emojis
+- Generate exactly 3 alternatives
+- Alternatives should be similar in duration but offer different experiences
+- Include realistic cost estimates in USD (0 if free)
+- Include external links if known (official websites, TripAdvisor, etc.)
+- Make alternatives diverse (one might be cheaper, one more upscale, one unique/local)
+
+Return JSON:
+{
+  "alternates": [
+    {
+      "id": "alt-1",
+      "title": "Activity Name",
+      "description": "Brief 1-sentence description",
+      "costEstimate": 25,
+      "externalLink": "https://..."
+    }
+  ]
+}`;
+
+  const userPrompt = `Generate 3 alternative activities for "${request.currentActivity.title}" (${request.currentActivity.startTime} - ${request.currentActivity.endTime}) in ${request.cityName}, ${request.countryName}. Make them diverse options.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    return { alternates: parsed.alternates || [] };
+  } catch (error) {
+    console.error("Error generating activity alternatives:", error);
+    throw new Error("Failed to generate alternatives");
   }
 }

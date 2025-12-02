@@ -31,10 +31,12 @@ import {
   planDayWithAI,
   generateFullItineraryPlan,
   chatWithItineraryAssistant,
+  generateActivityAlternatives,
   type ActivitySuggestionRequest,
   type DayPlannerRequest,
   type FullItineraryPlanRequest,
-  type ItineraryAssistantRequest
+  type ItineraryAssistantRequest,
+  type GenerateAlternativeRequest
 } from "./ai-destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
@@ -925,6 +927,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.error("AI itinerary assistant error:", error);
         res.status(500).json({ error: "Failed to get assistant response" });
+      }
+    }
+  });
+
+  const generateAlternativeRequestSchema = z.object({
+    cityName: z.string(),
+    countryName: z.string(),
+    currentActivity: z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      startTime: z.string(),
+      endTime: z.string(),
+    }),
+    existingAlternates: z.array(z.object({ title: z.string() })).optional(),
+    tripType: z.enum(["international", "domestic", "staycation"]),
+    quizPreferences: z.object({
+      tripGoal: z.string().optional(),
+      dayPace: z.string().optional(),
+      spendingPriority: z.string().optional(),
+      travelersType: z.string().optional(),
+      kidsAges: z.array(z.string()).optional(),
+    }).optional(),
+  });
+
+  app.post("/api/ai/generate-alternative", isAuthenticated, async (req, res) => {
+    try {
+      const request = generateAlternativeRequestSchema.parse(req.body);
+      const response = await generateActivityAlternatives(request as GenerateAlternativeRequest);
+      res.json(response);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid request", details: error.errors });
+      } else if (error instanceof Error && error.message.includes("API key")) {
+        res.status(503).json({ error: "AI service is not configured" });
+      } else {
+        console.error("Generate alternative error:", error);
+        res.status(500).json({ error: "Failed to generate alternatives" });
       }
     }
   });
