@@ -378,10 +378,11 @@ export default function QuizRefine() {
           placeType: quizData?.placeType,
           dayPace: quizData?.dayPace,
           spendingPriority: quizData?.spendingPriority,
-          travelersType: quizData?.travelersType,
-          kidsAges: quizData?.kidsAges,
-          accommodationType: quizData?.accommodationType,
-          mustHave: quizData?.mustHave,
+          // Extended properties from GettingStartedData flow - use type-safe access
+          travelersType: (quizData as Record<string, unknown>)?.travelersType,
+          kidsAges: (quizData as Record<string, unknown>)?.kidsAges,
+          accommodationType: (quizData as Record<string, unknown>)?.accommodationType,
+          mustHave: (quizData as Record<string, unknown>)?.mustHave,
         },
       });
       return response.json();
@@ -699,12 +700,15 @@ export default function QuizRefine() {
             
             const totalNights = cities.reduce((sum, c) => sum + c.stayLengthNights, 0);
             const itinerary: ItineraryRecommendation = {
+              id: crypto.randomUUID(),
               title: trip.title || "Your Trip",
               vibeTagline: "Continue planning your adventure",
+              isCurveball: false,
+              totalCost: { min: 0, max: 0, currency: "USD" },
+              costBreakdown: { flights: 0, housing: 0, food: 0, fun: 0, transportation: 0, preparation: 0 },
               cities,
+              bestTimeToVisit: "Year-round",
               totalNights,
-              totalEstimatedCost: 0,
-              costBreakdown: { flights: 0, accommodation: 0, food: 0, activities: 0, transport: 0 },
             };
             setCurrentItinerary(itinerary);
             setDesiredNights(totalNights);
@@ -1009,7 +1013,7 @@ export default function QuizRefine() {
     const syncedItinerary = { ...currentItinerary, cities: syncedCities };
     
     try {
-      const travelSeason = quizData?.travelSeason || "summer";
+      const travelSeason = ((quizData as Record<string, unknown>)?.travelSeason as string) || "summer";
       
       if (currentDraftId) {
         // Update existing draft
@@ -1114,7 +1118,7 @@ export default function QuizRefine() {
     
     try {
       // Get travel season from quiz data or default
-      const travelSeason = quizData?.travelSeason || "summer";
+      const travelSeason = ((quizData as Record<string, unknown>)?.travelSeason as string) || "summer";
       
       let tripId: string;
       
@@ -1608,10 +1612,11 @@ export default function QuizRefine() {
               placeType: quizData?.placeType,
               dayPace: quizData?.dayPace,
               spendingPriority: quizData?.spendingPriority,
-              travelersType: quizData?.travelersType,
-              kidsAges: quizData?.kidsAges,
-              accommodationType: quizData?.accommodationType,
-              mustHave: quizData?.mustHave,
+              // Extended properties from GettingStartedData flow - use type-safe access
+              travelersType: (quizData as Record<string, unknown>)?.travelersType as string | undefined,
+              kidsAges: (quizData as Record<string, unknown>)?.kidsAges as string[] | undefined,
+              accommodationType: (quizData as Record<string, unknown>)?.accommodationType as string | undefined,
+              mustHave: (quizData as Record<string, unknown>)?.mustHave as string | undefined,
             }}
             currentDayPlans={dayPlans.map(day => ({
               dayNumber: day.dayNumber,

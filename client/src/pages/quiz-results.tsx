@@ -193,7 +193,38 @@ export default function QuizResults() {
   };
 
   const handleStartPlanningStaycation = (staycation: StaycationRecommendation) => {
-    sessionStorage.setItem("selectedStaycation", JSON.stringify(staycation));
+    // Convert staycation to itinerary-compatible format for the refinement page
+    const numberOfNights = staycation.tripDuration === "weekend" ? 2 : 
+                           staycation.tripDuration === "full-day" ? 1 : 0;
+    
+    const convertedItinerary: ItineraryRecommendation = {
+      id: staycation.id,
+      title: staycation.title,
+      vibeTagline: staycation.vibeTagline,
+      isCurveball: staycation.isCurveball,
+      totalCost: staycation.totalCost,
+      costBreakdown: {
+        flights: 0, // No flights for staycations
+        housing: numberOfNights > 0 ? staycation.costBreakdown.misc : 0,
+        food: staycation.costBreakdown.food,
+        transportation: staycation.costBreakdown.gas + staycation.costBreakdown.parking,
+        fun: staycation.costBreakdown.activities,
+        preparation: 0,
+      },
+      cities: [{
+        order: 1,
+        cityName: staycation.destination.name,
+        countryName: "Local Adventure",
+        stayLengthNights: Math.max(1, numberOfNights),
+        activities: staycation.destination.activities,
+        imageQuery: staycation.destination.imageQuery,
+      }],
+      bestTimeToVisit: staycation.bestTimeToVisit,
+      totalNights: Math.max(1, numberOfNights),
+    };
+    
+    sessionStorage.setItem("selectedItinerary", JSON.stringify(convertedItinerary));
+    sessionStorage.setItem("selectedStaycation", JSON.stringify(staycation)); // Keep original for reference
     sessionStorage.setItem("tripType", "staycation");
     sessionStorage.setItem("tripSource", "quiz");
     
@@ -201,8 +232,8 @@ export default function QuizResults() {
       sessionStorage.setItem("quizNumberOfTravelers", String(gettingStartedData.adults + gettingStartedData.kids));
     }
     
-    // Go to trip planner to create the trip
-    setLocation("/trip/new");
+    // Go to refinement page just like other trip types
+    setLocation("/quiz/refine");
   };
 
   const handleRemix = () => {
