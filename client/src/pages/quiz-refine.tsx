@@ -43,7 +43,10 @@ import {
   Ship,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Coffee,
+  Compass,
+  Zap
 } from "lucide-react";
 import {
   HoverCard,
@@ -365,26 +368,39 @@ export default function QuizRefine() {
     "Finalizing your adventure...",
   ], []);
   
-  // Trip pace - derived from quiz dayPace, not user-adjustable
+  // Trip pace - initialized from quiz, but now user-adjustable via toggle
   // Maps quiz values: "relaxed" → "slow", "balanced" → "moderate", "packed" → "fast"
-  const tripPace = useMemo(() => {
+  const initialPace = useMemo(() => {
     const quizDayPace = quizData?.dayPace;
-    if (quizDayPace === "relaxed") return "slow";
-    if (quizDayPace === "packed") return "fast";
-    return "moderate"; // "balanced" or default
+    if (quizDayPace === "relaxed") return "slow" as const;
+    if (quizDayPace === "packed") return "fast" as const;
+    return "moderate" as const;
   }, [quizData?.dayPace]);
+  
+  // User-selected pace (can be changed via toggle)
+  const [selectedPace, setSelectedPace] = useState<"slow" | "moderate" | "fast">(initialPace);
+  
+  // Sync selectedPace with quiz data when it changes
+  useEffect(() => {
+    setSelectedPace(initialPace);
+  }, [initialPace]);
+  
+  // Use selectedPace instead of derived tripPace
+  const tripPace = selectedPace;
 
   // AI itinerary plan generation mutation
   const aiPlanMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (paceOverride?: "slow" | "moderate" | "fast") => {
       if (!currentItinerary) throw new Error("No itinerary");
-      // Validate trip personality using schema to ensure type safety
-      const validatedPersonality = tripPersonalitySchema.parse({ pace: tripPace });
+      // Use pace override if provided (for pace toggle), otherwise use derived tripPace
+      const effectivePace = paceOverride || tripPace;
+      const validatedPersonality = tripPersonalitySchema.parse({ pace: effectivePace });
       const response = await apiRequest("POST", "/api/ai/itinerary-plan", {
         itinerary: currentItinerary,
         numberOfTravelers,
         tripType,
         tripPersonality: validatedPersonality,
+        departureLocation: quizData?.departureLocation,
         quizPreferences: {
           tripGoal: quizData?.tripGoal,
           placeType: quizData?.placeType,
@@ -1720,26 +1736,82 @@ export default function QuizRefine() {
           </CardContent>
         </Card>
 
-        {/* Trip Personality Display (read-only, derived from quiz) */}
+        {/* Trip Personality - Adjustable Pace Toggle */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Trip Personality
+              Trip Pace
             </CardTitle>
             <CardDescription>
-              Based on your quiz preferences
+              Adjust how many activities you want each day
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3">
               <span className="text-sm font-medium">Daily Pace</span>
-              <Badge 
-                variant={tripPace === "slow" ? "outline" : tripPace === "fast" ? "default" : "secondary"}
-                data-testid="badge-pace-value"
-              >
-                {tripPace === "slow" ? "Slow & Leisurely" : tripPace === "fast" ? "Fast & Packed" : "Moderate & Balanced"}
-              </Badge>
+              <div className="flex gap-2">
+                <Button
+                  variant={tripPace === "slow" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (tripPace !== "slow") {
+                      setSelectedPace("slow");
+                      setRevealedDays(new Set());
+                      setAiGenerationComplete(false);
+                      aiPlanMutation.mutate("slow");
+                    }
+                  }}
+                  disabled={aiPlanMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-pace-slow"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Coffee className="w-3.5 h-3.5" />
+                    Slow
+                  </span>
+                </Button>
+                <Button
+                  variant={tripPace === "moderate" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (tripPace !== "moderate") {
+                      setSelectedPace("moderate");
+                      setRevealedDays(new Set());
+                      setAiGenerationComplete(false);
+                      aiPlanMutation.mutate("moderate");
+                    }
+                  }}
+                  disabled={aiPlanMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-pace-moderate"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5" />
+                    Moderate
+                  </span>
+                </Button>
+                <Button
+                  variant={tripPace === "fast" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (tripPace !== "fast") {
+                      setSelectedPace("fast");
+                      setRevealedDays(new Set());
+                      setAiGenerationComplete(false);
+                      aiPlanMutation.mutate("fast");
+                    }
+                  }}
+                  disabled={aiPlanMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-pace-fast"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" />
+                    Fast
+                  </span>
+                </Button>
+              </div>
             </div>
             <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
               {tripPace === "slow" && (
@@ -1752,6 +1824,12 @@ export default function QuizRefine() {
                 <p>5-6 activities per day to maximize your time. Ideal for those who want to see and do everything.</p>
               )}
             </div>
+            {aiPlanMutation.isPending && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Regenerating activities for new pace...
+              </p>
+            )}
           </CardContent>
         </Card>
 

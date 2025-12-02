@@ -1120,6 +1120,7 @@ export interface FullItineraryPlanRequest {
   numberOfTravelers: number;
   tripType: "international" | "domestic" | "staycation";
   tripPersonality?: TripPersonality;
+  departureLocation?: string;
   quizPreferences: {
     tripGoal?: string;
     placeType?: string;
@@ -1548,6 +1549,13 @@ PACE SETTING: MODERATE (Balanced)
   const citiesOverview = request.itinerary.cities.map(city => 
     `${city.cityName}, ${city.countryName} (${city.stayLengthNights} nights)`
   ).join(" -> ");
+  
+  // Build origin travel context for Day 1
+  const departureLocation = request.departureLocation || "";
+  const firstCity = request.itinerary.cities[0];
+  const originTravelContext = departureLocation && firstCity 
+    ? `\nINITIAL TRAVEL: Day 1 starts with travel from ${departureLocation} to ${firstCity.cityName}, ${firstCity.countryName}. Include a "Travel: Depart from ${departureLocation}" activity with appropriate travel mode (flight for international/long distances, drive for nearby destinations).`
+    : "";
 
   let currentDay = 1;
   const dayStructure: { dayNumber: number; city: typeof request.itinerary.cities[0]; dayInCity: number; totalDaysInCity: number; isArrival: boolean; isDeparture: boolean }[] = [];
@@ -1601,12 +1609,13 @@ PACE SETTING: MODERATE (Balanced)
   }
 
   const systemPrompt = `Travel planner creating day-by-day itinerary. Route: ${citiesOverview}. ${request.numberOfTravelers} travelers. ${preferencesContext}${familyContext}
-${paceInstructions}
+${paceInstructions}${originTravelContext}
 
 RULES:
 - No emojis. Follow pace setting above.
 - Times: "9:00 AM - 11:00 AM" format. No overlapping times.
-- Include travel between locations (walk/taxi/bus/train).
+- Include travel between locations (walk/taxi/bus/train/flight).
+- Day 1 MUST start with travel from origin (if provided) - include flight/drive time.
 - ARRIVAL days: "Arrival: Check into hotel" then light evening activities.
 - DEPARTURE days: Morning only, then "Travel: Depart to [city] via [mode]".
 
