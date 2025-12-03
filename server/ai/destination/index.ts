@@ -1,32 +1,35 @@
 /**
- * Legacy entry point for destination AI services
- * 
- * This file maintains backward compatibility by re-exporting all services
- * from the new modular structure. New code should import directly from
- * ./ai/destination instead.
- * 
- * @deprecated Import directly from ./ai/destination for better tree-shaking
+ * Public API for destination AI services
+ * Re-exports all service functions and types for external use
  */
 
-// Re-export all services and types from the new modular structure
+// Services
 export {
   getItineraryRecommendations,
   getStaycationRecommendations,
+} from "./services/itinerary-recommendations";
+
+export {
   adjustItineraryDuration,
   generateItineraryAddons,
   applyAddon,
+} from "./services/itinerary-adjustment";
+
+export {
   planDayWithAI,
   getActivitySuggestions,
-  generateFullItineraryPlan,
-  chatWithItineraryAssistant,
-  generateActivityAlternatives,
-  // Types
   type DayPlannerRequest,
   type DayPlannerResponse,
   type DayPlannerMessage,
   type PlannedActivity,
   type ActivitySuggestionRequest,
   type ActivitySuggestion,
+} from "./services/day-planner";
+
+export {
+  generateFullItineraryPlan,
+  chatWithItineraryAssistant,
+  generateActivityAlternatives,
   type FullItineraryPlanRequest,
   type FullItineraryPlanResponse,
   type TripPersonality,
@@ -36,4 +39,7 @@ export {
   type ItineraryAssistantMessage,
   type GenerateAlternativeRequest,
   type GenerateAlternativeResponse,
-} from "./ai/destination";
+} from "./services/itinerary-planning";
+
+// Client (for testing/mocking)
+export { openai, requireApiKey } from "./client";

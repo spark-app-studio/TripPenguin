@@ -37,7 +37,7 @@ import {
   type FullItineraryPlanRequest,
   type ItineraryAssistantRequest,
   type GenerateAlternativeRequest
-} from "./ai-destination";
+} from "./ai/destination";
 import { setupAuth, hashPassword, isAuthenticated, csrfProtection, authRateLimiter, passwordResetRateLimiter } from "./auth";
 import { emailService } from "./email";
 import passport from "passport";
